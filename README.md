@@ -84,7 +84,7 @@ optional arguments:
 
 ### Example
 
-`python subdomainator.py -s python.org`
+`python lepus.py -s python.org`
 
 ```
 [*]-Checking Shodan...
