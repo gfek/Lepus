@@ -411,6 +411,8 @@ if __name__ == '__main__':
 			colored("ASN:",'cyan'),colored(value['asn'],'yellow'),\
 			colored("Descriprion:",'cyan'),colored(value['asn_description'],'yellow')
 
-		fh.writelines(value['asn_cidr']+','+value['asn']+','+value['asn_description']+'\n')
+		fh.writelines(str(value['asn_cidr'])+','+ \
+			str(value['asn'])+','+ \
+			str(value['asn_description'])+'\n')
 
 	fh.close()
