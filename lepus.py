@@ -12,7 +12,6 @@ from bs4 import BeautifulSoup
 from colorama import init
 from termcolor import colored
 from ConfigParser import SafeConfigParser
-import csv
 
 init()
 
