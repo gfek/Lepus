@@ -1,7 +1,7 @@
 ## Lepus
 **Sub-domain finder**
 
-**Lepus** is a utility where it can help pentesters to identify and collect sub-domains for a given domain. Subdomain discovery is a crucial part during the reconnaissance phase. 
+**Lepus** is a utility for identifying and collecting subdomains for a given domain. Subdomain discovery is a crucial part during the reconnaissance phase. 
 
 ### Services
 
