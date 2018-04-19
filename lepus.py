@@ -344,26 +344,26 @@ if __name__ == '__main__':
 		fundsubdomains_list=[]
 		pass
 	
-	#try:
-	#	dnstrails_list=[domain+'.'+args.search for domain in subdnstrails(args.search)]
-	#except:
-	#	dnstrails_list=[]
+	try:
+		dnstrails_list=[domain+'.'+args.search for domain in subdnstrails(args.search)]
+	except:
+		dnstrails_list=[]
 		pass
 
-	#try:
-	#	cencys_list=subCencys(args.search)
-	#except:
-	#	cencys_list=[]
-	#	pass
+	try:
+		cencys_list=subCencys(args.search)
+	except:
+		cencys_list=[]
+		pass
 	
 	subdomains_list=shodan_list+ \
 				dnsdumpster_list+ \
 				threatcrowd_list+ \
 				virustotal_list+ \
 				crtsh_list+\
-				fundsubdomains_list
-				#cencys_list+\
-				#dnstrails_list
+				fundsubdomains_list+\
+				cencys_list+\
+				dnstrails_list
 				
 				
 	fh = open(args.search+'.txt', "a")
