@@ -194,22 +194,45 @@ optional arguments:
   \__ www.alliance-python.org : None
   \__ alliance-python.org : None
 
-[*] Unique ASNs Networks for unique IPs: 24
-  \__ CIDR: 140.211.0.0/16 ASN: 3701 Descriprion: NERONET - Network for Education and Research in Oregon (NERO), US
-  \__ CIDR: 192.30.252.0/24 ASN: 36459 Descriprion: GITHUB - GitHub, Inc., US
-  \__ CIDR: 82.92.0.0/14 ASN: 3265 Descriprion: XS4ALL-NL Amsterdam, NL
-  \__ CIDR: 176.9.0.0/16 ASN: 24940 Descriprion: HETZNER-AS, DE
-  \__ CIDR: 151.101.112.0/22 ASN: 54113 Descriprion: FASTLY - Fastly, US
-  \__ CIDR: 104.130.0.0/18 ASN: 27357 Descriprion: RACKSPACE - Rackspace Hosting, US
-  \__ CIDR: 185.166.140.0/24 ASN: 133530 Descriprion: ATLASSIANPTY-AS-AP ATLASSIAN PTY LTD, AU
-  \__ CIDR: 216.58.212.0/24 ASN: 15169 Descriprion: GOOGLE - Google LLC, US
-  \__ CIDR: 46.175.224.0/20 ASN: 43171 Descriprion: MAXNET, PL
-  \__ CIDR: 91.121.0.0/16 ASN: 16276 Descriprion: OVH, FR
-  \__ CIDR: 163.172.0.0/16 ASN: 12876 Descriprion: AS12876, FR
-  \__ CIDR: 46.4.0.0/16 ASN: 24940 Descriprion: HETZNER-AS, DE
-  \__ CIDR: 83.143.128.0/21 ASN: 35174 Descriprion: NFB-AS, PL
-  \__ CIDR: 23.253.128.0/19 ASN: 27357 Descriprion: RACKSPACE - Rackspace Hosting, US
-  \__ CIDR: 188.166.64.0/18 ASN: 14061 Descriprion: DIGITALOCEAN-ASN - DigitalOcean, LLC, US
+[*] Unique ASNs Networks for unique IPs: 28
+  \__ BGP Prefix: 140.211.0.0/16 AS: 3701 AS Name: NERONET - Network for Education and Research in Oregon (NERO), US
+  \__ BGP Prefix: 192.30.252.0/24 AS: 36459 AS Name: GITHUB - GitHub, Inc., US
+  \__ BGP Prefix: 82.92.0.0/14 AS: 3265 AS Name: XS4ALL-NL Amsterdam, NL
+  \__ BGP Prefix: 176.9.0.0/16 AS: 24940 AS Name: HETZNER-AS, DE
+  \__ BGP Prefix: 46.4.0.0/16 AS: 24940 AS Name: HETZNER-AS, DE
+  \__ BGP Prefix: 104.239.160.0/19 AS: 27357 AS Name: RACKSPACE - Rackspace Hosting, US
+  \__ BGP Prefix: 104.130.0.0/18 AS: 27357 AS Name: RACKSPACE - Rackspace Hosting, US
+  \__ BGP Prefix: 185.166.140.0/24 AS: 133530 AS Name: ATLASSIANPTY-AS-AP ATLASSIAN PTY LTD, AU
+  \__ BGP Prefix: 54.226.0.0/15 AS: 14618 AS Name: AMAZON-AES - Amazon.com, Inc., US
+  \__ BGP Prefix: 46.175.224.0/20 AS: 43171 AS Name: MAXNET, PL
+  \__ BGP Prefix: 151.101.112.0/22 AS: 54113 AS Name: FASTLY - Fastly, US
+  \__ BGP Prefix: 216.58.212.0/24 AS: 15169 AS Name: GOOGLE - Google LLC, US
+  \__ BGP Prefix: 91.121.0.0/16 AS: 16276 AS Name: OVH, FR
+  \__ BGP Prefix: 163.172.0.0/16 AS: 12876 AS Name: AS12876, FR
+  \__ BGP Prefix: 34.224.0.0/12 AS: 14618 AS Name: AMAZON-AES - Amazon.com, Inc., US
+  \__ BGP Prefix: 83.143.128.0/21 AS: 35174 AS Name: NFB-AS, PL
+  \__ BGP Prefix: 23.253.128.0/19 AS: 27357 AS Name: RACKSPACE - Rackspace Hosting, US
+  \__ BGP Prefix: 188.166.64.0/18 AS: 14061 AS Name: DIGITALOCEAN-ASN - DigitalOcean, LLC, US
+
+[*] Retrieving Name & Range from IPWHOIS Information for unique IPs: 28
+  \__ HOS-192907 : 46.4.197.64 - 46.4.197.71
+  \__ OVH : 91.121.160.0 - 91.121.175.255
+  \__ EU-DIGITALOCEAN-NL1 : 188.166.0.0 - 188.166.127.255
+  \__ RACKS-8-1393609936777860 : 23.253.134.0 - 23.253.135.255
+  \__ NERONET : 140.211.0.0 - 140.211.255.255
+  \__ ONLINE_NET_DEDICATED_SERVERS : 163.172.0.0 - 163.172.255.255
+  \__ AT-88-Z : 34.192.0.0 - 34.255.255.255
+  \__ GOOGLE : 216.58.192.0 - 216.58.223.255
+  \__ NFB-KRAKOW-PL : 83.143.128.0 - 83.143.135.255
+  \__ XS4ALL-CUST : 82.94.164.160 - 82.94.164.175
+  \__ RACKS-8-NET-16 : 104.239.128.0 - 104.239.255.255
+  \__ MAXNET : 46.175.224.0 - 46.175.239.255
+  \__ HETZNER-fsn1-dc5 : 176.9.11.0 - 176.9.11.31
+  \__ SKYCA-3 : 151.101.0.0 - 151.101.255.255
+  \__ GITHUB-NET4-1 : 192.30.252.0 - 192.30.255.255
+  \__ NL-ATLASSIAN-20160906 : 185.166.140.0 - 185.166.143.255
+  \__ RACKS-8-NET-16 : 104.130.0.0 - 104.130.255.255
+  \__ AMAZON-2011L : 54.224.0.0 - 54.239.255.255
 ```
 
 > A file (.txt extension) is created (results) with the name of the given domain
