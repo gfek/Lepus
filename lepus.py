@@ -12,6 +12,7 @@ from bs4 import BeautifulSoup
 from colorama import init
 from termcolor import colored
 from ConfigParser import SafeConfigParser
+import csv
 
 init()
 
@@ -292,6 +293,12 @@ def IP2CIDR(ip):
 	results = obj.lookup()
 	return results
 
+def IP2WHois(ip):
+	from ipwhois import IPWhois
+	obj = IPWhois(ip)
+	results = obj.lookup_whois()
+	return results['nets']
+
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(prog="lepus.py",description='OSINT Infrastructure-find subdomains for a given domain')
 	parser.add_argument("-s", action="store", dest='search',help="domain is required",required=True)
@@ -337,26 +344,26 @@ if __name__ == '__main__':
 		fundsubdomains_list=[]
 		pass
 	
-	try:
-		dnstrails_list=[domain+'.'+args.search for domain in subdnstrails(args.search)]
-	except:
-		dnstrails_list=[]
+	#try:
+	#	dnstrails_list=[domain+'.'+args.search for domain in subdnstrails(args.search)]
+	#except:
+	#	dnstrails_list=[]
 		pass
 
-	try:
-		cencys_list=subCencys(args.search)
-	except:
-		cencys_list=[]
-		pass
+	#try:
+	#	cencys_list=subCencys(args.search)
+	#except:
+	#	cencys_list=[]
+	#	pass
 	
 	subdomains_list=shodan_list+ \
 				dnsdumpster_list+ \
 				threatcrowd_list+ \
 				virustotal_list+ \
 				crtsh_list+\
-				fundsubdomains_list+\
-				cencys_list+\
-				dnstrails_list
+				fundsubdomains_list
+				#cencys_list+\
+				#dnstrails_list
 				
 				
 	fh = open(args.search+'.txt', "a")
@@ -411,8 +418,32 @@ if __name__ == '__main__':
 			colored("ASN:",'cyan'),colored(value['asn'],'yellow'),\
 			colored("Descriprion:",'cyan'),colored(value['asn_description'],'yellow')
 
-		fh.writelines(str(value['asn_cidr'])+','+ \
-			str(value['asn'])+','+ \
-			str(value['asn_description'])+'\n')
+		fh.writelines(value['asn_cidr']+','+value['asn']+','+value['asn_description']+'\n')
+
+	print colored("\n[*] Retrieving Name & Range from IPWHOIS Information for unique IPs:",'yellow'), "{}".format(colored(len(set(IPs)),'red'))
+
+	IP2WHOIS=[]
+	
+	try:
+		with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+			future_to_ipwhois={executor.submit(IP2WHois, ip):ip for ip in set(IPs) if "None" not in ip}
+			for future in concurrent.futures.as_completed(future_to_ipwhois):
+				ip=future_to_ipwhois[future]
+				try:
+					IPWHOIS = future.result()
+					IP2WHOIS.append((IPWHOIS[0])['name']+':'+(IPWHOIS[0])['range'])
+					
+				except Exception as exc:
+					print "  \__", colored('%r generated an exception: %s' % (ip, exc),'red')
+	except ValueError:
+		pass
+
+	fh.writelines('\n')
+	for res in set(IP2WHOIS):
+		split_for_color=res.split(':')
+		print "  \__",colored(split_for_color[0],'cyan'),\
+		':',colored(split_for_color[1],'yellow')
+
+		fh.writelines(str(split_for_color[0])+','+str(split_for_color[1])+'\n')
 
 	fh.close()
