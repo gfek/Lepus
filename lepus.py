@@ -18,6 +18,60 @@ init()
 
 warnings.filterwarnings("ignore")
 
+def DNS_Records(domain):
+
+	print colored("[*]-Retrieving DNS Records...",'yellow')
+
+	RES={}
+	MX=[]
+	NS=[]
+	A=[]
+	AAAA=[]
+	SOA=[]
+	CNAME=[]
+	TXT=[]
+	
+	resolver = dns.resolver.Resolver()
+	resolver.timeout = 1
+	resolver.lifetime = 1
+
+	rrtypes=['A','MX','NS','AAAA','SOA','TXT']
+	for r in rrtypes:
+		try:
+			Aanswer=resolver.query(domain,r)
+			for answer in Aanswer:
+				if r=='A':
+					A.append(answer.address)
+					RES.update({r:A})
+				if r=='MX':
+					MX.append(answer.exchange.to_text()[:-1])
+					RES.update({r:MX})
+				if r=='NS':
+					NS.append(answer.target.to_text()[:-1])
+					RES.update({r:NS})
+				if r=='AAAA':
+					AAAA.append(answer.address)
+					RES.update({r:AAAA})
+				if r=='SOA':
+					SOA.append(answer.mname.to_text()[:-1])
+					RES.update({r:SOA})
+				if r=='TXT':
+					TXT.append(str(answer))
+					RES.update({r:TXT})
+		except dns.resolver.NXDOMAIN:
+			pass
+		except dns.resolver.NoAnswer:
+			pass
+		except dns.name.EmptyLabel:
+			pass
+		except dns.resolver.NoNameservers:
+			pass
+		except dns.resolver.Timeout:
+			pass
+		except dns.exception.DNSException:
+			pass
+	return RES
+
 def get_A_Record(domain):
 
 	A=[]
@@ -58,7 +112,7 @@ def subShodan(domain):
 	SHODAN_API_KEY=parser.get('Shodan','SHODAN_API_KEY')
 	api=shodan.Shodan(SHODAN_API_KEY)
 	
-	print colored("[*]-Checking Shodan...",'yellow')
+	print colored("\n[*]-Searching Shodan...",'yellow')
 	
 	results=api.search('hostname:.{}'.format(domain))
 	try:
@@ -73,7 +127,7 @@ def subShodan(domain):
 def subVT(domain):
 	VT=[]
 	
-	print colored("[*]-Checking VirusTotal...",'yellow')
+	print colored("[*]-Searching VirusTotal...",'yellow')
 
 	parser = SafeConfigParser()
 	parser.read('config.ini')
@@ -101,7 +155,7 @@ def subVT(domain):
 	return VT
 
 def subDnsDumpster(domain):
-	print colored("[*]-Checking DNSDumpster...",'yellow')
+	print colored("[*]-Searching DNSDumpster...",'yellow')
 	try:
 		dnsdumpsubdomains = DNSDumpsterAPI({'verbose': False}).search(domain)
 		print "  \__ Unique subdomains found:", colored(len(set(dnsdumpsubdomains)),'yellow')
@@ -122,7 +176,7 @@ def subDnsDumpster(domain):
 def subThreatCrowd(domain):
 	TC=[]
 	
-	print colored("[*]-Checking ThreatCrowd...",'yellow')
+	print colored("[*]-Searching ThreatCrowd...",'yellow')
 
 	try:
 		result =  requests.get("https://www.threatcrowd.org/searchApi/v2/domain/report/", params = {"domain":domain})
@@ -152,7 +206,7 @@ def subThreatCrowd(domain):
 def subCencys(domain):
 	C=[]
 
-	print colored("[*]-Checking Cencys Certificates...",'yellow')
+	print colored("[*]-Searching Cencys Certificates...",'yellow')
 	
 	parser = SafeConfigParser()
 	parser.read('config.ini')
@@ -189,7 +243,7 @@ def subCencys(domain):
 
 def subCrt(domain):
 	CRT=[]
-	print colored("[*]-Checking crt.sh Certificates...",'yellow')
+	print colored("[*]-Searching crt.sh Certificates...",'yellow')
 	
 	parameters = {'q': '%.{}'.format(domain), 'output':'json'}
 	headers = {'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:52.0) Gecko/20100101 Firefox/52.0','content-type': 'application/json'}
@@ -221,7 +275,7 @@ def subCrt(domain):
 def subFindSubDomains(domain):
 	FSD=[]
 
-	print colored("[*]-Checking FindSubDomain...",'yellow')
+	print colored("[*]-Searching FindSubDomain...",'yellow')
 
 	headers = {'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:52.0) Gecko/20100101 Firefox/52.0'}
 	url = "https://findsubdomains.com/subdomains-of/{}".format(domain)
@@ -252,7 +306,7 @@ def subFindSubDomains(domain):
 def subdnstrails(domain):
 	DT=[]
 
-	print colored("[*]-Checking DNSTrails...",'yellow')
+	print colored("[*]-Searching DNSTrails...",'yellow')
 
 	parser = SafeConfigParser()
 	parser.read('config.ini')
@@ -306,7 +360,11 @@ if __name__ == '__main__':
 	args = parser.parse_args()
 
 	if args.search is None:
-	    parser.parse_args(['-h'])
+	    parser.parse_args(['-h'])t
+	
+	getDNS=DNS_Records(args.search)
+	for k,v in getDNS.iteritems():
+		print "  \_", colored(k,'cyan'),":",colored(','.join(v), 'yellow')
 
 	try:
 		shodan_list=subShodan(args.search)
@@ -368,7 +426,7 @@ if __name__ == '__main__':
 				
 	fh = open(args.search+'.txt', "a")
 	
-	print colored("\n[*] Checking DNS Record [A] for",'yellow'), "{}".format(colored(len(set(subdomains_list)),'red'))\
+	print colored("\n[*] Retrieving Forward DNS Record (A) for",'yellow'), "{}".format(colored(len(set(subdomains_list)),'red'))\
 	, colored("unique subdomains",'yellow')
 
 	IPs=[]
@@ -389,7 +447,7 @@ if __name__ == '__main__':
 	except ValueError:
 		pass
 
-	print colored("\n[*] Unique ASNs Networks for unique IPs:",'yellow'), "{}".format(colored(len(set(IPs)),'red'))
+	print colored("\n[*] Retrieving unique ASNs Networks for unique IPs:",'yellow'), "{}".format(colored(len(set(IPs)),'red'))
 
 	IP2ASN={}
 	values_from_IP2ASN=[]
@@ -414,9 +472,9 @@ if __name__ == '__main__':
 	
 	fh.writelines('\n')
 	for value in values_from_IP2ASN:
-		print "  \__", colored("CIDR:",'cyan'),colored(value['asn_cidr'],'yellow'),\
-			colored("ASN:",'cyan'),colored(value['asn'],'yellow'),\
-			colored("Descriprion:",'cyan'),colored(value['asn_description'],'yellow')
+		print "  \__", colored("BGP Prefix:",'cyan'),colored(value['asn_cidr'],'yellow'),\
+			colored("AS:",'cyan'),colored(value['asn'],'yellow'),\
+			colored("AS Name:",'cyan'),colored(value['asn_description'],'yellow')
 
 		fh.writelines(value['asn_cidr']+','+value['asn']+','+value['asn_description']+'\n')
 
