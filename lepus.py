@@ -360,7 +360,7 @@ if __name__ == '__main__':
 	args = parser.parse_args()
 
 	if args.search is None:
-	    parser.parse_args(['-h'])t
+	    parser.parse_args(['-h'])
 	
 	getDNS=DNS_Records(args.search)
 	for k,v in getDNS.iteritems():
