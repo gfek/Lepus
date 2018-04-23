@@ -476,7 +476,7 @@ if __name__ == '__main__':
 			colored("AS:",'cyan'),colored(value['asn'],'yellow'),\
 			colored("AS Name:",'cyan'),colored(value['asn_description'],'yellow')
 
-		fh.writelines(value['asn_cidr']+','+value['asn']+','+value['asn_description']+'\n')
+		fh.writelines(str(value['asn_cidr'])+','+str(value['asn'])+','+str(value['asn_description'])+'\n')
 
 	print colored("\n[*] Retrieving Name & Range from IPWHOIS Information for unique IPs:",'yellow'), "{}".format(colored(len(set(IPs)),'red'))
 
