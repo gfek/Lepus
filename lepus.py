@@ -457,7 +457,6 @@ if __name__ == '__main__':
 	print colored("\n[*] Retrieving unique ASNs Networks for unique IPs:",'yellow'), "{}".format(colored(len(set(IPs)),'red'))
 
 	IP2ASN={}
-	values_from_IP2ASN=[]
 
 	try:
 		with concurrent.futures.ThreadPoolExecutor(max_workers=100) as executor:
