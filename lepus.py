@@ -430,6 +430,7 @@ if __name__ == '__main__':
 	, colored("unique subdomains",'yellow')
 
 	IPs=[]
+	resForDNS=[]
 
 	try:
 		with concurrent.futures.ThreadPoolExecutor(max_workers=100) as executor:
@@ -438,14 +439,20 @@ if __name__ == '__main__':
 				dom=future_to_domain[future]
 				try:
 					DNSAdata = future.result()
-					print "  \__", colored(dom,'cyan'),":", colored(','.join(DNSAdata),'yellow')
-					fh.writelines(dom+','+','.join(DNSAdata)+'\n')
+					resForDNS.append(dom+":"+','.join(DNSAdata))
 					for ips in DNSAdata:
 						IPs.append(ips)
 				except Exception as exc:
 					print "  \__", colored('%r generated an exception: %s' % (dom, exc),'red')
 	except ValueError:
 		pass
+
+
+	resForDNS.sort(key = lambda x: x.split(':')[1])
+	for res in resForDNS:
+		print "  \__", colored(res.split(':')[0],'cyan'), \
+		colored(res.split(':')[1],'yellow')
+		fh.writelines(str(res.split(':')[0])+','+str(res.split(':')[1])+'\n')
 
 	print colored("\n[*] Retrieving unique ASNs Networks for unique IPs:",'yellow'), "{}".format(colored(len(set(IPs)),'red'))
 
