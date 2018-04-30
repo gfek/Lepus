@@ -20,6 +20,7 @@ The utility is collecting data from the following services:
 * [Crt.sh](https://crt.sh/)
 * [Findsubdomains](https://findsubdomains.com/)
 * [DNSTrails](https://securitytrails.com/dns-trails)
+* [DNSDB.COM] (http://www.dnsdb.org)
 
 |Service|API is required|
 |---|:---:|
@@ -31,6 +32,7 @@ The utility is collecting data from the following services:
 |Crt.sh|No|
 |Findsubdomains|No|
 |DNSTrails|Yes|
+|DNSDB.COM|No|
 
 In a case that you want to consume services that support API keys then you have to place your API keys in the file `config.ini`.
 
