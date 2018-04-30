@@ -4,7 +4,7 @@
 **Lepus** is a utility for identifying and collecting subdomains for a given domain. Subdomain discovery is a crucial part during the reconnaissance phase. It uses two (2) modes:
 
 * Services (Collecting subdomains from the below services)
-* Dictionairy mode for identifying domains
+* Dictionary mode for identifying domains
 
 The utility checks if the given domain is a *wildcard* domain or not.
 
