@@ -13,5 +13,6 @@ ipwhois==1.0.0
 requests==2.18.4
 shodan==1.7.7
 termcolor==1.1.0
+tqdm==4.23.1
 urllib3==1.22
 XlsxWriter==1.0.4
