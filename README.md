@@ -6,7 +6,7 @@
 * Services (Collecting subdomains from the below services)
 * Dictionairy mode for identifying domains
 
-The utility chacks if the given domain is a *wildcard* domain or not.
+The utility checks if the given domain is a *wildcard* domain or not.
 
 ### Services
 
