@@ -53,7 +53,7 @@ DNSTrail_API_KEY=<YourDNATrailAPI>
 
 ### Dictionary Mode
 
-A file can be given as an input `-w` switch for performing a dictionary discovery. Forward DNS lookup is performed for identifying subdomains for a given domain.
+A file can be given as an input `-w` switch for performing a dictionary discovery. Forward DNS lookup is performed during this time for identifying subdomains.
 
 ### Requirements
 
