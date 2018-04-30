@@ -12,15 +12,16 @@ from bs4 import BeautifulSoup
 from colorama import init
 from termcolor import colored
 from ConfigParser import SafeConfigParser
-import csv
+import time
+import tqdm
+import os
 
 init()
-
 warnings.filterwarnings("ignore")
 
 def DNS_Records(domain):
 
-	print colored("[*]-Retrieving DNS Records...",'yellow')
+	print colored("\n[*]-Retrieving DNS Records...",'yellow')
 
 	RES={}
 	MX=[]
@@ -72,16 +73,16 @@ def DNS_Records(domain):
 			pass
 	return RES
 
-def get_A_Record(domain):
+def get_A_Record(host):
 
 	A=[]
 	
 	resolver = dns.resolver.Resolver()
-	resolver.timeout = 3
-	resolver.lifetime = 3
+	resolver.timeout = 5
+	resolver.lifetime = 5
 
 	try:
-		Aanswer=resolver.query(domain,'A')
+		Aanswer=resolver.query(host,'A')
 		for answer in Aanswer:
 			A.append(answer.address)
 	except dns.resolver.NXDOMAIN:
@@ -104,6 +105,15 @@ def get_A_Record(domain):
 		pass
 	return A
 
+def check_wildcard_domain(domain):
+	print colored("[*]-Checking if domain {}".format(args.search) + " is wildcard...",'yellow')
+	
+	fres=[]
+	epoch_time = str(int(time.time()))
+	res=get_A_Record(epoch_time+"."+domain)
+	fres.append(epoch_time+"."+domain+":"+''.join(res))
+	return fres
+
 def subShodan(domain):
 	hosts=[]
 	parser = SafeConfigParser()
@@ -113,7 +123,7 @@ def subShodan(domain):
 	api=shodan.Shodan(SHODAN_API_KEY)
 	
 	print colored("\n[*]-Searching Shodan...",'yellow')
-	
+
 	results=api.search('hostname:.{}'.format(domain))
 	try:
 		for res in results['matches']:
@@ -121,7 +131,7 @@ def subShodan(domain):
 	except KeyError:
 		pass
 
-	print "  \__ Unique subdomains found:", colored(len(set(hosts)),'yellow')
+	print "  \__", colored("Unique subdomains found:",'cyan'), colored(len(set(hosts)),'yellow')
 	return hosts
 
 def subVT(domain):
@@ -139,7 +149,7 @@ def subVT(domain):
 		if 'subdomains' in response_dict:
 			for sd in response_dict['subdomains']:
 				VT.append(sd)
-		print "  \__ Unique subdomains found:", colored(len(set(VT)),'yellow')
+		print "  \__ ", colored("Unique subdomains found:",'cyan'), colored(len(set(VT)),'yellow')
 	except requests.exceptions.RequestException as err:
 		print "  \__", colored(err,'red')
 		pass
@@ -158,7 +168,7 @@ def subDnsDumpster(domain):
 	print colored("[*]-Searching DNSDumpster...",'yellow')
 	try:
 		dnsdumpsubdomains = DNSDumpsterAPI({'verbose': False}).search(domain)
-		print "  \__ Unique subdomains found:", colored(len(set(dnsdumpsubdomains)),'yellow')
+		print "  \__", colored("Unique subdomains found:",'cyan'), colored(len(set(dnsdumpsubdomains)),'yellow')
 		return dnsdumpsubdomains
 	except requests.exceptions.RequestException as err:
 		print "  \__", colored(err,'red')
@@ -186,7 +196,7 @@ def subThreatCrowd(domain):
 			if resp_code==1:
 				for sd in RES['subdomains']:
 					TC.append(sd)
-			print "  \__ Unique subdomains found:", colored(len(set(TC)),'yellow')
+			print "  \__", colored("Unique subdomains found:",'cyan'), colored(len(set(TC)),'yellow')
 		except ValueError:
 			pass
 	except requests.exceptions.RequestException as err:
@@ -226,7 +236,7 @@ def subCencys(domain):
 			str1=str1.split(",")
 			if domain in str1[0] and not ''.join(str1[0]).startswith('*'):
 				C.append(''.join(str1[0]))
-		print "  \__ Unique subdomains found:", colored(len(set(C)),'yellow')
+		print "  \__", colored("Unique subdomains found:",'cyan'), colored(len(set(C)),'yellow')
 	except requests.exceptions.RequestException as err:
 		print "  \__", colored(err,'red')
 		pass
@@ -256,8 +266,8 @@ def subCrt(domain):
 				if not ''.join(d['name_value']).startswith('*'):
 					CRT.append(d['name_value'])
 		elif response.status_code==404:
-			print colored("\tA 404 error was issued by the remote server!!!",'yellow')
-		print "  \__ Unique subdomains found:", colored(len(set(CRT)),'yellow')
+			print colored("\tA 404 error was issued by the remote server!!! (Potentially too many json results)",'yellow')
+		print "  \__", colored("Unique subdomains found:",'cyan'), colored(len(set(CRT)),'yellow')
 	except requests.exceptions.RequestException as err:
 		print "  \__", colored(err,'red')
 		pass
@@ -288,7 +298,7 @@ def subFindSubDomains(domain):
 					FSD.append(link.string.strip())
 			except KeyError:
 				pass
-		print "  \__ Unique subdomains found:", colored(len(set(FSD)),'yellow')
+		print "  \__", colored("Unique subdomains found:",'cyan'), colored(len(set(FSD)),'yellow')
 	except requests.exceptions.RequestException as err:
 		print "  \__", colored(err,'red')
 		pass
@@ -323,7 +333,7 @@ def subdnstrails(domain):
 			if v:
 				for dnsvalue in v:
 					DT.append(dnsvalue)
-		print "  \__ Unique subdomains found:", colored(len(set(DT)),'yellow')
+		print "  \__", colored("Unique subdomains found:",'cyan'), colored(len(set(DT)),'yellow')
 	except requests.exceptions.RequestException as err:
 		print "  \__", colored(err,'red')
 		pass
@@ -353,15 +363,36 @@ def IP2WHois(ip):
 	results = obj.lookup_whois()
 	return results['nets']
 
+def readfile(file):
+	file=open(file,'r')
+	hosts=[host for host in file.read().split('\n')]
+	file.close()
+	return hosts
+
+def createdir(domain):
+	if not os.path.exists(domain):
+		os.makedirs(domain)
+
 if __name__ == '__main__':
-	parser = argparse.ArgumentParser(prog="lepus.py",description='OSINT Infrastructure-find subdomains for a given domain')
+	parser = argparse.ArgumentParser(prog="subdomainator.py",description='OSINT Infrastructure-find subdomains for a domain')
 	parser.add_argument("-s", action="store", dest='search',help="domain is required",required=True)
+	parser.add_argument("-w", action="store", dest='wordlist',help="wordlist with subdomains [required]")
+	parser.add_argument("-t", action="store", dest='threads',help="specify # of threads [default is 100]", default=100)
 	parser.add_argument("-v", action="version",version="%(prog)s v1.0")
 	args = parser.parse_args()
 
 	if args.search is None:
 	    parser.parse_args(['-h'])
-	
+
+	createdir(args.search)
+
+	for res in check_wildcard_domain(args.search):
+		wildcardip=res.split(':')[1]
+		if 'None' not in res:
+			print "  \__", colored("Wildcard domain was identified",'red')
+		else:
+			print "  \__", "Not a wildcard domain."
+
 	getDNS=DNS_Records(args.search)
 	for k,v in getDNS.iteritems():
 		print "  \_", colored(k,'cyan'),":",colored(','.join(v), 'yellow')
@@ -422,24 +453,45 @@ if __name__ == '__main__':
 				fundsubdomains_list+\
 				cencys_list+\
 				dnstrails_list
-				
-				
-	fh = open(args.search+'.txt', "a")
 	
+	IPs=[]
+	resForDNS=[]
+	
+	if args.wordlist:
+		print colored("\n[*] Starting dictionairy attack mode [Forward DNS is performed]...",'yellow')
+		with concurrent.futures.ThreadPoolExecutor(max_workers=int(args.threads)) as executor:
+			future_to_a={executor.submit(get_A_Record, host+"."+args.search):host for host in readfile(args.wordlist)}
+			done_iter = concurrent.futures.as_completed(future_to_a)
+			done_iter = tqdm.tqdm(done_iter, total=len(readfile(args.wordlist)), desc=colored(args.wordlist,'cyan'), dynamic_ncols=True)
+
+			for future in done_iter:
+				r=future_to_a[future]
+				try:
+					a=future.result()
+					if 'None' not in a:
+						if wildcardip!=''.join(a):
+							resForDNS.append(r.lower()+"."+args.search+":"+','.join(a))
+					for ips in a:
+						IPs.append(ips)
+				except Exception as exc:
+					print "  \__", ('%r generated an exception: %s' % (r, exc))
+		
+		print "  \_", colored("Number of subdomains found:",'yellow'),"{}".format(colored(str(len(resForDNS)),'red'))
+		for bfres in resForDNS:
+			print "    \__", colored(bfres.split(':')[0],'cyan'), \
+			colored(bfres.split(':')[1],'yellow')
+
 	print colored("\n[*] Retrieving Forward DNS Record (A) for",'yellow'), "{}".format(colored(len(set(subdomains_list)),'red'))\
 	, colored("unique subdomains",'yellow')
 
-	IPs=[]
-	resForDNS=[]
-
 	try:
-		with concurrent.futures.ThreadPoolExecutor(max_workers=100) as executor:
+		with concurrent.futures.ThreadPoolExecutor(max_workers=int(args.threads)) as executor:
 			future_to_domain={executor.submit(get_A_Record, domain):domain for domain in set(subdomains_list)}
 			for future in concurrent.futures.as_completed(future_to_domain):
 				dom=future_to_domain[future]
 				try:
 					DNSAdata = future.result()
-					resForDNS.append(dom+":"+','.join(DNSAdata))
+					resForDNS.append(dom.lower()+":"+','.join(DNSAdata))
 					for ips in DNSAdata:
 						IPs.append(ips)
 				except Exception as exc:
@@ -447,19 +499,25 @@ if __name__ == '__main__':
 	except ValueError:
 		pass
 
+	FinalDNSLista=[]
 
-	resForDNS.sort(key = lambda x: x.split(':')[1])
-	for res in resForDNS:
+	for cleanLista in set(resForDNS):
+		FinalDNSLista.append(cleanLista)
+
+	fh = open(args.search+'/subdomains.txt', "w+")
+	FinalDNSLista.sort(key = lambda x: x.split(':')[1])
+	for res in FinalDNSLista:
 		print "  \__", colored(res.split(':')[0],'cyan'), \
 		colored(res.split(':')[1],'yellow')
 		fh.writelines(str(res.split(':')[0])+','+str(res.split(':')[1])+'\n')
+	fh.close()
 
 	print colored("\n[*] Retrieving unique ASNs Networks for unique IPs:",'yellow'), "{}".format(colored(len(set(IPs)),'red'))
 
 	IP2ASN={}
 
 	try:
-		with concurrent.futures.ThreadPoolExecutor(max_workers=100) as executor:
+		with concurrent.futures.ThreadPoolExecutor(max_workers=int(args.threads)) as executor:
 			future_to_ip2asn={executor.submit(IP2CIDR, ip):ip for ip in set(IPs) if "None" not in ip}
 			for future in concurrent.futures.as_completed(future_to_ip2asn):
 				ip=future_to_ip2asn[future]
@@ -467,7 +525,7 @@ if __name__ == '__main__':
 					IP2ASNDATA = future.result()
 					IP2ASN.update({ip:IP2ASNDATA})
 				except Exception as exc:
-					print "  \__", colored('%r generated an exception: %s' % (dom, exc),'red')
+					print "  \__", colored('%r generated an exception: %s' % (ip, exc),'red')
 	except ValueError:
 		pass
 
@@ -476,20 +534,20 @@ if __name__ == '__main__':
 		if v not in values_from_IP2ASN:
 			values_from_IP2ASN.append(v)
 	
-	fh.writelines('\n')
+	fh = open(args.search+'/IP2ASN.txt', "w+")
 	for value in values_from_IP2ASN:
 		print "  \__", colored("BGP Prefix:",'cyan'),colored(value['asn_cidr'],'yellow'),\
 			colored("AS:",'cyan'),colored(value['asn'],'yellow'),\
 			colored("AS Name:",'cyan'),colored(value['asn_description'],'yellow')
-
 		fh.writelines(str(value['asn_cidr'])+','+str(value['asn'])+','+str(value['asn_description'])+'\n')
+	fh.close()
 
 	print colored("\n[*] Retrieving Name & Range from IPWHOIS Information for unique IPs:",'yellow'), "{}".format(colored(len(set(IPs)),'red'))
 
 	IP2WHOIS=[]
 	
 	try:
-		with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+		with concurrent.futures.ThreadPoolExecutor(max_workers=int(args.threads)) as executor:
 			future_to_ipwhois={executor.submit(IP2WHois, ip):ip for ip in set(IPs) if "None" not in ip}
 			for future in concurrent.futures.as_completed(future_to_ipwhois):
 				ip=future_to_ipwhois[future]
@@ -502,12 +560,10 @@ if __name__ == '__main__':
 	except ValueError:
 		pass
 
-	fh.writelines('\n')
+	fh = open(args.search+'/IP2WHOIS.txt', "w+")
 	for res in set(IP2WHOIS):
 		split_for_color=res.split(':')
 		print "  \__",colored(split_for_color[0],'cyan'),\
 		':',colored(split_for_color[1],'yellow')
-
 		fh.writelines(str(split_for_color[0])+','+str(split_for_color[1])+'\n')
-
 	fh.close()
