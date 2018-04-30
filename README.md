@@ -20,7 +20,7 @@ The utility is collecting data from the following services:
 * [Crt.sh](https://crt.sh/)
 * [Findsubdomains](https://findsubdomains.com/)
 * [DNSTrails](https://securitytrails.com/dns-trails)
-* [DNSDB.COM] (http://www.dnsdb.org)
+* [DNSDB.COM](http://www.dnsdb.org)
 
 |Service|API is required|
 |---|:---:|
