@@ -348,6 +348,36 @@ def subdnstrails(domain):
 		pass
 	return DT
 
+def dnsdb(domain):
+	dnsdb=[]
+	print colored("[*]-Searching DNSDB.COM...",'yellow')
+	
+	headers = {'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:52.0) Gecko/20100101 Firefox/52.0'}
+	url = "http://www.dnsdb.org/{}/".format(domain)
+	try:
+		response = requests.get(url,headers=headers)
+		name_soup = BeautifulSoup(response.text,"html.parser")
+		for link in name_soup.findAll("a"):
+			try:
+				if link.string is not None:
+					dnsdb.append(link.string)
+			except KeyError:
+				pass
+		print "  \__", colored("Unique subdomains found:",'cyan'), colored(len(dnsdb),'yellow')
+	except requests.exceptions.RequestException as err:
+		print "  \__", colored(err,'red')
+		pass
+	except requests.exceptions.HTTPError as errh:
+		print "  \__", colored(errh,'red')
+		pass
+	except requests.exceptions.ConnectionError as errc:
+		print "  \__", colored(errc,'red')
+		pass
+	except requests.exceptions.Timeout as errt:
+		print "  \__", colored(errt,'red')
+		pass
+	return dnsdb
+
 def IP2CIDR(ip):
 	from ipwhois.net import Net
 	from ipwhois.asn import IPASN
@@ -445,12 +475,19 @@ if __name__ == '__main__':
 		cencys_list=[]
 		pass
 	
+	try:
+		dnsdb_list=dnsdb(args.search)
+	except:
+		dnsdb_list=[]
+		pass
+
 	subdomains_list=shodan_list+ \
 				dnsdumpster_list+ \
 				threatcrowd_list+ \
 				virustotal_list+ \
 				crtsh_list+\
 				fundsubdomains_list+\
+				dnsdb_list+\
 				cencys_list+\
 				dnstrails_list
 	
@@ -458,7 +495,7 @@ if __name__ == '__main__':
 	resForDNS=[]
 	
 	if args.wordlist:
-		print colored("\n[*] Starting dictionairy attack mode [Forward DNS is performed]...",'yellow')
+		print colored("\n[*] Starting dictionary attack mode [Forward DNS is performed]...",'yellow')
 		with concurrent.futures.ThreadPoolExecutor(max_workers=int(args.threads)) as executor:
 			future_to_a={executor.submit(get_A_Record, host+"."+args.search):host for host in readfile(args.wordlist)}
 			done_iter = concurrent.futures.as_completed(future_to_a)
