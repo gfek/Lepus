@@ -546,7 +546,7 @@ if __name__ == '__main__':
 	for res in FinalDNSLista:
 		print "  \__", colored(res.split(':')[0],'cyan'), \
 		colored(res.split(':')[1],'yellow')
-		fh.writelines(str(res.split(':')[0])+','+str(res.split(':')[1])+'\n')
+		fh.writelines(str(res.split(':')[0].encode('utf-8').strip())+','+str(res.split(':')[1])+'\n')
 	fh.close()
 
 	print colored("\n[*] Retrieving unique ASNs Networks for unique IPs:",'yellow'), "{}".format(colored(len(set(IPs)),'red'))
