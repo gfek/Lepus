@@ -290,7 +290,7 @@ def subFindSubDomains(domain):
 	headers = {'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:52.0) Gecko/20100101 Firefox/52.0'}
 	url = "https://findsubdomains.com/subdomains-of/{}".format(domain)
 	try:
-		response = requests.get(url,headers=headers)
+		response = requests.get(url,headers=headers,verify=False)
 		name_soup = BeautifulSoup(response.text,"html.parser")
 		for link in name_soup.findAll("a",{"class":"aggregated-link"}):
 			try:
