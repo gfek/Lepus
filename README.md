@@ -89,7 +89,7 @@ A file can be given as an input `-w` switch for performing a dictionary discover
 ### Help
 
 ```
-usage: subdomainator.py [-h] -s SEARCH [-w WORDLIST] [-t THREADS] [-v]
+usage: lepus.py [-h] -s SEARCH [-w WORDLIST] [-t THREADS] [-v]
 
 OSINT Infrastructure-find subdomains for a domain
 
