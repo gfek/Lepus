@@ -4,7 +4,7 @@
 **Lepus** is a utility for identifying and collecting subdomains for a given domain. Subdomain discovery is a crucial part during the reconnaissance phase. It uses two (2) modes:
 
 * Services (Collecting subdomains from the below services)
-* Dictionary mode for identifying domains
+* Dictionary mode for identifying domains (optional)
 
 The utility checks if the given domain is a *wildcard* domain or not.
 
@@ -21,6 +21,8 @@ The utility is collecting data from the following services:
 * [Findsubdomains](https://findsubdomains.com/)
 * [DNSTrails](https://securitytrails.com/dns-trails)
 * [DNSDB.COM](http://www.dnsdb.org)
+* [PassiveTotal](https://www.riskiq.com/products/passivetotal/)
+* [Wayback Machine](https://archive.org/web/)
 
 |Service|API is required|
 |---|:---:|
@@ -33,6 +35,8 @@ The utility is collecting data from the following services:
 |Findsubdomains|No|
 |DNSTrails|Yes|
 |DNSDB.COM|No|
+|PassiveTotal|Yes|
+|Wayback Machine|No|
 
 In a case that you want to consume services that support API keys then you have to place your API keys in the file `config.ini`.
 
@@ -41,14 +45,18 @@ In a case that you want to consume services that support API keys then you have 
 UID=<YourUID>
 SECRET=<YourSecret>
 
+[DNSTrail]
+DNSTrail_API_KEY=<YourDNATrailAPI>
+
+[PassiveTotal]
+PT_KEY=<YourPassiveTotalKey>
+PT_SECRET=<YourPassiveTotalSecret>
+
 [Shodan]
 SHODAN_API_KEY=<YourShodanAPI>
 
 [VirusTotal]
 VT_API_KEY=<YourVTAPI>
-
-[DNSTrail]
-DNSTrail_API_KEY=<YourDNATrailAPI>
 ```
 
 ### Dictionary Mode
@@ -89,16 +97,23 @@ A file can be given as an input `-w` switch for performing a dictionary discover
 ### Help
 
 ```
-usage: lepus.py [-h] -s SEARCH [-w WORDLIST] [-t THREADS] [-v]
+usage: lepus.py [-h] [-i] [-w WORDLIST] [-t THREADS] [-j] [-v] domain
 
-OSINT Infrastructure-find subdomains for a domain
+Infrastructure OSINT - find subdomains for a domain
+
+positional arguments:
+  domain                domain to search
 
 optional arguments:
-  -h, --help   show this help message and exit
-  -s SEARCH    domain is required
-  -w WORDLIST  wordlist with subdomains [required]
-  -t THREADS   specify # of threads [default is 100]
-  -v           show program's version number and exit
+  -h, --help            show this help message and exit
+  -i, --ignore-wildcard
+                        completely ignore wildcard [default is false]
+  -w WORDLIST, --wordlist WORDLIST
+                        wordlist with subdomains
+  -t THREADS, --threads THREADS
+                        number of threads [default is 100]
+  -j, --json            output to json as well [default is '|' delimited csv]
+  -v, --version         show program's version number and exit
 ```
 
 ### Example
@@ -294,4 +309,4 @@ dictionaries/hostnames-lite.txt: 100%|██████████████
   \__ AMAZON-2011L : 54.224.0.0 - 54.239.255.255
 ```
 
-> A folder is created with the name of the given domain. Inside the folder you can find three (3) .txt files (IP2ASN.txt, IP2WHOIS.txt, subdomains.txt)
+> A folder is created with the name of the given domain. Inside the folder you can find three (3) .txt files (IP2ASN.txt, IP2WHOIS.txt, subdomains.txt). For consecutive runs for the same domain, the tool keeps in mind previously found domains so that the result files are incremental (say for example in case you want to try different wordlists, previous results don't get overwritten).
