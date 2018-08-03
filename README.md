@@ -88,6 +88,7 @@ A file can be given as an input `-w` switch for performing a dictionary discover
 |urllib3|        1.22
 |wheel|          0.31.0
 |XlsxWriter|     1.0.4
+|IPy|            0.83
 
 
 ### Installation
