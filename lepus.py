@@ -1,5 +1,8 @@
+# -*- coding: utf-8 -*-
 from argparse import ArgumentParser
 from warnings import simplefilter
+from termcolor import colored
+from time import sleep
 import utils
 import collectors.Censys
 import collectors.CRT
@@ -15,7 +18,18 @@ import collectors.WaybackMachine
 
 simplefilter("ignore")
 
+
+def banner():
+	print colored("""
+        _______  _____  _     _ _______
+ |      |______ |_____] |     | |______
+ |_____ |______ |       |_____| ______|                                       
+	""",'yellow'), colored("""                          v2.0\n""",'cyan')
+	sleep(2)
+
+
 if __name__ == '__main__':
+	banner()
 	parser = ArgumentParser(prog="lepus.py", description='Infrastructure OSINT - find subdomains for a domain')
 	parser.add_argument("domain", help="domain to search")
 	parser.add_argument("-i", "--ignore-wildcard", action="store_true", dest='ignore', help="completely ignore wildcard [default is false]", default=False)
