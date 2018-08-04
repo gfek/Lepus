@@ -32,7 +32,7 @@ if __name__ == '__main__':
 	banner()
 	parser = ArgumentParser(prog="lepus.py", description='Infrastructure OSINT - find subdomains for a domain')
 	parser.add_argument("domain", help="domain to search")
-	parser.add_argument("-i", "--ignore-wildcard", action="store_true", dest='ignore', help="completely ignore wildcard [default is false]", default=False)
+	parser.add_argument("-sw", "--show-wildcard", action="store_true", dest='showWildcard', help="show wildcard results [default is false]", default=False)
 	parser.add_argument("-w", "--wordlist", action="store", dest='wordlist', help="wordlist with subdomains")
 	parser.add_argument("-t", "--threads", action="store", dest='threads', help="number of threads [default is 100]", type=int, default=100)
 	parser.add_argument("-j", "--json", action="store_true", dest='json', help="output to json as well [default is '|' delimited csv]", default=False)
@@ -43,7 +43,7 @@ if __name__ == '__main__':
 		parser.parse_args(['-h'])
 
 	workspace = utils.createWorkspace(args.domain)
-	wildcard = utils.checkWildcard(args.domain, args.ignore)
+	wildcard = utils.checkWildcard(args.domain, args.showWildcard)
 	utils.getDNSrecords(args.domain, args.json)
 
 	if not workspace:

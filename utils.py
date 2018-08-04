@@ -165,7 +165,7 @@ def getDNSrecords(domain, out_to_json):
 		pass
 
 
-def checkWildcard(domain, ignore):
+def checkWildcard(domain, showWildcard):
 	print colored("[*]-Checking if domain {0} is wildcard...".format(domain), 'yellow')
 
 	wildcard = resolve('.'.join([str(int(time())), domain]))
@@ -177,7 +177,7 @@ def checkWildcard(domain, ignore):
 	else:
 		print "  \__", colored("Not a wildcard domain.", 'cyan')
 
-	return wildcard[1] if ignore else None
+	return wildcard[1] if not showWildcard else None
 
 
 def filterDomain(domain, subdomains):
