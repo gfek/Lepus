@@ -2,6 +2,7 @@ from IPy import IP
 from time import time
 from tqdm import tqdm
 from json import dumps
+from time import sleep
 from ipwhois import IPWhois
 from ipwhois.net import Net
 from termcolor import colored
@@ -13,6 +14,7 @@ from os.path import exists, isfile, join
 from os import makedirs, listdir, stat, remove
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dns.resolver import Resolver, NXDOMAIN, NoAnswer, NoNameservers, Timeout
+import concurrent.futures.thread
 
 
 def deleteEmptyFiles(directory):
@@ -24,9 +26,6 @@ def deleteEmptyFiles(directory):
 				remove(join(directory, filename))
 
 	except OSError:
-		pass
-
-	except IOError:
 		pass
 
 
@@ -58,7 +57,7 @@ def loadOldFindings(directory):
 			except IOError:
 				pass
 
-	print "  \__", colored("Unique subdomains found:", 'cyan'), colored(len(OF), 'yellow')
+	print "  \__", colored("Unique subdomains loaded:", 'cyan'), colored(len(OF), 'yellow')
 	return OF
 
 
@@ -68,7 +67,7 @@ def loadWordlist(domain, filepath):
 	with open(filepath, 'r') as wordlist:
 		WL = set(['.'.join([subdomain.strip(), domain]) for subdomain in wordlist.readlines()])
 
-	print "  \__", colored("Unique subdomains found:", 'cyan'), colored(len(WL), 'yellow')
+	print "  \__", colored("Unique subdomains loaded:", 'cyan'), colored(len(WL), 'yellow')
 	return list(WL)
 
 
@@ -82,7 +81,6 @@ def getDNSrecords(domain, out_to_json):
 	AAAA = []
 	SOA = []
 	TXT = []
-	# CNAME = []
 
 	resolver = Resolver()
 	resolver.timeout = 1
@@ -201,7 +199,7 @@ def resolve(hostname):
 		return (hostname, None)
 
 
-def massResolve(domain, hostnames, collector_hostnames, threads, wildcard, out_to_json):
+def massResolve(domain, hostnames, collector_hostnames, threads, wildcard, out_to_json, already_resolved):
 	resolved = {}
 	resolved_public = {}
 	resolved_private = {}
@@ -210,51 +208,61 @@ def massResolve(domain, hostnames, collector_hostnames, threads, wildcard, out_t
 	resolved_carrier_grade_nat = {}
 	unresolved = {}
 
-	print "{0} {1} {2}".format(colored("\n[*]-Attempting to resolve", "yellow"), colored(len(hostnames), "cyan"), colored("hostnames...", "yellow"))
+	print "{0} {1} {2}".format(colored("\n[*]-Attempting to resolve", "yellow"), colored(len(hostnames) - len(already_resolved), "cyan"), colored("hostnames...", "yellow"))
 
 	with ThreadPoolExecutor(max_workers=threads) as executor:
 		tasks = {executor.submit(resolve, hostname) for hostname in hostnames}
-		completed = as_completed(tasks)
-		completed = tqdm(completed, total=len(hostnames), desc="  \__ {0}".format(colored("Progress", 'cyan')), dynamic_ncols=True)
 
-		for task in completed:
-			try:
-				result = task.result()
+		try:
+			completed = as_completed(tasks)
+			completed = tqdm(completed, total=len(hostnames), desc="  \__ {0}".format(colored("Progress", 'cyan')), dynamic_ncols=True)
 
-				if None not in result and wildcard not in result:
-					ip_type = IP(result[1]).iptype()
+			for task in completed:
+				try:
+					result = task.result()
 
-					if ip_type == "PUBLIC":
-						resolved[result[0]] = result[1]
-						resolved_public[result[0]] = result[1]
+					if None not in result and wildcard not in result:
+						ip_type = IP(result[1]).iptype()
 
-					elif ip_type == "PRIVATE":
-						resolved[result[0]] = result[1]
-						resolved_private[result[0]] = result[1]
+						if ip_type == "PUBLIC":
+							resolved[result[0]] = result[1]
+							resolved_public[result[0]] = result[1]
 
-					elif ip_type == "RESERVED":
-						resolved[result[0]] = result[1]
-						resolved_reserved[result[0]] = result[1]
+						elif ip_type == "PRIVATE":
+							resolved[result[0]] = result[1]
+							resolved_private[result[0]] = result[1]
 
-					elif ip_type == "LOOPBACK":
-						resolved[result[0]] = result[1]
-						resolved_loopback[result[0]] = result[1]
+						elif ip_type == "RESERVED":
+							resolved[result[0]] = result[1]
+							resolved_reserved[result[0]] = result[1]
 
-					elif ip_type == "CARRIER_GRADE_NAT":
-						resolved[result[0]] = result[1]
-						resolved_carrier_grade_nat[result[0]] = result[1]
+						elif ip_type == "LOOPBACK":
+							resolved[result[0]] = result[1]
+							resolved_loopback[result[0]] = result[1]
 
-				elif None in result:
-					if result[0] in collector_hostnames:
-						unresolved[result[0]] = result[1]
+						elif ip_type == "CARRIER_GRADE_NAT":
+							resolved[result[0]] = result[1]
+							resolved_carrier_grade_nat[result[0]] = result[1]
 
-			except Exception:
-				continue
+					elif None in result:
+						if result[0] in collector_hostnames:
+							unresolved[result[0]] = result[1]
 
-	print "    \__ {0} {1}".format(colored("Hostnames that were resolved:", "yellow"), colored(len(resolved), "cyan"))
+				except Exception:
+					continue
+
+		except KeyboardInterrupt:
+			executor._threads.clear()
+			concurrent.futures.thread._threads_queues.clear()
+			print colored("\n\n[*]-Received KeyboardInterrupt. Exiting...\n", 'red')
+			sleep(2)
+			exit(-1)
+
+	print "    \__ {0} {1}".format(colored("Hostnames that were resolved:", "yellow"), colored(len(resolved) - len(already_resolved), "cyan"))
 
 	for hostname, address in resolved.items():
-		print "      \__ {0} {1}".format(colored(hostname, "cyan"), colored(address, "yellow"))
+		if hostname not in already_resolved:
+			print "      \__ {0} {1}".format(colored(hostname, "cyan"), colored(address, 'yellow'))
 
 	if out_to_json:
 		try:
@@ -408,15 +416,23 @@ def massASN(domain, IPs, threads, out_to_json):
 	try:
 		with ThreadPoolExecutor(max_workers=threads) as executor:
 			tasks = {executor.submit(asn, ip): ip for ip in IPs}
-			completed = as_completed(tasks)
-			completed = tqdm(completed, total=len(IPs), desc="  \__ {0}".format(colored("Progress", 'cyan')), dynamic_ncols=True)
+			try:
+				completed = as_completed(tasks)
+				completed = tqdm(completed, total=len(IPs), desc="  \__ {0}".format(colored("Progress", 'cyan')), dynamic_ncols=True)
 
-			for task in completed:
-				try:
-					ip2asn.update({tasks[task]: task.result()})
+				for task in completed:
+					try:
+						ip2asn.update({tasks[task]: task.result()})
 
-				except Exception:
-					pass
+					except Exception:
+						pass
+
+			except KeyboardInterrupt:
+				executor._threads.clear()
+				concurrent.futures.thread._threads_queues.clear()
+				print colored("\n\n[*]-Received KeyboardInterrupt. Exiting...\n", 'red')
+				sleep(2)
+				exit(-1)
 
 	except ValueError:
 		pass
@@ -475,15 +491,24 @@ def massWHOIS(domain, IPs, threads, out_to_json):
 	try:
 		with ThreadPoolExecutor(max_workers=threads) as executor:
 			tasks = {executor.submit(whois, ip): ip for ip in IPs}
-			completed = as_completed(tasks)
-			completed = tqdm(completed, total=len(IPs), desc="  \__ {0}".format(colored("Progress", 'cyan')), dynamic_ncols=True)
 
-			for task in completed:
-				try:
-					ip2whois[task.result()[0]['range']] = task.result()[0]['name']
+			try:
+				completed = as_completed(tasks)
+				completed = tqdm(completed, total=len(IPs), desc="  \__ {0}".format(colored("Progress", 'cyan')), dynamic_ncols=True)
 
-				except Exception:
-					pass
+				for task in completed:
+					try:
+						ip2whois[task.result()[0]['range']] = task.result()[0]['name']
+
+					except Exception:
+						pass
+
+			except KeyboardInterrupt:
+				executor._threads.clear()
+				concurrent.futures.thread._threads_queues.clear()
+				print colored("\n\n[*]-Received KeyboardInterrupt. Exiting...\n", 'red')
+				sleep(2)
+				exit(-1)
 
 	except ValueError:
 		pass
