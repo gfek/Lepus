@@ -29,7 +29,7 @@ def init(domain):
 
 		WB = set(WB)
 
-		print "  \__ ", colored("Unique subdomains found:", 'cyan'), colored(len(WB), 'yellow')
+		print "  \__", colored("Unique subdomains found:", 'cyan'), colored(len(WB), 'yellow')
 		return WB
 
 	except requests.exceptions.RequestException as err:
