@@ -12,6 +12,7 @@ import collectors.FindSubdomains
 import collectors.GoogleTransparencyReport
 import collectors.HackerTarget
 import collectors.PassiveTotal
+import collectors.Riddler
 import collectors.Shodan
 import collectors.ThreatCrowd
 import collectors.VirusTotal
@@ -59,6 +60,7 @@ if __name__ == '__main__':
 
 		if args.noCollectors:
 			collector_hosts = []
+
 		else:
 			print
 			collector_hosts = []
@@ -71,6 +73,7 @@ if __name__ == '__main__':
 			collector_hosts += collectors.GoogleTransparencyReport.init(args.domain)
 			collector_hosts += collectors.HackerTarget.init(args.domain)
 			collector_hosts += collectors.PassiveTotal.init(args.domain)
+			collector_hosts += collectors.Riddler.init(args.domain)
 			collector_hosts += collectors.Shodan.init(args.domain)
 			collector_hosts += collectors.ThreatCrowd.init(args.domain)
 			collector_hosts += collectors.VirusTotal.init(args.domain)
