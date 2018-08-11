@@ -15,7 +15,7 @@ def init(domain):
 	SECRET = parser.get('Censys', 'SECRET')
 
 	if UID == "":
-		print "  \__", colored("No Censys API key found :(", 'red')
+		print "  \__", colored("No Censys API credentials found :(", 'red')
 		return []
 
 	else:
