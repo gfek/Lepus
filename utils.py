@@ -65,7 +65,7 @@ def loadWordlist(domain, filepath):
 	print colored("\n[*]-Loading Wordlist...", 'yellow')
 
 	with open(filepath, 'r') as wordlist:
-		WL = set(['.'.join([subdomain.strip(), domain]) for subdomain in wordlist.readlines()])
+		WL = set(['.'.join([subdomain.strip().lower(), domain]) for subdomain in wordlist.readlines()])
 
 	print "  \__", colored("Unique subdomains loaded:", 'cyan'), colored(len(WL), 'yellow')
 	return list(WL)
