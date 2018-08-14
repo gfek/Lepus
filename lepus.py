@@ -89,6 +89,7 @@ if __name__ == '__main__':
 
 		if len(hosts) > 0:
 			resolved = utils.massResolve(args.domain, set(utils.filterDomain(args.domain, hosts)), set(utils.filterDomain(args.domain, collector_hosts)), args.threads, wildcard, args.json, [])
+			hosts = list(set(old_findings + collector_hosts + [hostname for hostname, address in resolved.items()]))
 
 			if args.permutate:
 				permutated_hosts = submodules.Permutations.init(args.domain, resolved, args.permutation_wordlist)
