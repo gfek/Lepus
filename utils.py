@@ -199,6 +199,11 @@ def resolve(hostname):
 		return (hostname, None)
 
 
+def chunks(list, numberInChunk):
+	for i in range(0, len(list), numberInChunk):
+		yield list[i:i + numberInChunk]
+
+
 def massResolve(domain, hostnames, collector_hostnames, threads, wildcard, out_to_json, already_resolved):
 	resolved = {}
 	resolved_public = {}
@@ -208,55 +213,63 @@ def massResolve(domain, hostnames, collector_hostnames, threads, wildcard, out_t
 	resolved_carrier_grade_nat = {}
 	unresolved = {}
 
-	print "{0} {1} {2}".format(colored("\n[*]-Attempting to resolve", "yellow"), colored(len(hostnames) - len(already_resolved), "cyan"), colored("hostnames...", "yellow"))
+	if len(hostnames) <= 100000:
+		print "{0} {1} {2}".format(colored("\n[*]-Attempting to resolve", "yellow"), colored(len(hostnames) - len(already_resolved), "cyan"), colored("hostnames...", "yellow"))
+	else:
+		print "{0} {1} {2}".format(colored("\n[*]-Attempting to resolve", "yellow"), colored(len(hostnames) - len(already_resolved), "cyan"), colored("hostnames, in chunks of 100.000...", "yellow"))
 
-	with ThreadPoolExecutor(max_workers=threads) as executor:
-		tasks = {executor.submit(resolve, hostname) for hostname in hostnames}
+	hostNamesInChunks = chunks(list(hostnames), 100000)
 
-		try:
-			completed = as_completed(tasks)
-			completed = tqdm(completed, total=len(hostnames), desc="  \__ {0}".format(colored("Progress", 'cyan')), dynamic_ncols=True)
+	for hostNameChunk in hostNamesInChunks:
 
-			for task in completed:
-				try:
-					result = task.result()
+		hostnames = hostNameChunk
+		with ThreadPoolExecutor(max_workers=threads) as executor:
+			tasks = {executor.submit(resolve, hostname) for hostname in hostnames}
 
-					if None not in result and wildcard not in result:
-						ip_type = IP(result[1]).iptype()
+			try:
+				completed = as_completed(tasks)
+				completed = tqdm(completed, total=len(hostnames), desc="  \__ {0}".format(colored("Progress", 'cyan')), dynamic_ncols=True)
 
-						if ip_type == "PUBLIC":
-							resolved[result[0]] = result[1]
-							resolved_public[result[0]] = result[1]
+				for task in completed:
+					try:
+						result = task.result()
 
-						elif ip_type == "PRIVATE":
-							resolved[result[0]] = result[1]
-							resolved_private[result[0]] = result[1]
+						if None not in result and wildcard not in result:
+							ip_type = IP(result[1]).iptype()
 
-						elif ip_type == "RESERVED":
-							resolved[result[0]] = result[1]
-							resolved_reserved[result[0]] = result[1]
+							if ip_type == "PUBLIC":
+								resolved[result[0]] = result[1]
+								resolved_public[result[0]] = result[1]
 
-						elif ip_type == "LOOPBACK":
-							resolved[result[0]] = result[1]
-							resolved_loopback[result[0]] = result[1]
+							elif ip_type == "PRIVATE":
+								resolved[result[0]] = result[1]
+								resolved_private[result[0]] = result[1]
 
-						elif ip_type == "CARRIER_GRADE_NAT":
-							resolved[result[0]] = result[1]
-							resolved_carrier_grade_nat[result[0]] = result[1]
+							elif ip_type == "RESERVED":
+								resolved[result[0]] = result[1]
+								resolved_reserved[result[0]] = result[1]
 
-					elif None in result:
-						if result[0] in collector_hostnames:
-							unresolved[result[0]] = result[1]
+							elif ip_type == "LOOPBACK":
+								resolved[result[0]] = result[1]
+								resolved_loopback[result[0]] = result[1]
 
-				except Exception:
-					continue
+							elif ip_type == "CARRIER_GRADE_NAT":
+								resolved[result[0]] = result[1]
+								resolved_carrier_grade_nat[result[0]] = result[1]
 
-		except KeyboardInterrupt:
-			executor._threads.clear()
-			concurrent.futures.thread._threads_queues.clear()
-			print colored("\n\n[*]-Received KeyboardInterrupt. Exiting...\n", 'red')
-			sleep(2)
-			exit(-1)
+						elif None in result:
+							if result[0] in collector_hostnames:
+								unresolved[result[0]] = result[1]
+
+					except Exception:
+						continue
+
+			except KeyboardInterrupt:
+				executor._threads.clear()
+				concurrent.futures.thread._threads_queues.clear()
+				print colored("\n\n[*]-Received KeyboardInterrupt. Exiting...\n", 'red')
+				sleep(2)
+				exit(-1)
 
 	print "    \__ {0} {1}".format(colored("Hostnames that were resolved:", "yellow"), colored(len(resolved) - len(already_resolved), "cyan"))
 
