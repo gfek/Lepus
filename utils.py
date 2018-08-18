@@ -216,13 +216,13 @@ def massResolve(domain, hostnames, collector_hostnames, threads, wildcard, out_t
 	if len(hostnames) <= 100000:
 		print "{0} {1} {2}".format(colored("\n[*]-Attempting to resolve", "yellow"), colored(len(hostnames) - len(already_resolved), "cyan"), colored("hostnames...", "yellow"))
 	else:
-		print "{0} {1} {2}".format(colored("\n[*]-Attempting to resolve", "yellow"), colored(len(hostnames) - len(already_resolved), "cyan"), colored("hostnames, in chunks of 100.000...", "yellow"))
+		print "{0} {1} {2}".format(colored("\n[*]-Attempting to resolve", "yellow"), colored(len(hostnames) - len(already_resolved), "cyan"), colored("hostnames, in chunks of 100,000...", "yellow"))
 
 	hostNamesInChunks = chunks(list(hostnames), 100000)
 
 	for hostNameChunk in hostNamesInChunks:
-
 		hostnames = hostNameChunk
+
 		with ThreadPoolExecutor(max_workers=threads) as executor:
 			tasks = {executor.submit(resolve, hostname) for hostname in hostnames}
 
@@ -281,7 +281,7 @@ def massResolve(domain, hostnames, collector_hostnames, threads, wildcard, out_t
 		try:
 			with open('/'.join([domain, "resolved_public.json"]), "w") as resolved_public_file:
 				if resolved_public:
-					resolved_public_file.write(dumps(resolved_public))
+					resolved_public_file.write("{0}\n".format(dumps(resolved_public)))
 
 		except OSError:
 			pass
@@ -292,7 +292,7 @@ def massResolve(domain, hostnames, collector_hostnames, threads, wildcard, out_t
 		try:
 			with open('/'.join([domain, "resolved_private.json"]), "w") as resolved_private_file:
 				if resolved_private:
-					resolved_private_file.write(dumps(resolved_private))
+					resolved_private_file.write("{0}\n".format(dumps(resolved_private)))
 
 		except OSError:
 			pass
@@ -303,7 +303,7 @@ def massResolve(domain, hostnames, collector_hostnames, threads, wildcard, out_t
 		try:
 			with open('/'.join([domain, "resolved_reserved.json"]), "w") as resolved_reserved_file:
 				if resolved_reserved:
-					resolved_reserved_file.write(dumps(resolved_reserved))
+					resolved_reserved_file.write("{0}\n".format(dumps(resolved_reserved)))
 
 		except OSError:
 			pass
@@ -314,7 +314,7 @@ def massResolve(domain, hostnames, collector_hostnames, threads, wildcard, out_t
 		try:
 			with open('/'.join([domain, "resolved_loopback.json"]), "w") as resolved_loopback_file:
 				if resolved_loopback:
-					resolved_loopback_file.write(dumps(resolved_loopback))
+					resolved_loopback_file.write("{0}\n".format(dumps(resolved_loopback)))
 
 		except OSError:
 			pass
@@ -325,7 +325,7 @@ def massResolve(domain, hostnames, collector_hostnames, threads, wildcard, out_t
 		try:
 			with open('/'.join([domain, "resolved_carrier_grade_nat.json"]), "w") as resolved_carrier_grade_nat_file:
 				if resolved_carrier_grade_nat:
-					resolved_carrier_grade_nat_file.write(dumps(resolved_carrier_grade_nat))
+					resolved_carrier_grade_nat_file.write("{0}\n".format(dumps(resolved_carrier_grade_nat)))
 
 		except OSError:
 			pass
@@ -336,7 +336,7 @@ def massResolve(domain, hostnames, collector_hostnames, threads, wildcard, out_t
 		try:
 			with open('/'.join([domain, "unresolved.json"]), "w") as unresolved_file:
 				if unresolved:
-					unresolved_file.write(dumps(unresolved))
+					unresolved_file.write("{0}\n".format(dumps(unresolved)))
 
 		except OSError:
 			pass
@@ -469,7 +469,7 @@ def massASN(domain, IPs, threads, out_to_json):
 
 		try:
 			with open('/'.join([domain, "asn.json"]), "w") as asn_file:
-				asn_file.write(dumps(ip2asn_json))
+				asn_file.write("{0}\n".format(dumps(ip2asn_json)))
 
 		except OSError:
 			pass
@@ -511,7 +511,8 @@ def massWHOIS(domain, IPs, threads, out_to_json):
 
 				for task in completed:
 					try:
-						ip2whois[task.result()[0]['range']] = task.result()[0]['name']
+						if task.result()[0]['name'] is not None:
+							ip2whois[task.result()[0]['range']] = task.result()[0]['name']
 
 					except Exception:
 						pass
@@ -534,7 +535,7 @@ def massWHOIS(domain, IPs, threads, out_to_json):
 	if out_to_json:
 		try:
 			with open('/'.join([domain, "whois.json"]), "w") as whois_file:
-				whois_file.write(dumps(ip2whois))
+				whois_file.write("{0}\n".format(dumps(ip2whois)))
 
 		except OSError:
 			pass

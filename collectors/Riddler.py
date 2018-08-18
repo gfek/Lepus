@@ -16,7 +16,7 @@ def init(domain):
 	RIDDLER_PASSWORD = parser.get('Riddler', 'RIDDLER_PASSWORD')
 
 	if RIDDLER_USERNAME == "" or RIDDLER_PASSWORD == "":
-		print "  \__", colored("No Riddler API credentials found :(", 'red')
+		print "  \__", colored("No Riddler API credentials configured", 'red')
 		return []
 
 	else:
