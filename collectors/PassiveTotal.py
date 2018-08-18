@@ -14,7 +14,7 @@ def init(domain):
 	PT_SECRET = parser.get('PassiveTotal', 'PT_SECRET')
 
 	if PT_KEY == "" or PT_SECRET == "":
-		print "  \__", colored("No PassiveTotal API credentials found :(", 'red')
+		print "  \__", colored("No PassiveTotal API credentials configured", 'red')
 		return []
 
 	else:

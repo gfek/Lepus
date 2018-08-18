@@ -14,7 +14,7 @@ def init(domain):
 	api = shodan.Shodan(SHODAN_API_KEY)
 
 	if SHODAN_API_KEY == "":
-		print "  \__", colored("No Shodan API key found :(", 'red')
+		print "  \__", colored("No Shodan API key configured", 'red')
 		return []
 
 	else:

@@ -11,11 +11,11 @@ def init(domain):
 	parser = SafeConfigParser()
 	parser.read('config.ini')
 	API_URL = "https://www.censys.io/api/v1"
-	UID = parser.get('Censys', 'UID')
-	SECRET = parser.get('Censys', 'SECRET')
+	UID = parser.get('Censys', 'CENSYS_UID')
+	SECRET = parser.get('Censys', 'CENSYS_SECRET')
 
 	if UID == "":
-		print "  \__", colored("No Censys API credentials found :(", 'red')
+		print "  \__", colored("No Censys API credentials configured", 'red')
 		return []
 
 	else:

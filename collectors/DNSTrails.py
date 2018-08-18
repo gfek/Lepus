@@ -13,7 +13,7 @@ def init(domain):
 	DNSTrails_API_KEY = parser.get('DNSTrails', 'DNSTrails_API_KEY')
 
 	if DNSTrails_API_KEY == "":
-		print "  \__", colored("No DNSTrails API key found :(", 'red')
+		print "  \__", colored("No DNSTrails API key configured", 'red')
 		return []
 
 	else:

@@ -13,7 +13,7 @@ def init(domain):
 	VT_API_KEY = parser.get('VirusTotal', 'VT_API_KEY')
 
 	if VT_API_KEY == "":
-		print "  \__", colored("No VirusTotal API key found :(", 'red')
+		print "  \__", colored("No VirusTotal API key configured", 'red')
 		return []
 
 	else:

@@ -18,6 +18,7 @@ import collectors.ThreatCrowd
 import collectors.VirusTotal
 import collectors.WaybackMachine
 import submodules.Permutations
+import submodules.PortScan
 
 simplefilter("ignore")
 
@@ -41,6 +42,7 @@ if __name__ == '__main__':
 	parser.add_argument("-nc", "--no-collectors", action="store_true", dest='noCollectors', help="don't use collectors [default is false]", default=False)
 	parser.add_argument("--permutate", action="store_true", dest='permutate', help="perform permutations on resolved domains", default=False)
 	parser.add_argument("-pw", "--permutation-wordlist", dest='permutation_wordlist', help="wordlist to perform permutations with [default is ./lists/words.txt]", type=str, default="lists/words.txt")
+	parser.add_argument("--portscan", action="store_true", dest='port_scan', help="scan resolved public IP addresses for open ports", default=False)
 	parser.add_argument("-v", "--version", action="version", version="%(prog)s v2.0")
 	args = parser.parse_args()
 
@@ -102,8 +104,14 @@ if __name__ == '__main__':
 				pass
 
 			IPs = set([address for hostname, address in resolved.items()])
-			utils.massASN(args.domain, IPs, args.threads, args.json)
-			utils.massWHOIS(args.domain, IPs, args.threads, args.json)
+
+			if len(IPs) > 0:
+				utils.massASN(args.domain, IPs, args.threads, args.json)
+				utils.massWHOIS(args.domain, IPs, args.threads, args.json)
+
+				if args.port_scan:
+					open_ports = submodules.PortScan.init(args.domain, IPs, args.threads, args.json)
+
 			utils.deleteEmptyFiles(args.domain)
 
 	except KeyboardInterrupt:
