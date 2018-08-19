@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 from argparse import ArgumentParser
 from warnings import simplefilter
 from termcolor import colored
@@ -43,6 +45,7 @@ if __name__ == '__main__':
 	parser.add_argument("--permutate", action="store_true", dest='permutate', help="perform permutations on resolved domains", default=False)
 	parser.add_argument("-pw", "--permutation-wordlist", dest='permutation_wordlist', help="wordlist to perform permutations with [default is ./lists/words.txt]", type=str, default="lists/words.txt")
 	parser.add_argument("--portscan", action="store_true", dest='port_scan', help="scan resolved public IP addresses for open ports", default=False)
+	parser.add_argument("-p", "--ports", action="store", dest='ports', help="set of ports to be used by the portscan module [default is medium]", default="medium")
 	parser.add_argument("-v", "--version", action="version", version="%(prog)s v2.0")
 	args = parser.parse_args()
 
@@ -110,7 +113,7 @@ if __name__ == '__main__':
 				utils.massWHOIS(args.domain, IPs, args.threads, args.json)
 
 				if args.port_scan:
-					open_ports = submodules.PortScan.init(args.domain, IPs, args.threads, args.json)
+					open_ports = submodules.PortScan.init(args.domain, IPs, args.ports, args.threads, args.json)
 
 			utils.deleteEmptyFiles(args.domain)
 
