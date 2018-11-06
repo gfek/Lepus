@@ -27,7 +27,7 @@ def init(domain):
 			response = requests.get(url, auth=auth, json=data, headers=headers)
 
 			if response.status_code == 402:
-				print "  \__", colored("Quota exceeded! Bad luck :(", 'red')
+				print "  \__", colored("Quota exceeded!", 'red')
 				return []
 
 			try:

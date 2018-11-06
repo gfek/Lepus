@@ -72,7 +72,7 @@ def permuteNumbers(subdomain):
 	return results
 
 
-def init(domain, subdomains, wordlist):
+def init(domain, subdomains, wildcards, wordlist):
 	print "{0} {1} {2}".format(colored("\n[*]-Performing permutations on", "yellow"), colored(len(subdomains), "cyan"), colored("resolved hostnames...", "yellow"))
 
 	permutated_subdomains = []
@@ -91,11 +91,22 @@ def init(domain, subdomains, wordlist):
 		return None
 
 	for subdomain in subdomains:
-		subdomain = subdomain.split(domain)[0][:-1]
-		permutated_subdomains += permuteDash(subdomain, words)
-		permutated_subdomains += permuteDot(subdomain, words)
-		permutated_subdomains += permuteWords(subdomain, words)
-		permutated_subdomains += permuteNumbers(subdomain)
+		is_wildcard = False
+
+		for hostnames in wildcards.values():
+			for hostname in hostnames:
+				if hostname in subdomain:
+					is_wildcard = True
+
+		if is_wildcard:
+			pass
+
+		else:
+			subdomain = subdomain.split(domain)[0][:-1]
+			permutated_subdomains += permuteDash(subdomain, words)
+			permutated_subdomains += permuteDot(subdomain, words)
+			permutated_subdomains += permuteWords(subdomain, words)
+			permutated_subdomains += permuteNumbers(subdomain)
 
 	permutated_subdomains = set(permutated_subdomains)
 
