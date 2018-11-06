@@ -14,7 +14,7 @@ def init(domain):
 	UID = parser.get('Censys', 'CENSYS_UID')
 	SECRET = parser.get('Censys', 'CENSYS_SECRET')
 
-	if UID == "":
+	if UID == "" or SECRET == "":
 		print "  \__", colored("No Censys API credentials configured", 'red')
 		return []
 
@@ -37,6 +37,9 @@ def init(domain):
 
 			print "  \__", colored("Unique subdomains found:", 'cyan'), colored(len(C), 'yellow')
 			return C
+
+		except KeyError:
+			return []
 
 		except requests.exceptions.RequestException as err:
 			print "  \__", colored(err, 'red')

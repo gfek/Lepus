@@ -5,16 +5,16 @@ from termcolor import colored
 
 def parseResponse(response, domain):
 	token = response.split("\n]\n,[")[2].split("]\n")[0].split(",")[1].strip("\"")
-	hostnameRegex = "\"([\w\.\-]+\.%s)\"" % (domain.replace(".", "\."))
+	hostnameRegex = "([\w\.\-]+\.%s)" % (domain.replace(".", "\."))
 	hosts = findall(hostnameRegex, response)
 
-	return token, hosts
+	return token, [host.lstrip('.') for host in hosts]
 
 
 def init(domain):
 	GTR = []
 
-	print colored("[*]-Searching Google Transparency Report...", 'yellow')
+	print colored("[*]-Searching Google Transparency...", 'yellow')
 
 	baseURL = "https://www.google.com/transparencyreport/api/v3/httpsreport/ct/certsearch"
 	headers = {'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:52.0) Gecko/20100101 Firefox/52.0', 'referrer': 'https://transparencyreport.google.com/https/certificates'}

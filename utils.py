@@ -1,14 +1,13 @@
 from IPy import IP
-from time import time
 from tqdm import tqdm
 from json import dumps
-from time import sleep
 from ipwhois import IPWhois
 from ipwhois.net import Net
 from termcolor import colored
 from ipwhois.asn import IPASN
 from dns.name import EmptyLabel
 from socket import gethostbyname
+from time import sleep, time, ctime
 from dns.exception import DNSException
 from os.path import exists, isfile, join
 from os import makedirs, listdir, stat, remove
@@ -19,37 +18,30 @@ import concurrent.futures.thread
 
 def deleteEmptyFiles(directory):
 	try:
-		filenames = [filename for filename in listdir(directory) if isfile(join(directory, filename))]
+		filenames = [filename for filename in listdir(join("results", directory)) if isfile(join("results", directory, filename))]
 
 		for filename in filenames:
-			if stat(join(directory, filename)).st_size == 0:
-				remove(join(directory, filename))
+			if stat(join("results", directory, filename)).st_size == 0:
+				remove(join("results", directory, filename))
 
 	except OSError:
 		pass
 
 
-def createWorkspace(directory):
-	if not exists(directory):
-		makedirs(directory)
+def diffLastRun(domain, resolved_public, old_resolved_public, last_run, out_to_json):
+	if old_resolved_public:
+		print "{0} - {1}".format(colored("\n[*]-Differences from last run", 'yellow'), colored(ctime(int(last_run)), 'cyan'))
+		diff = {}
 
-		return True
+		for host, ip in resolved_public.items():
+			if host not in old_resolved_public:
+				print "  \__", colored("[+]", 'green'), colored("{0} ({1})".format(host, ip), 'white')
+				diff[host] = ip
 
-	else:
-		return False
-
-
-def loadOldFindings(directory):
-	filenames = [filename for filename in listdir(directory) if isfile(join(directory, filename))]
-	OF = []
-
-	print colored("\n[*]-Loading Old Findings...", 'yellow')
-
-	for filename in filenames:
-		if "resolved" in filename:
+		if out_to_json:
 			try:
-				with open(join(directory, filename), 'r') as old_file:
-					OF += (line.split('|')[0] for line in old_file.readlines())
+				with open(join("results", domain, "diff.json"), "w") as diff_file:
+					diff_file.write("{0}\n".format(dumps(diff)))
 
 			except OSError:
 				pass
@@ -57,8 +49,80 @@ def loadOldFindings(directory):
 			except IOError:
 				pass
 
+		try:
+			with open(join("results", domain, "diff.csv"), "w") as diff_file:
+				for host, ip in diff.items():
+					diff_file.write("{0}|{1}\n".format(host, ip))
+
+		except OSError:
+			pass
+
+		except IOError:
+			pass
+
+
+def createWorkspace(directory):
+	dir_path = join("results", directory)
+
+	if not exists(dir_path):
+		makedirs(dir_path)
+
+		return True
+
+	else:
+		return False
+
+
+def saveCollectorResults(domain, subdomains):
+	if subdomains:
+		try:
+			with open(join("results", domain, "collector_results.txt"), "w") as collector_file:
+				for subdomain in subdomains:
+					collector_file.write("{0}\n".format(subdomain))
+
+		except OSError:
+			pass
+
+		except IOError:
+			pass
+
+
+def loadOldFindings(directory):
+	filenames = [filename for filename in listdir(join("results", directory)) if isfile(join("results", directory, filename))]
+	OF = []
+	ORP = []
+	collector_results = []
+
+	print colored("\n[*]-Loading Old Findings...", 'yellow')
+
+	for filename in filenames:
+		if "resolved" in filename:
+			try:
+				with open(join("results", directory, filename), 'r') as old_file:
+					lines = old_file.readlines()
+
+					for line in lines:
+						OF.append(line.split('|')[0])
+
+						if "public" in filename:
+							ORP.append(line.split('|')[0])
+
+			except OSError:
+				pass
+
+			except IOError:
+				pass
+
+		if filename == ".timestamp":
+			with open(join("results", directory, filename), 'r') as timestamp_file:
+				last_run = timestamp_file.read()
+
+		if filename == "collector_results.txt":
+			with open(join("results", directory, filename), 'r') as collector_file:
+				collector_results += [line.strip() for line in collector_file.readlines()]
+
 	print "  \__", colored("Unique subdomains loaded:", 'cyan'), colored(len(OF), 'yellow')
-	return OF
+	return OF, ORP, last_run, collector_results
 
 
 def loadWordlist(domain, filepath):
@@ -141,7 +205,7 @@ def getDNSrecords(domain, out_to_json):
 
 	if out_to_json:
 		try:
-			with open('/'.join([domain, "dns.json"]), "w") as dns_file:
+			with open(join("results", domain, "dns.json"), "w") as dns_file:
 				dns_file.write(dumps(RES))
 
 		except OSError:
@@ -151,7 +215,7 @@ def getDNSrecords(domain, out_to_json):
 			pass
 
 	try:
-		with open('/'.join([domain, "dns.csv"]), "w") as dns_file:
+		with open(join("results", domain, "dns.csv"), "w") as dns_file:
 			for key, value in RES.iteritems():
 				for record in value:
 					dns_file.write("{0}|{1}\n".format(key, record))
@@ -163,19 +227,133 @@ def getDNSrecords(domain, out_to_json):
 		pass
 
 
-def checkWildcard(domain, showWildcard):
-	print colored("[*]-Checking if domain {0} is wildcard...".format(domain), 'yellow')
+def checkWildcard(domain):
+	resolution = resolve('.'.join([str(int(time())), domain]))
 
-	wildcard = resolve('.'.join([str(int(time())), domain]))
-
-	if None not in wildcard:
-		print "  \__", colored("Wildcard domain was identified!", 'red')
-		print "    \__", colored("{0} {1}".format(wildcard[0], wildcard[1]), 'red')
+	if None in resolution:
+		return None
 
 	else:
-		print "  \__", colored("Not a wildcard domain.", 'cyan')
+		return (domain, resolution[1])
 
-	return wildcard[1] if not showWildcard else None
+
+def identifyWildcards(domain, hosts, threads, previously_identified, out_to_json):
+	sub_levels = uniqueSubdomainLevels(hosts)
+	wildcards = []
+
+	if len(sub_levels) <= 100000:
+		print colored("\n[*]-Checking for wildcards...", 'yellow')
+	else:
+		print colored("\n[*]-Checking for wildcards, in chunks of 100,000...", 'yellow')
+
+	subLevelChunks = list(chunks(list(sub_levels), 100000))
+	iteration = 1
+
+	for subLevelChunk in subLevelChunks:
+		with ThreadPoolExecutor(max_workers=threads) as executor:
+			tasks = {executor.submit(checkWildcard, sub_level) for sub_level in subLevelChunk}
+
+			try:
+				completed = as_completed(tasks)
+				completed = tqdm(completed, total=len(subLevelChunk), desc="  \__ {0}".format(colored("Progress {0}/{1}".format(iteration, len(subLevelChunks)), 'cyan')), dynamic_ncols=True)
+
+				for task in completed:
+					result = task.result()
+
+					if result is not None:
+						wildcards.append(result)
+
+			except KeyboardInterrupt:
+				executor._threads.clear()
+				concurrent.futures.thread._threads_queues.clear()
+				print colored("\n\n[*]-Received KeyboardInterrupt. Exiting...\n", 'red')
+				sleep(2)
+				exit(-1)
+
+		iteration += 1
+
+	optimized_wildcards = {}
+
+	if wildcards:
+		reversed_wildcards = [('.'.join(reversed(hostname.split('.'))), ip) for hostname, ip in wildcards]
+		sorted_wildcards = sorted(reversed_wildcards, key=lambda rw: rw[0])
+
+		for reversed_hostname, ip in sorted_wildcards:
+			hostname = '.'.join(reversed(reversed_hostname.split('.')))
+			new_wildcard = True
+
+			if ip in optimized_wildcards:
+				for entry in optimized_wildcards[ip]:
+					if len(hostname.split('.')) > len(entry.split('.')):
+						if entry in hostname:
+							new_wildcard = False
+
+				if new_wildcard:
+					optimized_wildcards[ip].append(hostname)
+
+			else:
+				optimized_wildcards[ip] = [hostname]
+
+		print "    \__ {0} {1}".format(colored("Wildcards that were identified:", "yellow"), colored(sum(len(hostnames) for hostnames in optimized_wildcards.values()) - sum(len(hostnames) for hostnames in previously_identified.values()), "cyan"))
+
+		for ip, hostnames in optimized_wildcards.items():
+			for hostname in hostnames:
+				if previously_identified:
+					if ip in previously_identified:
+						if hostname in previously_identified[ip]:
+							pass
+
+						else:
+							print "      \__ {0}.{1} ==> {2}".format(colored('*', "red"), colored(hostname, "cyan"), colored(ip, 'red'))
+
+					else:
+						print "      \__ {0}.{1} ==> {2}".format(colored('*', "red"), colored(hostname, "cyan"), colored(ip, 'red'))
+
+				else:
+					print "      \__ {0}.{1} ==> {2}".format(colored('*', "red"), colored(hostname, "cyan"), colored(ip, 'red'))
+
+		if out_to_json:
+			try:
+				with open(join("results", domain, "wildcards.json"), "w") as wildcard_file:
+					wildcard_file.write("{0}\n".format(dumps(optimized_wildcards)))
+
+			except OSError:
+				pass
+
+			except IOError:
+				pass
+
+		try:
+			with open(join("results", domain, "wildcards.csv"), "w") as wildcard_file:
+				for ip, hostnames in optimized_wildcards.items():
+					for hostname in hostnames:
+						wildcard_file.write("{0}|{1}\n".format(hostname, ip))
+
+		except OSError:
+			pass
+
+		except IOError:
+			pass
+
+	return optimized_wildcards
+
+
+def uniqueSubdomainLevels(hosts):
+	unique_subs = set()
+
+	for host in hosts:
+		unique_subs.add('.'.join(sub for sub in host.split('.')[1:]))
+
+	return list(unique_subs)
+
+
+def uniqueList(subdomains):
+	uniqe_subdomains = set()
+
+	for subdomain in subdomains:
+		uniqe_subdomains.add(subdomain.lower())
+
+	return list(uniqe_subdomains)
 
 
 def filterDomain(domain, subdomains):
@@ -204,7 +382,7 @@ def chunks(list, numberInChunk):
 		yield list[i:i + numberInChunk]
 
 
-def massResolve(domain, hostnames, collector_hostnames, threads, wildcard, out_to_json, already_resolved):
+def massResolve(domain, hostnames, collector_hostnames, threads, wildcards, out_to_json, already_resolved):
 	resolved = {}
 	resolved_public = {}
 	resolved_private = {}
@@ -214,27 +392,26 @@ def massResolve(domain, hostnames, collector_hostnames, threads, wildcard, out_t
 	unresolved = {}
 
 	if len(hostnames) <= 100000:
-		print "{0} {1} {2}".format(colored("\n[*]-Attempting to resolve", "yellow"), colored(len(hostnames) - len(already_resolved), "cyan"), colored("hostnames...", "yellow"))
+		print "{0} {1} {2}".format(colored("\n[*]-Attempting to resolve", "yellow"), colored(len(hostnames), "cyan"), colored("hostnames...", "yellow"))
 	else:
-		print "{0} {1} {2}".format(colored("\n[*]-Attempting to resolve", "yellow"), colored(len(hostnames) - len(already_resolved), "cyan"), colored("hostnames, in chunks of 100,000...", "yellow"))
+		print "{0} {1} {2}".format(colored("\n[*]-Attempting to resolve", "yellow"), colored(len(hostnames), "cyan"), colored("hostnames, in chunks of 100,000...", "yellow"))
 
-	hostNamesInChunks = chunks(list(hostnames), 100000)
+	hostNameChunks = list(chunks(list(hostnames), 100000))
+	iteration = 1
 
-	for hostNameChunk in hostNamesInChunks:
-		hostnames = hostNameChunk
-
+	for hostNameChunk in hostNameChunks:
 		with ThreadPoolExecutor(max_workers=threads) as executor:
-			tasks = {executor.submit(resolve, hostname) for hostname in hostnames}
+			tasks = {executor.submit(resolve, hostname) for hostname in hostNameChunk}
 
 			try:
 				completed = as_completed(tasks)
-				completed = tqdm(completed, total=len(hostnames), desc="  \__ {0}".format(colored("Progress", 'cyan')), dynamic_ncols=True)
+				completed = tqdm(completed, total=len(hostNameChunk), desc="  \__ {0}".format(colored("Progress {0}/{1}".format(iteration, len(hostNameChunks)), 'cyan')), dynamic_ncols=True)
 
 				for task in completed:
 					try:
 						result = task.result()
 
-						if None not in result and wildcard not in result:
+						if None not in result and result[1] not in wildcards:
 							ip_type = IP(result[1]).iptype()
 
 							if ip_type == "PUBLIC":
@@ -257,6 +434,36 @@ def massResolve(domain, hostnames, collector_hostnames, threads, wildcard, out_t
 								resolved[result[0]] = result[1]
 								resolved_carrier_grade_nat[result[0]] = result[1]
 
+						elif None not in result and result[1] in wildcards:
+							actual_wildcard = False
+
+							for value in wildcards[result[1]]:
+								if value in result[0]:
+									actual_wildcard = True
+
+							if not actual_wildcard or result[0] in collector_hostnames:
+								ip_type = IP(result[1]).iptype()
+
+								if ip_type == "PUBLIC":
+									resolved[result[0]] = result[1]
+									resolved_public[result[0]] = result[1]
+
+								elif ip_type == "PRIVATE":
+									resolved[result[0]] = result[1]
+									resolved_private[result[0]] = result[1]
+
+								elif ip_type == "RESERVED":
+									resolved[result[0]] = result[1]
+									resolved_reserved[result[0]] = result[1]
+
+								elif ip_type == "LOOPBACK":
+									resolved[result[0]] = result[1]
+									resolved_loopback[result[0]] = result[1]
+
+								elif ip_type == "CARRIER_GRADE_NAT":
+									resolved[result[0]] = result[1]
+									resolved_carrier_grade_nat[result[0]] = result[1]
+
 						elif None in result:
 							if result[0] in collector_hostnames:
 								unresolved[result[0]] = result[1]
@@ -271,15 +478,31 @@ def massResolve(domain, hostnames, collector_hostnames, threads, wildcard, out_t
 				sleep(2)
 				exit(-1)
 
+		iteration += 1
+
 	print "    \__ {0} {1}".format(colored("Hostnames that were resolved:", "yellow"), colored(len(resolved) - len(already_resolved), "cyan"))
 
 	for hostname, address in resolved.items():
 		if hostname not in already_resolved:
-			print "      \__ {0} {1}".format(colored(hostname, "cyan"), colored(address, 'yellow'))
+			if address in wildcards:
+				actual_wildcard = False
+
+				for value in wildcards[address]:
+					if value in hostname:
+						actual_wildcard = True
+
+				if actual_wildcard:
+					print "      \__ {0} {1}".format(colored(hostname, "cyan"), colored(address, 'red'))
+
+				else:
+					print "      \__ {0} {1}".format(colored(hostname, "cyan"), colored(address, 'yellow'))
+
+			else:
+				print "      \__ {0} {1}".format(colored(hostname, "cyan"), colored(address, 'yellow'))
 
 	if out_to_json:
 		try:
-			with open('/'.join([domain, "resolved_public.json"]), "w") as resolved_public_file:
+			with open(join("results", domain, "resolved_public.json"), "w") as resolved_public_file:
 				if resolved_public:
 					resolved_public_file.write("{0}\n".format(dumps(resolved_public)))
 
@@ -290,7 +513,7 @@ def massResolve(domain, hostnames, collector_hostnames, threads, wildcard, out_t
 			pass
 
 		try:
-			with open('/'.join([domain, "resolved_private.json"]), "w") as resolved_private_file:
+			with open(join("results", domain, "resolved_private.json"), "w") as resolved_private_file:
 				if resolved_private:
 					resolved_private_file.write("{0}\n".format(dumps(resolved_private)))
 
@@ -301,7 +524,7 @@ def massResolve(domain, hostnames, collector_hostnames, threads, wildcard, out_t
 			pass
 
 		try:
-			with open('/'.join([domain, "resolved_reserved.json"]), "w") as resolved_reserved_file:
+			with open(join("results", domain, "resolved_reserved.json"), "w") as resolved_reserved_file:
 				if resolved_reserved:
 					resolved_reserved_file.write("{0}\n".format(dumps(resolved_reserved)))
 
@@ -312,7 +535,7 @@ def massResolve(domain, hostnames, collector_hostnames, threads, wildcard, out_t
 			pass
 
 		try:
-			with open('/'.join([domain, "resolved_loopback.json"]), "w") as resolved_loopback_file:
+			with open(join("results", domain, "resolved_loopback.json"), "w") as resolved_loopback_file:
 				if resolved_loopback:
 					resolved_loopback_file.write("{0}\n".format(dumps(resolved_loopback)))
 
@@ -323,7 +546,7 @@ def massResolve(domain, hostnames, collector_hostnames, threads, wildcard, out_t
 			pass
 
 		try:
-			with open('/'.join([domain, "resolved_carrier_grade_nat.json"]), "w") as resolved_carrier_grade_nat_file:
+			with open(join("results", domain, "resolved_carrier_grade_nat.json"), "w") as resolved_carrier_grade_nat_file:
 				if resolved_carrier_grade_nat:
 					resolved_carrier_grade_nat_file.write("{0}\n".format(dumps(resolved_carrier_grade_nat)))
 
@@ -334,7 +557,7 @@ def massResolve(domain, hostnames, collector_hostnames, threads, wildcard, out_t
 			pass
 
 		try:
-			with open('/'.join([domain, "unresolved.json"]), "w") as unresolved_file:
+			with open(join("results", domain, "unresolved.json"), "w") as unresolved_file:
 				if unresolved:
 					unresolved_file.write("{0}\n".format(dumps(unresolved)))
 
@@ -345,7 +568,7 @@ def massResolve(domain, hostnames, collector_hostnames, threads, wildcard, out_t
 			pass
 
 	try:
-		with open('/'.join([domain, "resolved_public.csv"]), "w") as resolved_public_file:
+		with open(join("results", domain, "resolved_public.csv"), "w") as resolved_public_file:
 			for hostname, address in resolved_public.items():
 				resolved_public_file.write("{0}|{1}\n".format(hostname, address))
 
@@ -356,7 +579,7 @@ def massResolve(domain, hostnames, collector_hostnames, threads, wildcard, out_t
 		pass
 
 	try:
-		with open('/'.join([domain, "resolved_private.csv"]), "w") as resolved_private_file:
+		with open(join("results", domain, "resolved_private.csv"), "w") as resolved_private_file:
 			for hostname, address in resolved_private.items():
 				resolved_private_file.write("{0}|{1}\n".format(hostname, address))
 
@@ -367,7 +590,7 @@ def massResolve(domain, hostnames, collector_hostnames, threads, wildcard, out_t
 		pass
 
 	try:
-		with open('/'.join([domain, "resolved_reserved.csv"]), "w") as resolved_reserved_file:
+		with open(join("results", domain, "resolved_reserved.csv"), "w") as resolved_reserved_file:
 			for hostname, address in resolved_reserved.items():
 				resolved_reserved_file.write("{0}|{1}\n".format(hostname, address))
 
@@ -378,7 +601,7 @@ def massResolve(domain, hostnames, collector_hostnames, threads, wildcard, out_t
 		pass
 
 	try:
-		with open('/'.join([domain, "resolved_loopback.csv"]), "w") as resolved_loopback_file:
+		with open(join("results", domain, "resolved_loopback.csv"), "w") as resolved_loopback_file:
 			for hostname, address in resolved_loopback.items():
 				resolved_loopback_file.write("{0}|{1}\n".format(hostname, address))
 
@@ -389,7 +612,7 @@ def massResolve(domain, hostnames, collector_hostnames, threads, wildcard, out_t
 		pass
 
 	try:
-		with open('/'.join([domain, "resolved_carrier_grade_nat.csv"]), "w") as resolved_carrier_grade_nat_file:
+		with open(join("results", domain, "resolved_carrier_grade_nat.csv"), "w") as resolved_carrier_grade_nat_file:
 			for hostname, address in resolved_carrier_grade_nat.items():
 				resolved_carrier_grade_nat_file.write("{0}|{1}\n".format(hostname, address))
 
@@ -400,7 +623,7 @@ def massResolve(domain, hostnames, collector_hostnames, threads, wildcard, out_t
 		pass
 
 	try:
-		with open('/'.join([domain, "unresolved.csv"]), "w") as unresolved_file:
+		with open(join("results", domain, "unresolved.csv"), "w") as unresolved_file:
 			for hostname, address in unresolved.items():
 				unresolved_file.write("{0}|{1}\n".format(hostname, address))
 
@@ -410,7 +633,7 @@ def massResolve(domain, hostnames, collector_hostnames, threads, wildcard, out_t
 	except IOError:
 		pass
 
-	return resolved
+	return resolved, resolved_public
 
 
 def asn(ip):
@@ -422,7 +645,7 @@ def asn(ip):
 
 
 def massASN(domain, IPs, threads, out_to_json):
-	print "{0} {1} {2}".format(colored("\n[*] Retrieving unique Autonomous Systems for", "yellow"), colored(len(IPs), "cyan"), colored("unique IPs...", "yellow"))
+	print "{0} {1} {2}".format(colored("\n[*]-Retrieving unique Autonomous Systems for", "yellow"), colored(len(IPs), "cyan"), colored("unique public IPs...", "yellow"))
 
 	ip2asn = {}
 
@@ -468,7 +691,7 @@ def massASN(domain, IPs, threads, out_to_json):
 			ip2asn_json[value['asn']] = [value['asn_cidr'], value['asn_description']]
 
 		try:
-			with open('/'.join([domain, "asn.json"]), "w") as asn_file:
+			with open(join("results", domain, "asn.json"), "w") as asn_file:
 				asn_file.write("{0}\n".format(dumps(ip2asn_json)))
 
 		except OSError:
@@ -478,7 +701,7 @@ def massASN(domain, IPs, threads, out_to_json):
 			pass
 
 	try:
-		with open('/'.join([domain, "asn.csv"]), "w") as asn_file:
+		with open(join("results", domain, "asn.csv"), "w") as asn_file:
 			for value in ip2asn_values:
 				asn_file.write("{0}|{1}|{2}\n".format(value['asn_cidr'], value['asn'], value['asn_description']))
 
@@ -497,7 +720,7 @@ def whois(ip):
 
 
 def massWHOIS(domain, IPs, threads, out_to_json):
-	print "{0} {1} {2}".format(colored("\n[*] Retrieving unique WHOIS records for", "yellow"), colored(len(IPs), "cyan"), colored("unique IPs...", "yellow"))
+	print "{0} {1} {2}".format(colored("\n[*]-Retrieving unique WHOIS records for", "yellow"), colored(len(IPs), "cyan"), colored("unique public IPs...", "yellow"))
 
 	ip2whois = {}
 
@@ -534,7 +757,7 @@ def massWHOIS(domain, IPs, threads, out_to_json):
 
 	if out_to_json:
 		try:
-			with open('/'.join([domain, "whois.json"]), "w") as whois_file:
+			with open(join("results", domain, "whois.json"), "w") as whois_file:
 				whois_file.write("{0}\n".format(dumps(ip2whois)))
 
 		except OSError:
@@ -544,7 +767,7 @@ def massWHOIS(domain, IPs, threads, out_to_json):
 			pass
 
 	try:
-		with open('/'.join([domain, "whois.csv"]), "w") as whois_file:
+		with open(join("results", domain, "whois.csv"), "w") as whois_file:
 			for ip_range, name in ip2whois.items():
 				whois_file.write("{0}|{1}\n".format(ip_range, name))
 

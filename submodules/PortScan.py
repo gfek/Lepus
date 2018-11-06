@@ -1,27 +1,65 @@
-from IPy import IP
 from tqdm import tqdm
-from json import dumps
 from time import sleep
+from os.path import join
 from termcolor import colored
 from socket import socket, AF_INET, SOCK_STREAM
+from ssl import create_default_context, CERT_NONE
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import concurrent.futures.thread
 
 
+def urlize(target, domains):
+	hosts = [hostname for hostname, address in domains.items() if address == target[0]]
+
+	for host in hosts:
+		if target[1] == 80:
+			return "http://{0}/".format(host)
+
+		elif target[1] == 443:
+			return "https://{0}/".format(host)
+
+		else:
+			if target[2]:
+				return "https://{0}:{1}/".format(host, target[1])
+
+			else:
+				return "http://{0}:{1}/".format(host, target[1])
+
+
 def scanTarget(target):
+	isOpen = False
+
 	try:
 		s = socket(AF_INET, SOCK_STREAM)
 		s.settimeout(1)
-		result = s.connect_ex(target)
+		result1 = s.connect_ex(target)
 
-		if not result:
-			return target
+		if not result1:
+			if target[1] != 80 and target[1] != 443:
+				isOpen = True
+				context = create_default_context()
+				context.check_hostname = False
+				context.verify_mode = CERT_NONE
+				context.wrap_socket(s)
+
+				return (target[0], target[1], True)
+
+			elif target[1] == 80:
+				return (target[0], target[1], False)
+
+			elif target[1] == 443:
+				return (target[0], target[1], True)
+
+	except Exception as e:
+		if isOpen:
+			if "unsupported protocol" in e:
+				return (target[0], target[1], True)
+
+			else:
+				return (target[0], target[1], False)
 
 		else:
 			return None
-
-	except Exception:
-		return None
 
 	finally:
 		s.close()
@@ -53,15 +91,10 @@ def massConnectScan(targets, threads):
 	return open_ports
 
 
-def init(domain, IPs, port_scan, threads, out_to_json):
+def init(resolved, domain, IPs, port_scan, threads):
 	targets = []
-	public_IPs = []
 
-	for ip in IPs:
-		if IP(ip).iptype() == "PUBLIC":
-			public_IPs.append(ip)
-
-	print "{0} {1} {2}".format(colored("\n[*] Scanning", "yellow"), colored(len(public_IPs), "cyan"), colored("unique public IPs for open ports...", "yellow"))
+	print "{0} {1} {2}".format(colored("\n[*] Scanning", "yellow"), colored(len(IPs), "cyan"), colored("unique public IPs for open ports...", "yellow"))
 
 	if port_scan == "small":
 		ports = [80, 443]
@@ -83,7 +116,7 @@ def init(domain, IPs, port_scan, threads, out_to_json):
 			print "  \__", colored("Invalid set of ports specified", "red")
 			return
 
-	for ip in public_IPs:
+	for ip in IPs:
 		for port in ports:
 			targets.append((ip, port))
 
@@ -103,21 +136,10 @@ def init(domain, IPs, port_scan, threads, out_to_json):
 	for key, values in results_json.items():
 		print "      \__", colored(key, 'cyan'), ':', ', '.join(colored(str(value), 'yellow') for value in sorted(values))
 
-	if out_to_json:
-		try:
-			with open('/'.join([domain, "port_scan.json"]), "w") as port_scan_file:
-				port_scan_file.write("{0}\n".format(dumps(results_json)))
-
-		except OSError:
-			pass
-
-		except IOError:
-			pass
-
 	try:
-		with open('/'.join([domain, "port_scan.csv"]), "w") as port_scan_file:
-			for key, values in results_json.items():
-				port_scan_file.write("{0}|{1}\n".format(key, ','.join(str(value) for value in sorted(values))))
+		with open(join("results", domain, "urls.txt"), "w") as port_scan_file:
+			for target in results:
+				port_scan_file.write("{0}\n".format(urlize(target, resolved)))
 
 	except OSError:
 		pass
