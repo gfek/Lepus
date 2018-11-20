@@ -5,16 +5,16 @@ def permuteDash(subdomain, wordlist):
 	results = []
 
 	for word in wordlist:
-		results.append('-'.join([word, subdomain]))
-		results.append('-'.join([subdomain, word]))
+		results.append("-".join([word, subdomain]))
+		results.append("-".join([subdomain, word]))
 
 	if "." in subdomain:
 		subParts = subdomain.split(".")
 
 		for part in subParts:
 			for word in wordlist:
-				results.append(subdomain.replace(part, '-'.join([word, part])))
-				results.append(subdomain.replace(part, '-'.join([part, word])))
+				results.append(subdomain.replace(part, "-".join([word, part])))
+				results.append(subdomain.replace(part, "-".join([part, word])))
 
 	return results
 
@@ -23,15 +23,15 @@ def permuteDot(subdomain, wordlist):
 	results = []
 
 	for word in wordlist:
-		results.append('.'.join([word, subdomain]))
-		results.append('.'.join([subdomain, word]))
+		results.append(".".join([word, subdomain]))
+		results.append(".".join([subdomain, word]))
 
 	if "." in subdomain:
 		subParts = subdomain.split(".")
 
 		for part in subParts:
 			for word in wordlist:
-				results.append(subdomain.replace(part, '.'.join([word, part])))
+				results.append(subdomain.replace(part, ".".join([word, part])))
 
 	return results
 
@@ -40,16 +40,16 @@ def permuteWords(subdomain, wordlist):
 	results = []
 
 	for word in wordlist:
-		results.append(''.join([word, subdomain]))
-		results.append(''.join([subdomain, word]))
+		results.append("".join([word, subdomain]))
+		results.append("".join([subdomain, word]))
 
 	if "." in subdomain:
 		subParts = subdomain.split(".")
 
 		for part in subParts:
 			for word in wordlist:
-				results.append(subdomain.replace(part, ''.join([word, part])))
-				results.append(subdomain.replace(part, ''.join([part, word])))
+				results.append(subdomain.replace(part, "".join([word, part])))
+				results.append(subdomain.replace(part, "".join([part, word])))
 
 	return results
 
@@ -58,22 +58,25 @@ def permuteNumbers(subdomain):
 	results = []
 
 	for number in range(10):
-		results.append('-'.join([subdomain, str(number)]))
-		results.append(''.join([subdomain, str(number)]))
+		results.append("-".join([subdomain, str(number)]))
+		results.append("".join([subdomain, str(number)]))
 
 	if "." in subdomain:
 		subParts = subdomain.split(".")
 
 		for part in subParts:
 			for number in range(10):
-				results.append(subdomain.replace(part, '-'.join([part, str(number)])))
-				results.append(subdomain.replace(part, ''.join([part, str(number)])))
+				results.append(subdomain.replace(part, "-".join([part, str(number)])))
+				results.append(subdomain.replace(part, "".join([part, str(number)])))
 
 	return results
 
 
 def init(domain, subdomains, wildcards, wordlist):
 	print "{0} {1} {2}".format(colored("\n[*]-Performing permutations on", "yellow"), colored(len(subdomains), "cyan"), colored("resolved hostnames...", "yellow"))
+
+	if not wordlist:
+		wordlist = "lists/words.txt"
 
 	permutated_subdomains = []
 	permutations = []
@@ -111,7 +114,7 @@ def init(domain, subdomains, wildcards, wordlist):
 	permutated_subdomains = set(permutated_subdomains)
 
 	for subdomain in permutated_subdomains:
-		permutations.append('.'.join([subdomain, domain]))
+		permutations.append(".".join([subdomain, domain]))
 
-	print "  \__", colored("Generated subdomains:", 'cyan'), colored(len(permutations), 'yellow')
+	print "  \__", colored("Generated subdomains:", "cyan"), colored(len(permutations), "yellow")
 	return permutations

@@ -6,14 +6,14 @@ from termcolor import colored
 def init(domain):
 	HT = []
 
-	print colored("[*]-Searching HackerTarget...", 'yellow')
+	print colored("[*]-Searching HackerTarget...", "yellow")
 
 	url = "https://api.hackertarget.com/hostsearch/?q={0}".format(quote(domain))
-	headers = {'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:52.0) Gecko/20100101 Firefox/52.0'}
+	headers = {"user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:52.0) Gecko/20100101 Firefox/52.0"}
 
 	try:
 		response = requests.get(url, headers=headers).content
-		hostnames = [result.split(',')[0] for result in response.split('\n')]
+		hostnames = [result.split(",")[0] for result in response.split("\n")]
 
 		for hostname in hostnames:
 			if hostname:
@@ -21,21 +21,21 @@ def init(domain):
 
 		HT = set(HT)
 
-		print "  \__", colored("Unique subdomains found:", 'cyan'), colored(len(HT), 'yellow')
+		print "  \__", colored("Unique subdomains found:", "cyan"), colored(len(HT), "yellow")
 		return HT
 
 	except requests.exceptions.RequestException as err:
-		print "  \__", colored(err, 'red')
+		print "  \__", colored(err, "red")
 		return []
 
 	except requests.exceptions.HTTPError as errh:
-		print "  \__", colored(errh, 'red')
+		print "  \__", colored(errh, "red")
 		return []
 
 	except requests.exceptions.ConnectionError as errc:
-		print "  \__", colored(errc, 'red')
+		print "  \__", colored(errc, "red")
 		return []
 
 	except requests.exceptions.Timeout as errt:
-		print "  \__", colored(errt, 'red')
+		print "  \__", colored(errt, "red")
 		return []
