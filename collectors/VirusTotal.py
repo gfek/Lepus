@@ -6,45 +6,45 @@ from ConfigParser import SafeConfigParser
 def init(domain):
 	VT = []
 
-	print colored("[*]-Searching VirusTotal...", 'yellow')
+	print colored("[*]-Searching VirusTotal...", "yellow")
 
 	parser = SafeConfigParser()
-	parser.read('config.ini')
-	VT_API_KEY = parser.get('VirusTotal', 'VT_API_KEY')
+	parser.read("config.ini")
+	VT_API_KEY = parser.get("VirusTotal", "VT_API_KEY")
 
 	if VT_API_KEY == "":
-		print "  \__", colored("No VirusTotal API key configured", 'red')
+		print "  \__", colored("No VirusTotal API key configured", "red")
 		return []
 
 	else:
-		parameters = {'domain': domain, 'apikey': VT_API_KEY}
-		headers = {'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:52.0) Gecko/20100101 Firefox/52.0'}
+		parameters = {"domain": domain, "apikey": VT_API_KEY}
+		headers = {"user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:52.0) Gecko/20100101 Firefox/52.0"}
 
 		try:
-			response = requests.get('https://www.virustotal.com/vtapi/v2/domain/report', params=parameters, headers=headers)
+			response = requests.get("https://www.virustotal.com/vtapi/v2/domain/report", params=parameters, headers=headers)
 			response_dict = response.json()
 
-			if 'subdomains' in response_dict:
-				for sd in response_dict['subdomains']:
+			if "subdomains" in response_dict:
+				for sd in response_dict["subdomains"]:
 					VT.append(sd)
 
 			VT = set(VT)
 
-			print "  \__", colored("Unique subdomains found:", 'cyan'), colored(len(VT), 'yellow')
+			print "  \__", colored("Unique subdomains found:", "cyan"), colored(len(VT), "yellow")
 			return VT
 
 		except requests.exceptions.RequestException as err:
-			print "  \__", colored(err, 'red')
+			print "  \__", colored(err, "red")
 			return []
 
 		except requests.exceptions.HTTPError as errh:
-			print "  \__", colored(errh, 'red')
+			print "  \__", colored(errh, "red")
 			return []
 
 		except requests.exceptions.ConnectionError as errc:
-			print "  \__", colored(errc, 'red')
+			print "  \__", colored(errc, "red")
 			return []
 
 		except requests.exceptions.Timeout as errt:
-			print "  \__", colored(errt, 'red')
+			print "  \__", colored(errt, "red")
 			return []

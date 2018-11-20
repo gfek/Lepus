@@ -1,53 +1,23 @@
-from tqdm import tqdm
-from time import sleep
 from json import dumps
 from os.path import join
 from termcolor import colored
-from socket import gethostbyaddr
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import concurrent.futures.thread
-import utils
+from ipaddress import ip_network
+import utilities.MiscHelpers
+import utilities.ScanHelpers
 
 
-def reverseDNS(IP):
-	try:
-		return (gethostbyaddr(IP)[0].lower(), IP)
+def init(domain, ranges, resolved_public, IPs, threads, out_to_json):
+	if ranges:
+		IPs = []
 
-	except Exception:
-		return None
+		for cidr in ranges.split(","):
+			for ip in ip_network(unicode(cidr.strip())):
+				IPs.append(str(ip))
 
+	return
 
-def massReverseLookup(IPs, threads):
-	hosts = []
-
-	with ThreadPoolExecutor(max_workers=threads) as executor:
-		tasks = {executor.submit(reverseDNS, IP) for IP in IPs}
-
-		try:
-			completed = as_completed(tasks)
-			completed = tqdm(completed, total=len(IPs), desc="  \__ {0}".format(colored("Progress", 'cyan')), dynamic_ncols=True)
-
-			for task in completed:
-				result = task.result()
-
-				if result is not None:
-					hosts.append(result)
-
-		except KeyboardInterrupt:
-			executor._threads.clear()
-			concurrent.futures.thread._threads_queues.clear()
-			print colored("\n\n[*]-Received KeyboardInterrupt. Exiting...\n", 'red')
-			sleep(2)
-			exit(-1)
-
-	return hosts
-
-
-def init(domain, resolved_public, IPs, threads, out_to_json):
-	print "{0} {1} {2}".format(colored("\n[*]-Performing reverse DNS lookups on", "yellow"), colored(len(IPs), "cyan"), colored("unique public IPs...", "yellow"))
-
-	results = massReverseLookup(IPs, threads)
-	filtered = utils.filterDomain(domain, [result[0] for result in results])
+	results = utilities.ScanHelpers.massReverseLookup(IPs, threads)
+	filtered = utilities.MiscHelpers.filterDomain(domain, [result[0] for result in results])
 	diff = []
 
 	for result in results:
@@ -59,7 +29,7 @@ def init(domain, resolved_public, IPs, threads, out_to_json):
 	print "    \__ {0} {1}".format(colored("Additional hostnames that were identified:", "yellow"), colored(len(diff), "cyan"))
 
 	for hostname, address in diff:
-		print "      \__ {0} {1}".format(colored(hostname, "cyan"), colored(address, 'yellow'))
+		print "      \__ {0} {1}".format(colored(hostname, "cyan"), colored(address, "yellow"))
 
 	if out_to_json:
 		try:

@@ -23,39 +23,39 @@ class DNSDumpsterAPI(object):
 		try:
 			req = s.get(url)
 			soup = BeautifulSoup(req.content, "html.parser")
-			csrf_middleware = soup.findAll('input', attrs={'name': 'csrfmiddlewaretoken'})[0]['value']
-			cookies = {'csrftoken': csrf_middleware}
-			headers = {'Referer': 'https://dnsdumpster.com/'}
-			data = {'csrfmiddlewaretoken': csrf_middleware, 'targetip': domain}
+			csrf_middleware = soup.findAll("input", attrs={"name": "csrfmiddlewaretoken"})[0]["value"]
+			cookies = {"csrftoken": csrf_middleware}
+			headers = {"Referer": "https://dnsdumpster.com/"}
+			data = {"csrfmiddlewaretoken": csrf_middleware, "targetip": domain}
 			req = s.post(url, cookies=cookies, data=data, headers=headers)
-			pattern = r'([\w\-][\w\-\.]+)\.%s' % (domain.replace('.', '\.'))
+			pattern = r"([\w\-][\w\-\.]+)\.%s" % (domain.replace(".", "\."))
 			res = re.findall(pattern, req.content)
 
 			return list(res)
 
 		except requests.exceptions.RequestException as err:
-			print "  \__", colored(err, 'red')
+			print "  \__", colored(err, "red")
 			return []
 
 		except requests.exceptions.HTTPError as errh:
-			print "  \__", colored(errh, 'red')
+			print "  \__", colored(errh, "red")
 			return []
 
 		except requests.exceptions.ConnectionError as errc:
-			print "  \__", colored(errc, 'red')
+			print "  \__", colored(errc, "red")
 			return []
 
 		except requests.exceptions.Timeout as errt:
-			print "  \__", colored(errt, 'red')
+			print "  \__", colored(errt, "red")
 			return []
 
 
 def init(domain):
-	print colored("[*]-Searching DNSDumpster...", 'yellow')
+	print colored("[*]-Searching DNSDumpster...", "yellow")
 
 	api = DNSDumpsterAPI()
-	DD = ['.'.join([subdomain, domain]) for subdomain in set(api.search(domain))]
+	DD = [".".join([subdomain, domain]) for subdomain in set(api.search(domain))]
 
-	print "  \__", colored("Unique subdomains found:", 'cyan'), colored(len(DD), 'yellow')
+	print "  \__", colored("Unique subdomains found:", "cyan"), colored(len(DD), "yellow")
 
 	return DD

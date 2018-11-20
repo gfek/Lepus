@@ -8,16 +8,16 @@ def parseResponse(response, domain):
 	hostnameRegex = "([\w\.\-]+\.%s)" % (domain.replace(".", "\."))
 	hosts = findall(hostnameRegex, response)
 
-	return token, [host.lstrip('.') for host in hosts]
+	return token, [host.lstrip(".") for host in hosts]
 
 
 def init(domain):
 	GTR = []
 
-	print colored("[*]-Searching Google Transparency...", 'yellow')
+	print colored("[*]-Searching Google Transparency...", "yellow")
 
 	baseURL = "https://www.google.com/transparencyreport/api/v3/httpsreport/ct/certsearch"
-	headers = {'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:52.0) Gecko/20100101 Firefox/52.0', 'referrer': 'https://transparencyreport.google.com/https/certificates'}
+	headers = {"user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:52.0) Gecko/20100101 Firefox/52.0", "referrer": "https://transparencyreport.google.com/https/certificates"}
 	token = ""
 
 	try:
@@ -39,21 +39,21 @@ def init(domain):
 
 		GTR = set(GTR)
 
-		print "  \__", colored("Unique subdomains found:", 'cyan'), colored(len(GTR), 'yellow')
+		print "  \__", colored("Unique subdomains found:", "cyan"), colored(len(GTR), "yellow")
 		return GTR
 
 	except requests.exceptions.RequestException as err:
-		print "  \__", colored(err, 'red')
+		print "  \__", colored(err, "red")
 		return []
 
 	except requests.exceptions.HTTPError as errh:
-		print "  \__", colored(errh, 'red')
+		print "  \__", colored(errh, "red")
 		return []
 
 	except requests.exceptions.ConnectionError as errc:
-		print "  \__", colored(errc, 'red')
+		print "  \__", colored(errc, "red")
 		return []
 
 	except requests.exceptions.Timeout as errt:
-		print "  \__", colored(errt, 'red')
+		print "  \__", colored(errt, "red")
 		return []
