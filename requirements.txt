@@ -1,7 +1,7 @@
-tqdm==4.23.4
+shodan==1.10.4
+tqdm==4.28.1
+requests==2.20.1
 ipwhois==1.0.0
-requests==2.20.0
-shodan==1.7.7
 IPy==0.83
 beautifulsoup4==4.6.3
 futures==3.2.0

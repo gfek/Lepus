@@ -1,3 +1,4 @@
+from time import time
 from termcolor import colored
 
 
@@ -75,23 +76,10 @@ def permuteNumbers(subdomain):
 def init(domain, subdomains, wildcards, wordlist):
 	print "{0} {1} {2}".format(colored("\n[*]-Performing permutations on", "yellow"), colored(len(subdomains), "cyan"), colored("resolved hostnames...", "yellow"))
 
-	if not wordlist:
-		wordlist = "lists/words.txt"
-
 	permutated_subdomains = []
 	permutations = []
-	words = []
-
-	try:
-		with open(wordlist, "r") as wordListFile:
-			for line in wordListFile:
-				words.append(line.strip())
-
-	except OSError:
-		return None
-
-	except IOError:
-		return None
+	words = [line.strip() for line in wordlist.readlines()]
+	wordlist.close()
 
 	for subdomain in subdomains:
 		is_wildcard = False
@@ -115,6 +103,10 @@ def init(domain, subdomains, wildcards, wordlist):
 
 	for subdomain in permutated_subdomains:
 		permutations.append(".".join([subdomain, domain]))
+
+	for hostnames in wildcards.values():
+		for hostname in hostnames:
+			permutations.append(".".join([str(int(time())), hostname]))
 
 	print "  \__", colored("Generated subdomains:", "cyan"), colored(len(permutations), "yellow")
 	return permutations

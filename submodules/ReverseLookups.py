@@ -14,8 +14,6 @@ def init(domain, ranges, resolved_public, IPs, threads, out_to_json):
 			for ip in ip_network(unicode(cidr.strip())):
 				IPs.append(str(ip))
 
-	return
-
 	results = utilities.ScanHelpers.massReverseLookup(IPs, threads)
 	filtered = utilities.MiscHelpers.filterDomain(domain, [result[0] for result in results])
 	diff = []

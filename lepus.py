@@ -28,7 +28,7 @@ import utilities.MiscHelpers
 import utilities.ScanHelpers
 
 simplefilter("ignore")
-version = "2.3.3"
+version = "2.3.4"
 
 
 def printBanner():
@@ -48,7 +48,7 @@ if __name__ == "__main__":
 	parser.add_argument("-nc", "--no-collectors", action="store_true", dest="noCollectors", help="skip passive subdomain enumeration", default=False)
 	parser.add_argument("-zt", "--zone-transfer", action="store_true", dest="zoneTransfer", help="attempt to zone transfer from identified name servers", default=False)
 	parser.add_argument("--permutate", action="store_true", dest="permutate", help="perform permutations on resolved domains", default=False)
-	parser.add_argument("-pw", "--permutation-wordlist", dest="permutation_wordlist", help="wordlist to perform permutations with [default is lists/words.txt]", type=FileType("r"))
+	parser.add_argument("-pw", "--permutation-wordlist", dest="permutation_wordlist", help="wordlist to perform permutations with [default is lists/words.txt]", type=FileType("r"), default="lists/words.txt")
 	parser.add_argument("--reverse", action="store_true", dest="reverse", help="perform reverse dns lookups on resolved public IP addresses", default=False)
 	parser.add_argument("-r", "--ranges", action="store", dest="ranges", help="comma seperated ip ranges to perform reverse dns lookups on", type=str, default=None)
 	parser.add_argument("--portscan", action="store_true", dest="portscan", help="scan resolved public IP addresses for open ports", default=False)
@@ -87,6 +87,7 @@ if __name__ == "__main__":
 			pass
 
 		else:
+			print
 			collector_hosts = []
 			collector_hosts += collectors.Censys.init(args.domain)
 			collector_hosts += collectors.CertSpotter.init(args.domain)
@@ -150,6 +151,5 @@ if __name__ == "__main__":
 			print
 
 	except KeyboardInterrupt:
-		print colored("\n\n[*]-Received KeyboardInterrupt. Exiting...\n", "red")
-		sleep(2)
+		print colored("\n[*]-Received keyboard interrupt! Shutting down...\n", "red")
 		exit(-1)
