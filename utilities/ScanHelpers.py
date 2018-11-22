@@ -1,11 +1,11 @@
 from IPy import IP
+from time import time
 from tqdm import tqdm
 from json import dumps
 from os.path import join
 from dns.query import xfr
 from ipwhois import IPWhois
 from ipwhois.net import Net
-from time import sleep, time
 from dns.zone import from_xfr
 from termcolor import colored
 from ipwhois.asn import IPASN
@@ -15,7 +15,6 @@ from ssl import create_default_context, CERT_NONE
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from socket import gethostbyname, gethostbyaddr, socket, AF_INET, SOCK_STREAM
 from dns.resolver import Resolver, NXDOMAIN, NoAnswer, NoNameservers, Timeout
-import concurrent.futures.thread
 import utilities.MiscHelpers
 
 
@@ -181,10 +180,9 @@ def identifyWildcards(domain, hosts, threads, out_to_json):
 						wildcards.append(result)
 
 			except KeyboardInterrupt:
-				executor._threads.clear()
-				concurrent.futures.thread._threads_queues.clear()
-				print colored("\n\n[*]-Received KeyboardInterrupt. Exiting...\n", "red")
-				sleep(2)
+				completed.close()
+				print colored("\n[*]-Received keyboard interrupt! Shutting down...\n", "red")
+				executor.shutdown(wait=False)
 				exit(-1)
 
 		iteration += 1
@@ -341,10 +339,9 @@ def massResolve(domain, hostnames, collector_hostnames, threads, wildcards, out_
 						continue
 
 			except KeyboardInterrupt:
-				executor._threads.clear()
-				concurrent.futures.thread._threads_queues.clear()
-				print colored("\n\n[*]-Received KeyboardInterrupt. Exiting...\n", "red")
-				sleep(2)
+				completed.close()
+				print colored("\n[*]-Received keyboard interrupt! Shutting down...\n", "red")
+				executor.shutdown(wait=False)
 				exit(-1)
 
 		iteration += 1
@@ -517,9 +514,9 @@ def massReverseLookup(IPs, threads):
 	hosts = []
 
 	if len(IPs) <= 100000:
-		print "{0} {1} {2}".format(colored("\n[*]-Performing reverse DNS lookups on", "yellow"), colored(len(IPs), "cyan"), colored("public IPs...", "yellow"))
+		print "{0} {1} {2}".format(colored("\n[*]-Performing reverse DNS lookups on", "yellow"), colored(len(IPs), "cyan"), colored("unique public IPs...", "yellow"))
 	else:
-		print "{0} {1} {2}".format(colored("\n[*]-Performing reverse DNS lookups on", "yellow"), colored(len(IPs), "cyan"), colored("public IPs, in chunks of 100,000...", "yellow"))
+		print "{0} {1} {2}".format(colored("\n[*]-Performing reverse DNS lookups on", "yellow"), colored(len(IPs), "cyan"), colored("unique public IPs, in chunks of 100,000...", "yellow"))
 
 	IPChunks = list(utilities.MiscHelpers.chunks(list(IPs), 100000))
 	iteration = 1
@@ -539,10 +536,9 @@ def massReverseLookup(IPs, threads):
 						hosts.append(result)
 
 			except KeyboardInterrupt:
-				executor._threads.clear()
-				concurrent.futures.thread._threads_queues.clear()
-				print colored("\n\n[*]-Received KeyboardInterrupt. Exiting...\n", "red")
-				sleep(2)
+				completed.close()
+				print colored("\n[*]-Received keyboard interrupt! Shutting down...\n", "red")
+				executor.shutdown(wait=False)
 				exit(-1)
 
 		iteration += 1
@@ -589,13 +585,13 @@ def connectScan(target):
 		s.close()
 
 
-def massConnectScan(targets, threads):
+def massConnectScan(IPs, targets, threads):
 	open_ports = []
 
 	if len(targets) <= 100000:
-		print "{0} {1} {2}".format(colored("\n[*]-Port scanning", "yellow"), colored(len(targets), "cyan"), colored("public IPs...", "yellow"))
+		print "{0} {1} {2} {3} {4}".format(colored("\n[*]-Scanning", "yellow"), colored(len(targets), "cyan"), colored("ports on", "yellow"), colored(len(IPs), "cyan"), colored("unique public IPs...", "yellow"))
 	else:
-		print "{0} {1} {2}".format(colored("\n[*]-Port scanning", "yellow"), colored(len(targets), "cyan"), colored("public IPs, in chunks of 100,000...", "yellow"))
+		print "{0} {1} {2} {3} {4}".format(colored("\n[*]-Scanning", "yellow"), colored(len(targets), "cyan"), colored("ports on", "yellow"), colored(len(IPs), "cyan"), colored("unique public IPs, in chunks of 100,000...", "yellow"))
 
 	PortChunks = list(utilities.MiscHelpers.chunks(list(targets), 100000))
 	iteration = 1
@@ -615,10 +611,9 @@ def massConnectScan(targets, threads):
 						open_ports.append(result)
 
 			except KeyboardInterrupt:
-				executor._threads.clear()
-				concurrent.futures.thread._threads_queues.clear()
-				print colored("\n\n[*]-Received KeyboardInterrupt. Exiting...\n", "red")
-				sleep(2)
+				completed.close()
+				print colored("\n[*]-Received keyboard interrupt! Shutting down...\n", "red")
+				executor.shutdown(wait=False)
 				exit(-1)
 
 		iteration += 1
@@ -654,10 +649,9 @@ def massASN(domain, IPs, threads, out_to_json):
 						pass
 
 			except KeyboardInterrupt:
-				executor._threads.clear()
-				concurrent.futures.thread._threads_queues.clear()
-				print colored("\n\n[*]-Received KeyboardInterrupt. Exiting...\n", "red")
-				sleep(2)
+				completed.close()
+				print colored("\n[*]-Received keyboard interrupt! Shutting down...\n", "red")
+				executor.shutdown(wait=False)
 				exit(-1)
 
 	except ValueError:
@@ -731,10 +725,9 @@ def massWHOIS(domain, IPs, threads, out_to_json):
 						pass
 
 			except KeyboardInterrupt:
-				executor._threads.clear()
-				concurrent.futures.thread._threads_queues.clear()
-				print colored("\n\n[*]-Received KeyboardInterrupt. Exiting...\n", "red")
-				sleep(2)
+				completed.close()
+				print colored("\n[*]-Received keyboard interrupt! Shutting down...\n", "red")
+				executor.shutdown(wait=False)
 				exit(-1)
 
 	except ValueError:

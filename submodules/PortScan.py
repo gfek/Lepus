@@ -29,7 +29,7 @@ def init(resolved, domain, IPs, port_scan, threads):
 		for port in ports:
 			targets.append((ip, port))
 
-	results = utilities.ScanHelpers.massConnectScan(targets, threads)
+	results = utilities.ScanHelpers.massConnectScan(IPs, targets, threads)
 	results_json = {}
 
 	for result in results:

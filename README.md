@@ -77,10 +77,10 @@ IP ranges can also be provided using the `--ranges` switch.
 
 |Package|Version|
 |---|---|
-|tqdm|4.23.4|
+|shodan|1.10.4|
+|tqdm|4.28.1|
+|requests|2.20.1|
 |ipwhois|1.0.0|
-|requests|2.20.0|
-|shodan|1.7.7|
 |IPy|0.83|
 |beautifulsoup4|4.6.3|
 |futures|3.2.0|
@@ -137,8 +137,7 @@ optional arguments:
          ______  _____           ______  
  |      |______ |_____) |     | (_____   
  |_____ |______ |       |_____| ______)  
-                                v2.3.3
-
+                                v2.3.4
 [*]-Retrieving DNS Records...
   \__ A : 23.253.135.79
   \__ AAAA : 2001:4802:7901:0:e60a:1375:0:6

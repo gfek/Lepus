@@ -7,7 +7,7 @@ from os import makedirs, listdir, stat, remove
 
 
 def checkArgumentValidity(parser, args):
-	if args.permutation_wordlist and not args.permutate:
+	if args.permutation_wordlist and not args.permutate and args.permutation_wordlist.name != "lists/words.txt":
 		parser.print_usage()
 		print "lepus.py: error: argument -pw/--permutation-wordlist: missing required argument '--permutate'"
 		return False
@@ -163,11 +163,11 @@ def loadOldFindings(directory):
 	return OF, ORP, last_run, collector_results
 
 
-def loadWordlist(domain, filepath):
+def loadWordlist(domain, wordlist):
 	print colored("\n[*]-Loading Wordlist...", "yellow")
 
-	with open(filepath, "r") as wordlist:
-		WL = set([".".join([subdomain.strip().lower(), domain]) for subdomain in wordlist.readlines()])
+	WL = set([".".join([subdomain.strip().lower(), domain]) for subdomain in wordlist.readlines()])
+	wordlist.close()
 
 	print "  \__", colored("Unique subdomains loaded:", "cyan"), colored(len(WL), "yellow")
 	return list(WL)
