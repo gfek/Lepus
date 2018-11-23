@@ -64,3 +64,7 @@ def init(domain):
 		except requests.exceptions.Timeout as errt:
 			print "  \__", colored(errt, "red")
 			return []
+
+		except ValueError as errv:
+			print "  \__", colored(errv, "red")
+			return []
