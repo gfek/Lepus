@@ -142,14 +142,19 @@ def getDNSrecords(domain, out_to_json):
 	return NS
 
 
-def checkWildcard(timestamp, domain):
-	resolution = resolve(".".join([timestamp, domain]))
+def checkWildcard(resolver, timestamp, domain):
+	resolution = []
+
+	try:
+		resolution = resolver.query(".".join([timestamp, domain]), "A")
+	except:
+		pass
 
 	if None in resolution:
 		return None
 
 	else:
-		return (domain, resolution[1])
+		return (domain, resolution)
 
 
 def identifyWildcards(domain, hosts, threads, out_to_json):
@@ -165,9 +170,13 @@ def identifyWildcards(domain, hosts, threads, out_to_json):
 	subLevelChunks = list(utilities.MiscHelpers.chunks(list(sub_levels), 100000))
 	iteration = 1
 
+	resolver = Resolver()
+	resolver.timeout = 1
+	resolver.lifetime = 1
+
 	for subLevelChunk in subLevelChunks:
 		with ThreadPoolExecutor(max_workers=threads) as executor:
-			tasks = {executor.submit(checkWildcard, timestamp, sub_level) for sub_level in subLevelChunk}
+			tasks = {executor.submit(checkWildcard, resolver, timestamp, sub_level) for sub_level in subLevelChunk}
 
 			try:
 				completed = as_completed(tasks)
@@ -177,7 +186,9 @@ def identifyWildcards(domain, hosts, threads, out_to_json):
 					result = task.result()
 
 					if result is not None:
-						wildcards.append(result)
+						for rdata in result[1]:
+							wc = (result[0], str(rdata.address))
+							wildcards.append(wc)
 
 			except KeyboardInterrupt:
 				completed.close()
