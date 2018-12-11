@@ -25,7 +25,7 @@ def init(domain):
 
 		dnsdb = set(dnsdb)
 
-		print "  \__", colored("Unique subdomains found:", "cyan"), colored(len(dnsdb), "yellow")
+		print "  \__ {0}: {1}".format(colored("Unique subdomains found", "cyan"), colored(len(dnsdb), "yellow"))
 		return dnsdb
 
 	except requests.exceptions.RequestException as err:

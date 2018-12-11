@@ -42,7 +42,7 @@ def init(domain):
 
 				riddler = set(riddler)
 
-				print "  \__", colored("Unique subdomains found:", "cyan"), colored(len(riddler), "yellow")
+				print "  \__ {0}: {1}".format(colored("Unique subdomains found", "cyan"), colored(len(riddler), "yellow"))
 				return riddler
 
 			else:

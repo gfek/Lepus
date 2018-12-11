@@ -56,6 +56,6 @@ def init(domain):
 	api = DNSDumpsterAPI()
 	DD = [".".join([subdomain, domain]) for subdomain in set(api.search(domain))]
 
-	print "  \__", colored("Unique subdomains found:", "cyan"), colored(len(DD), "yellow")
+	print "  \__ {0}: {1}".format(colored("Unique subdomains found", "cyan"), colored(len(DD), "yellow"))
 
 	return DD

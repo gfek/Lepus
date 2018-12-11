@@ -5,10 +5,8 @@ from json import dumps
 from os.path import join
 from dns.query import xfr
 from ipwhois import IPWhois
-from ipwhois.net import Net
 from dns.zone import from_xfr
 from termcolor import colored
-from ipwhois.asn import IPASN
 from dns.name import EmptyLabel
 from dns.exception import DNSException
 from ssl import create_default_context, CERT_NONE
@@ -114,7 +112,7 @@ def getDNSrecords(domain, out_to_json):
 
 	for key, value in RES.iteritems():
 		for record in value:
-			print "  \__", colored(key, "cyan"), ":", colored(record, "yellow")
+			print "  \__ {0}: {1}".format(colored(key, "cyan"), colored(record, "yellow"))
 
 	if out_to_json:
 		try:
@@ -147,7 +145,7 @@ def checkWildcard(resolver, timestamp, domain):
 
 	try:
 		resolution = resolver.query(".".join([timestamp, domain]), "A")
-	except:
+	except Exception:
 		pass
 
 	if None in resolution:
@@ -157,7 +155,7 @@ def checkWildcard(resolver, timestamp, domain):
 		return (domain, resolution)
 
 
-def identifyWildcards(domain, hosts, threads, out_to_json):
+def identifyWildcards(domain, previously_identified, hosts, threads, out_to_json):
 	sub_levels = utilities.MiscHelpers.uniqueSubdomainLevels(hosts)
 	timestamp = str(int(time()))
 	wildcards = []
@@ -186,8 +184,8 @@ def identifyWildcards(domain, hosts, threads, out_to_json):
 					result = task.result()
 
 					if result is not None:
-						for rdata in result[1]:
-							wc = (result[0], str(rdata.address))
+						for res in result[1]:
+							wc = (result[0], str(res.address))
 							wildcards.append(wc)
 
 			except KeyboardInterrupt:
@@ -220,9 +218,26 @@ def identifyWildcards(domain, hosts, threads, out_to_json):
 			else:
 				optimized_wildcards[ip] = [hostname]
 
-		print "    \__ {0} {1}".format(colored("Wildcards that were identified:", "yellow"), colored(sum(len(hostnames) for hostnames in optimized_wildcards.values()), "cyan"))
+		diff_wildcards = {}
 
 		for ip, hostnames in optimized_wildcards.items():
+			for hostname in hostnames:
+				is_actually_new = True
+
+				if ip in previously_identified:
+					if hostname in previously_identified[ip]:
+						is_actually_new = False
+
+				if is_actually_new:
+					if ip in diff_wildcards:
+						diff_wildcards[ip].append(hostname)
+
+					else:
+						diff_wildcards[ip] = [hostname]
+
+		print "    \__ {0} {1}".format(colored("Wildcards that were identified:", "yellow"), colored(sum(len(hostnames) for hostnames in diff_wildcards.values()), "cyan"))
+
+		for ip, hostnames in diff_wildcards.items():
 			for hostname in hostnames:
 				print "      \__ {0}.{1} ==> {2}".format(colored("*", "red"), colored(hostname, "cyan"), colored(ip, "red"))
 
@@ -357,9 +372,15 @@ def massResolve(domain, hostnames, collector_hostnames, threads, wildcards, out_
 
 		iteration += 1
 
-	print "    \__ {0} {1}".format(colored("Hostnames that were resolved:", "yellow"), colored(len(resolved) - len(already_resolved), "cyan"))
+	resolved_diff = {}
 
 	for hostname, address in resolved.items():
+		if hostname not in already_resolved:
+			resolved_diff[hostname] = address
+
+	print "    \__ {0} {1}".format(colored("Hostnames that were resolved:", "yellow"), colored(len(resolved_diff), "cyan"))
+
+	for hostname, address in resolved_diff.items():
 		if hostname not in already_resolved:
 			if address in wildcards:
 				actual_wildcard = False
@@ -369,13 +390,13 @@ def massResolve(domain, hostnames, collector_hostnames, threads, wildcards, out_
 						actual_wildcard = True
 
 				if actual_wildcard:
-					print "      \__ {0} {1}".format(colored(hostname, "cyan"), colored(address, "red"))
+					print "      \__ {0} ({1})".format(colored(hostname, "cyan"), colored(address, "red"))
 
 				else:
-					print "      \__ {0} {1}".format(colored(hostname, "cyan"), colored(address, "yellow"))
+					print "      \__ {0} ({1})".format(colored(hostname, "cyan"), colored(address, "yellow"))
 
 			else:
-				print "      \__ {0} {1}".format(colored(hostname, "cyan"), colored(address, "yellow"))
+				print "      \__ {0} ({1})".format(colored(hostname, "cyan"), colored(address, "yellow"))
 
 	if out_to_json:
 		try:
@@ -632,62 +653,88 @@ def massConnectScan(IPs, targets, threads):
 	return open_ports
 
 
-def asn(ip):
-	net = Net(ip)
-	obj = IPASN(net)
-	results = obj.lookup()
+def rdap(ip):
+	obj = IPWhois(ip)
+	result = obj.lookup_rdap()
 
-	return results
+	return result
 
 
-def massASN(domain, IPs, threads, out_to_json):
-	print "{0} {1} {2}".format(colored("\n[*]-Retrieving unique Autonomous Systems for", "yellow"), colored(len(IPs), "cyan"), colored("unique public IPs...", "yellow"))
+def massRDAP(domain, IPs, threads, out_to_json):
+	print "{0} {1} {2}".format(colored("\n[*]-Performing RDAP lookups for", "yellow"), colored(len(IPs), "cyan"), colored("unique public IPs...", "yellow"))
 
-	ip2asn = {}
+	rdap_records = []
 
-	try:
-		with ThreadPoolExecutor(max_workers=threads) as executor:
-			tasks = {executor.submit(asn, ip): ip for ip in IPs}
-			try:
-				completed = as_completed(tasks)
-				completed = tqdm(completed, total=len(IPs), desc="  \__ {0}".format(colored("Progress", "cyan")), dynamic_ncols=True)
+	with ThreadPoolExecutor(max_workers=threads) as executor:
+		tasks = {executor.submit(rdap, ip): ip for ip in IPs}
 
-				for task in completed:
-					try:
-						ip2asn.update({tasks[task]: task.result()})
+		try:
+			completed = as_completed(tasks)
+			completed = tqdm(completed, total=len(IPs), desc="  \__ {0}".format(colored("Progress", "cyan")), dynamic_ncols=True)
 
-					except Exception:
-						pass
+			for task in completed:
+				rdap_records.append(task.result())
 
-			except KeyboardInterrupt:
-				completed.close()
-				print colored("\n[*]-Received keyboard interrupt! Shutting down...\n", "red")
-				executor.shutdown(wait=False)
-				exit(-1)
+		except KeyboardInterrupt:
+			completed.close()
+			print colored("\n[*]-Received keyboard interrupt! Shutting down...\n", "red")
+			executor.shutdown(wait=False)
+			exit(-1)
 
-	except ValueError:
-		pass
+	ASN = set()
+	NETS = set()
 
-	ip2asn_values = []
+	for record in rdap_records:
+		if record["asn"] != "NA" and record["asn_cidr"] != "NA" and record["asn_description"] != "NA":
+			for asn in record["asn"].split(" "):
+				ASN.add((asn, record["asn_cidr"], record["asn_description"]))
 
-	for key, value in ip2asn.items():
-		if value not in ip2asn_values and value["asn_cidr"] != "NA" and value["asn_cidr"] is not None and value["asn"] != "NA" and value["asn"] is not None and value["asn_description"] != "NA" and value["asn_description"] is not None:
-			ip2asn_values.append(value)
+		for cidr in record["network"]["cidr"].split(", "):
+			NETS.add((cidr, record["network"]["name"]))
 
-	print "    \__ {0} {1}".format(colored("ASNs that were identified:", "yellow"), colored(len(ip2asn_values), "cyan"))
+	print "    \__ {0}:".format(colored("Autonomous Systems that were identified", "yellow"))
+	ASN = sorted(ASN, key=lambda k: int(k[0]))
 
-	for value in ip2asn_values:
-		print "      \__", colored("ASN", "cyan") + ":", colored(value["asn"], "yellow") + ",", colored("BGP Prefix", "cyan") + ":", colored(value["asn_cidr"], "yellow") + ",", colored("AS Name", "cyan") + ":", colored(value["asn_description"], "yellow")
+	for asn in ASN:
+		if asn == ASN[-1]:
+			print "    __\__ {0}: {1}, {2}: {3}, {4}: {5}".format(colored("ASN", "cyan"), colored(asn[0], "yellow"), colored("Prefix", "cyan"), colored(asn[1], "yellow"), colored("Description", "cyan"), colored(asn[2], "yellow"))
+
+		else:
+			print "      \__ {0}: {1}, {2}: {3}, {4}: {5}".format(colored("ASN", "cyan"), colored(asn[0], "yellow"), colored("Prefix", "cyan"), colored(asn[1], "yellow"), colored("Description", "cyan"), colored(asn[2], "yellow"))
+
+	print "    \__ {0}:".format(colored("Networks that were identified", "yellow"))
+	NETS = sorted(NETS, key=lambda k: k[0])
+
+	for net in NETS:
+		print "      \__ {0}: {1}, {2}: {3}".format(colored("CIDR", "cyan"), colored(net[0], "yellow"), colored("Identifier", "cyan"), colored(net[1], "yellow"))
 
 	if out_to_json:
-		ip2asn_json = {}
+		ASN_json = {}
+		NETS_json = {}
 
-		for value in ip2asn_values:
-			ip2asn_json[value["asn"]] = [value["asn_cidr"], value["asn_description"]]
+		for asn in ASN:
+			if asn[0] in ASN_json:
+				ASN_json[asn[0]].append((asn[1], asn[2]))
+
+			else:
+				ASN_json[asn[0]] = [(asn[1], asn[2])]
 
 		try:
 			with open(join("results", domain, "asn.json"), "w") as asn_file:
-				asn_file.write("{0}\n".format(dumps(ip2asn_json)))
+				asn_file.write(dumps(ASN_json))
+
+		except OSError:
+			pass
+
+		except IOError:
+			pass
+
+		for net in NETS:
+			NETS_json[net[0]] = net[1]
+
+		try:
+			with open(join("results", domain, "networks.json"), "w") as net_file:
+				net_file.write(dumps(NETS_json))
 
 		except OSError:
 			pass
@@ -697,8 +744,8 @@ def massASN(domain, IPs, threads, out_to_json):
 
 	try:
 		with open(join("results", domain, "asn.csv"), "w") as asn_file:
-			for value in ip2asn_values:
-				asn_file.write("{0}|{1}|{2}\n".format(value["asn_cidr"], value["asn"], value["asn_description"]))
+			for asn in ASN:
+				asn_file.write("{0}|{1}|{2}\n".format(asn[0], asn[1], asn[2]))
 
 	except OSError:
 		pass
@@ -706,64 +753,10 @@ def massASN(domain, IPs, threads, out_to_json):
 	except IOError:
 		pass
 
-
-def whois(ip):
-	obj = IPWhois(ip)
-	results = obj.lookup_whois()
-
-	return results["nets"]
-
-
-def massWHOIS(domain, IPs, threads, out_to_json):
-	print "{0} {1} {2}".format(colored("\n[*]-Retrieving unique WHOIS records for", "yellow"), colored(len(IPs), "cyan"), colored("unique public IPs...", "yellow"))
-
-	ip2whois = {}
-
 	try:
-		with ThreadPoolExecutor(max_workers=threads) as executor:
-			tasks = {executor.submit(whois, ip): ip for ip in IPs}
-
-			try:
-				completed = as_completed(tasks)
-				completed = tqdm(completed, total=len(IPs), desc="  \__ {0}".format(colored("Progress", "cyan")), dynamic_ncols=True)
-
-				for task in completed:
-					try:
-						if task.result()[0]["name"] is not None:
-							ip2whois[task.result()[0]["range"]] = task.result()[0]["name"]
-
-					except Exception:
-						pass
-
-			except KeyboardInterrupt:
-				completed.close()
-				print colored("\n[*]-Received keyboard interrupt! Shutting down...\n", "red")
-				executor.shutdown(wait=False)
-				exit(-1)
-
-	except ValueError:
-		pass
-
-	print "    \__ {0} {1}".format(colored("WHOIS records that were identified:", "yellow"), colored(len(ip2whois), "cyan"))
-
-	for ip_range, name in ip2whois.items():
-		print "      \__", colored(ip_range, "cyan"), ":", colored(name, "yellow")
-
-	if out_to_json:
-		try:
-			with open(join("results", domain, "whois.json"), "w") as whois_file:
-				whois_file.write("{0}\n".format(dumps(ip2whois)))
-
-		except OSError:
-			pass
-
-		except IOError:
-			pass
-
-	try:
-		with open(join("results", domain, "whois.csv"), "w") as whois_file:
-			for ip_range, name in ip2whois.items():
-				whois_file.write("{0}|{1}\n".format(ip_range, name))
+		with open(join("results", domain, "networks.csv"), "w") as net_file:
+			for net in NETS:
+				net_file.write("{0}|{1}\n".format(net[0], net[1]))
 
 	except OSError:
 		pass

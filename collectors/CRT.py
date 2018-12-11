@@ -24,7 +24,7 @@ def init(domain):
 
 		CRT = set(CRT)
 
-		print "  \__", colored("Unique subdomains found:", "cyan"), colored(len(CRT), "yellow")
+		print "  \__ {0}: {1}".format(colored("Unique subdomains found", "cyan"), colored(len(CRT), "yellow"))
 		return CRT
 
 	except requests.exceptions.RequestException as err:
