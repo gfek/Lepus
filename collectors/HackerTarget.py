@@ -21,7 +21,7 @@ def init(domain):
 
 		HT = set(HT)
 
-		print "  \__", colored("Unique subdomains found:", "cyan"), colored(len(HT), "yellow")
+		print "  \__ {0}: {1}".format(colored("Unique subdomains found", "cyan"), colored(len(HT), "yellow"))
 		return HT
 
 	except requests.exceptions.RequestException as err:

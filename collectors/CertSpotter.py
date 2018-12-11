@@ -53,5 +53,5 @@ def init(domain):
 
 	CS = set(CS)
 
-	print "  \__", colored("Unique subdomains found:", "cyan"), colored(len(CS), "yellow")
+	print "  \__ {0}: {1}".format(colored("Unique subdomains found", "cyan"), colored(len(CS), "yellow"))
 	return CS

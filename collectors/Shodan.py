@@ -31,7 +31,7 @@ def init(domain):
 
 			SD = set(SD)
 
-			print "  \__", colored("Unique subdomains found:", "cyan"), colored(len(SD), "yellow")
+			print "  \__ {0}: {1}".format(colored("Unique subdomains found", "cyan"), colored(len(SD), "yellow"))
 			return SD
 
 		except shodan.exception.APIError as err:

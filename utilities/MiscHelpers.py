@@ -63,7 +63,7 @@ def deleteEmptyFiles(directory):
 		pass
 
 
-def diffLastRun(domain, resolved_public, old_resolved_public, last_run, out_to_json):
+def diffLastRun(domain, wildcards, resolved_public, old_resolved_public, last_run, out_to_json):
 	diff = {}
 
 	for host, ip in resolved_public.items():
@@ -74,7 +74,21 @@ def diffLastRun(domain, resolved_public, old_resolved_public, last_run, out_to_j
 		print "{0} - {1}".format(colored("\n[*]-Differences from last run", "yellow"), colored(ctime(int(last_run)), "cyan"))
 
 		for host, ip in diff.items():
-			print "  \__", colored("[+]", "green"), colored("{0} ({1})".format(host, ip), "white")
+			if ip in wildcards:
+				actual_wildcard = False
+
+				for value in wildcards[ip]:
+					if value in host:
+						actual_wildcard = True
+
+				if actual_wildcard:
+					print "  \__ {0} ({1})".format(colored(host, "cyan"), colored(ip, "red"))
+
+				else:
+					print "  \__ {0} ({1})".format(colored(host, "cyan"), colored(ip, "yellow"))
+
+			else:
+				print "  \__ {0} ({1})".format(colored(host, "cyan"), colored(ip, "yellow"))
 
 		if out_to_json:
 			try:
@@ -159,7 +173,7 @@ def loadOldFindings(directory):
 			with open(join("results", directory, filename), "r") as collector_file:
 				collector_results += [line.strip() for line in collector_file.readlines()]
 
-	print "  \__", colored("Unique subdomains loaded:", "cyan"), colored(len(OF), "yellow")
+	print "  \__ {0}: {1}".format(colored("Unique subdomains loaded", "cyan"), colored(len(OF), "yellow"))
 	return OF, ORP, last_run, collector_results
 
 
@@ -169,7 +183,7 @@ def loadWordlist(domain, wordlist):
 	WL = set([".".join([subdomain.strip().lower(), domain]) for subdomain in wordlist.readlines()])
 	wordlist.close()
 
-	print "  \__", colored("Unique subdomains loaded:", "cyan"), colored(len(WL), "yellow")
+	print "  \__ {0}: {1}".format(colored("Unique subdomains loaded", "cyan"), colored(len(WL), "yellow"))
 	return list(WL)
 
 

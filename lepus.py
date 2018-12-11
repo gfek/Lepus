@@ -28,7 +28,7 @@ import utilities.MiscHelpers
 import utilities.ScanHelpers
 
 simplefilter("ignore")
-version = "2.3.5"
+version = "2.3.6"
 
 
 def printBanner():
@@ -115,7 +115,7 @@ if __name__ == "__main__":
 			wordlist_hosts = []
 
 		hosts = utilities.MiscHelpers.filterDomain(args.domain, utilities.MiscHelpers.uniqueList(old_findings + zone_hosts + collector_hosts + wordlist_hosts))
-		wildcards = utilities.ScanHelpers.identifyWildcards(args.domain, hosts, args.threads, args.json)
+		wildcards = utilities.ScanHelpers.identifyWildcards(args.domain, {}, hosts, args.threads, args.json)
 
 		if len(hosts) > 0:
 			resolved, resolved_public = utilities.ScanHelpers.massResolve(args.domain, hosts, collector_hosts, args.threads, wildcards, args.json, [])
@@ -127,27 +127,24 @@ if __name__ == "__main__":
 
 				if permutated_hosts is not None:
 					hosts = utilities.MiscHelpers.uniqueList(hosts + permutated_hosts)
-					wildcards = utilities.ScanHelpers.identifyWildcards(args.domain, hosts, args.threads, args.json)
+					wildcards = utilities.ScanHelpers.identifyWildcards(args.domain, wildcards, hosts, args.threads, args.json)
 					resolved, resolved_public = utilities.ScanHelpers.massResolve(args.domain, hosts, collector_hosts, args.threads, wildcards, args.json, resolved)
 
 			public_IPs = set([address for hostname, address in resolved_public.items()])
 
-			if len(public_IPs) > 0:
-				utilities.ScanHelpers.massASN(args.domain, public_IPs, args.threads, args.json)
-				utilities.ScanHelpers.massWHOIS(args.domain, public_IPs, args.threads, args.json)
-
-				if args.reverse:
-					resolved_public = submodules.ReverseLookups.init(args.domain, args.ranges, resolved_public, public_IPs, args.threads, args.json)
-					public_IPs = set([address for hostname, address in resolved_public.items()])
-
-				if args.portscan:
-					submodules.PortScan.init(resolved_public, args.domain, public_IPs, args.ports, args.threads)
+			if args.reverse:
+				resolved_public = submodules.ReverseLookups.init(args.domain, args.ranges, resolved_public, public_IPs, args.threads, args.json)
+				public_IPs = set([address for hostname, address in resolved_public.items()])
 
 			if resolved_public and old_resolved_public:
-				utilities.MiscHelpers.diffLastRun(args.domain, resolved_public, old_resolved_public, last_run, args.json)
+				utilities.MiscHelpers.diffLastRun(args.domain, wildcards, resolved_public, old_resolved_public, last_run, args.json)
+
+			utilities.ScanHelpers.massRDAP(args.domain, public_IPs, args.threads, args.json)
+
+			if args.portscan:
+				submodules.PortScan.init(resolved_public, args.domain, public_IPs, args.ports, args.threads)
 
 			utilities.MiscHelpers.deleteEmptyFiles(args.domain)
-
 			print
 
 	except KeyboardInterrupt:

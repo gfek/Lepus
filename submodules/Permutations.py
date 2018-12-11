@@ -108,5 +108,5 @@ def init(domain, subdomains, wildcards, wordlist):
 		for hostname in hostnames:
 			permutations.append(".".join([str(int(time())), hostname]))
 
-	print "  \__", colored("Generated subdomains:", "cyan"), colored(len(permutations), "yellow")
+	print "  \__ {0}: {1}".format(colored("Generated subdomains", "cyan"), colored(len(permutations), "yellow"))
 	return permutations
