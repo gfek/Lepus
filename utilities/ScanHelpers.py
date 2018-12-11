@@ -654,10 +654,14 @@ def massConnectScan(IPs, targets, threads):
 
 
 def rdap(ip):
-	obj = IPWhois(ip)
-	result = obj.lookup_rdap()
+	try:
+		obj = IPWhois(ip)
+		result = obj.lookup_rdap()
 
-	return result
+		return result
+
+	except Exception:
+		return None
 
 
 def massRDAP(domain, IPs, threads, out_to_json):
@@ -673,7 +677,10 @@ def massRDAP(domain, IPs, threads, out_to_json):
 			completed = tqdm(completed, total=len(IPs), desc="  \__ {0}".format(colored("Progress", "cyan")), dynamic_ncols=True)
 
 			for task in completed:
-				rdap_records.append(task.result())
+				result = task.result()
+
+				if result is not None:
+					rdap_records.append(result)
 
 		except KeyboardInterrupt:
 			completed.close()
