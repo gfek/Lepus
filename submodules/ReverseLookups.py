@@ -27,7 +27,7 @@ def init(domain, ranges, resolved_public, IPs, threads, out_to_json):
 	print "    \__ {0} {1}".format(colored("Additional hostnames that were identified:", "yellow"), colored(len(diff), "cyan"))
 
 	for hostname, address in diff:
-		print "      \__ {0}: {1}".format(colored(hostname, "cyan"), colored(address, "yellow"))
+		print "      \__ {0} ({1})".format(colored(hostname, "cyan"), colored(address, "yellow"))
 
 	if out_to_json:
 		try:
