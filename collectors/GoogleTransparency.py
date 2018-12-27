@@ -4,11 +4,15 @@ from termcolor import colored
 
 
 def parseResponse(response, domain):
-	token = response.split("\n]\n,[")[2].split("]\n")[0].split(",")[1].strip("\"")
-	hostnameRegex = "([\w\.\-]+\.%s)" % (domain.replace(".", "\."))
-	hosts = findall(hostnameRegex, response)
+	try:
+		token = response.split("\n]\n,[")[2].split("]\n")[0].split(",")[1].strip("\"")
+		hostnameRegex = "([\w\.\-]+\.%s)" % (domain.replace(".", "\."))
+		hosts = findall(hostnameRegex, response)
 
-	return token, [host.lstrip(".") for host in hosts]
+		return token, [host.lstrip(".") for host in hosts]
+
+	except Exception:
+		return "null", []
 
 
 def init(domain):

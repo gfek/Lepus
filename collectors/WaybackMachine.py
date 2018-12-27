@@ -32,6 +32,10 @@ def init(domain):
 		print "  \__ {0}: {1}".format(colored("Unique subdomains found", "cyan"), colored(len(WB), "yellow"))
 		return WB
 
+	except ValueError as errv:
+		print "  \__", colored(errv, "red")
+		return []
+
 	except requests.exceptions.RequestException as err:
 		print "  \__", colored(err, "red")
 		return []
