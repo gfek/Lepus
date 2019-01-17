@@ -1,6 +1,6 @@
 import requests
 from termcolor import colored
-from ConfigParser import SafeConfigParser
+from ConfigParser import RawConfigParser
 
 
 def init(domain):
@@ -8,7 +8,7 @@ def init(domain):
 
 	print colored("[*]-Searching PassiveTotal...", "yellow")
 
-	parser = SafeConfigParser()
+	parser = RawConfigParser()
 	parser.read("config.ini")
 	PT_KEY = parser.get("PassiveTotal", "PT_KEY")
 	PT_SECRET = parser.get("PassiveTotal", "PT_SECRET")

@@ -1,6 +1,6 @@
 import requests
 from termcolor import colored
-from ConfigParser import SafeConfigParser
+from ConfigParser import RawConfigParser
 
 
 def init(domain):
@@ -8,7 +8,7 @@ def init(domain):
 
 	print colored("[*]-Searching Censys...", "yellow")
 
-	parser = SafeConfigParser()
+	parser = RawConfigParser()
 	parser.read("config.ini")
 	API_URL = "https://www.censys.io/api/v1"
 	UID = parser.get("Censys", "CENSYS_UID")

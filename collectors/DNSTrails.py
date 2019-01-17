@@ -1,6 +1,6 @@
 import requests
 from termcolor import colored
-from ConfigParser import SafeConfigParser
+from ConfigParser import RawConfigParser
 
 
 def init(domain):
@@ -8,7 +8,7 @@ def init(domain):
 
 	print colored("[*]-Searching DNSTrails...", "yellow")
 
-	parser = SafeConfigParser()
+	parser = RawConfigParser()
 	parser.read("config.ini")
 	DNSTrails_API_KEY = parser.get("DNSTrails", "DNSTrails_API_KEY")
 

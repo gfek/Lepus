@@ -15,11 +15,10 @@ def init(domain):
 		response = requests.get("https://crt.sh/?", params=parameters, headers=headers)
 
 		if response.status_code == 200:
-			content = response.content
-			data = json.loads("[{}]".format(content.replace("}{", "},{")))
+			data = json.loads(response.content)
 
 			for d in data:
-				if not "".join(d["name_value"]).startswith("*"):
+				if not d["name_value"].startswith("*"):
 					CRT.append(d["name_value"])
 
 		CRT = set(CRT)
