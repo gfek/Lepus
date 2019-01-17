@@ -1,6 +1,6 @@
 import shodan
 from termcolor import colored
-from ConfigParser import SafeConfigParser
+from ConfigParser import RawConfigParser
 
 
 def init(domain):
@@ -8,7 +8,7 @@ def init(domain):
 
 	print colored("[*]-Searching Shodan...", "yellow")
 
-	parser = SafeConfigParser()
+	parser = RawConfigParser()
 	parser.read("config.ini")
 	SHODAN_API_KEY = parser.get("Shodan", "SHODAN_API_KEY")
 	api = shodan.Shodan(SHODAN_API_KEY)

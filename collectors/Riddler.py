@@ -2,7 +2,7 @@ import requests
 from json import loads
 from urllib import quote
 from termcolor import colored
-from ConfigParser import SafeConfigParser
+from ConfigParser import RawConfigParser
 
 
 def init(domain):
@@ -10,7 +10,7 @@ def init(domain):
 
 	print colored("[*]-Searching Riddler...", "yellow")
 
-	parser = SafeConfigParser()
+	parser = RawConfigParser()
 	parser.read("config.ini")
 	RIDDLER_USERNAME = parser.get("Riddler", "RIDDLER_USERNAME")
 	RIDDLER_PASSWORD = parser.get("Riddler", "RIDDLER_PASSWORD")
