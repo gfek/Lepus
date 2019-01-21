@@ -1,5 +1,5 @@
 from json import dumps
-from time import ctime
+from time import time, ctime
 from termcolor import colored
 from ipaddress import ip_network
 from os.path import exists, isfile, join
@@ -63,7 +63,7 @@ def deleteEmptyFiles(directory):
 		pass
 
 
-def diffLastRun(domain, wildcards, resolved_public, old_resolved_public, last_run, out_to_json):
+def diffLastRun(domain, wildcards, resolved_public, old_resolved_public, last_run, current_run):
 	diff = {}
 
 	for host, ip in resolved_public.items():
@@ -71,7 +71,7 @@ def diffLastRun(domain, wildcards, resolved_public, old_resolved_public, last_ru
 			diff[host] = ip
 
 	if diff:
-		print "{0} - {1}".format(colored("\n[*]-Differences from last run", "yellow"), colored(ctime(int(last_run)), "cyan"))
+		print "{0} {1}:".format(colored("\n[*]-Differences since", "yellow"), colored(ctime(int(last_run)), "cyan"))
 
 		for host, ip in diff.items():
 			if ip in wildcards:
@@ -90,21 +90,24 @@ def diffLastRun(domain, wildcards, resolved_public, old_resolved_public, last_ru
 			else:
 				print "  \__ {0} ({1})".format(colored(host, "cyan"), colored(ip, "yellow"))
 
-		if out_to_json:
-			try:
-				with open(join("results", domain, "diff.json"), "w") as diff_file:
-					diff_file.write("{0}\n".format(dumps(diff)))
-
-			except OSError:
-				pass
-
-			except IOError:
-				pass
-
 		try:
-			with open(join("results", domain, "diff.csv"), "w") as diff_file:
+			if exists(join("results", domain, "diff.log")):
+				initialDiff = False
+
+			else:
+				initialDiff = True
+
+			with open(join("results", domain, "diff.log"), "a") as diff_file:
+				if initialDiff:
+					diff_file.write("# ---------- {0} ---------- #\n".format(ctime(int(current_run))))
+
+				else:
+					diff_file.write("\n# ---------- {0} ---------- #\n".format(ctime(int(current_run))))
+
+				diff_file.write("[!] Differences since {0}\n".format(ctime(int(last_run))))
+
 				for host, ip in diff.items():
-					diff_file.write("{0}|{1}\n".format(host, ip))
+					diff_file.write("  \__ {0} ({1})\n".format(host, ip))
 
 		except OSError:
 			pass
