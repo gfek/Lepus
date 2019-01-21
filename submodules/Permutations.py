@@ -1,5 +1,6 @@
 from time import time
 from termcolor import colored
+import utilities.MiscHelpers
 
 
 def permuteDash(subdomain, wordlist):
@@ -73,8 +74,14 @@ def permuteNumbers(subdomain):
 	return results
 
 
-def init(domain, subdomains, wildcards, wordlist):
-	print "{0} {1} {2}".format(colored("\n[*]-Performing permutations on", "yellow"), colored(len(subdomains), "cyan"), colored("resolved hostnames...", "yellow"))
+def init(domain, resolved, collector_hosts, wildcards, wordlist):
+	resolved_hosts = []
+	
+	for host in resolved:
+		resolved_hosts.append(host)
+
+	subdomains = utilities.MiscHelpers.uniqueList(resolved_hosts + collector_hosts)
+	print "{0} {1} {2}".format(colored("\n[*]-Performing permutations on", "yellow"), colored(len(subdomains), "cyan"), colored("hostnames...", "yellow"))
 
 	permutated_subdomains = []
 	permutations = []

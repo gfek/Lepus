@@ -28,7 +28,7 @@ import utilities.MiscHelpers
 import utilities.ScanHelpers
 
 simplefilter("ignore")
-version = "2.3.6"
+version = "2.3.7"
 
 
 def printBanner():
@@ -67,15 +67,20 @@ if __name__ == "__main__":
 
 		if not workspace:
 			old_findings, old_resolved_public, last_run, collector_hosts = utilities.MiscHelpers.loadOldFindings(args.domain)
+			current_run = str(int(time()))
+
+			with open(join("results", args.domain, ".timestamp"), "w") as timestamp_file:
+				timestamp_file.write(current_run)
 
 		else:
 			collector_hosts = []
 			old_findings = []
 			old_resolved_public = []
 			last_run = None
+			current_run = str(int(time()))
 
 			with open(join("results", args.domain, ".timestamp"), "w") as timestamp_file:
-				timestamp_file.write(str(int(time())))
+				timestamp_file.write(current_run)
 
 		if args.zoneTransfer:
 			zone_hosts = utilities.ScanHelpers.zoneTransfer(nameservers, args.domain)
@@ -122,7 +127,7 @@ if __name__ == "__main__":
 			hosts = list(set(old_findings + zone_hosts + collector_hosts + [hostname for hostname, address in resolved.items()]))
 
 			if args.permutate:
-				permutated_hosts = submodules.Permutations.init(args.domain, resolved, wildcards, args.permutation_wordlist)
+				permutated_hosts = submodules.Permutations.init(args.domain, resolved, collector_hosts, wildcards, args.permutation_wordlist)
 				permutated_hosts = utilities.MiscHelpers.filterDomain(args.domain, utilities.MiscHelpers.uniqueList(permutated_hosts))
 
 				if permutated_hosts is not None:
@@ -137,7 +142,7 @@ if __name__ == "__main__":
 				public_IPs = set([address for hostname, address in resolved_public.items()])
 
 			if resolved_public and old_resolved_public:
-				utilities.MiscHelpers.diffLastRun(args.domain, wildcards, resolved_public, old_resolved_public, last_run, args.json)
+				utilities.MiscHelpers.diffLastRun(args.domain, wildcards, resolved_public, old_resolved_public, last_run, current_run)
 
 			utilities.ScanHelpers.massRDAP(args.domain, public_IPs, args.threads, args.json)
 
