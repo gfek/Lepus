@@ -76,14 +76,13 @@ def permuteNumbers(subdomain):
 
 def init(domain, resolved, collector_hosts, wildcards, wordlist):
 	resolved_hosts = []
-	
+
 	for host in resolved:
 		resolved_hosts.append(host)
 
 	subdomains = utilities.MiscHelpers.uniqueList(resolved_hosts + collector_hosts)
 	print "{0} {1} {2}".format(colored("\n[*]-Performing permutations on", "yellow"), colored(len(subdomains), "cyan"), colored("hostnames...", "yellow"))
 
-	permutated_subdomains = []
 	permutations = []
 	words = [line.strip() for line in wordlist.readlines()]
 	wordlist.close()
@@ -101,15 +100,15 @@ def init(domain, resolved, collector_hosts, wildcards, wordlist):
 
 		else:
 			subdomain = subdomain.split(domain)[0][:-1]
-			permutated_subdomains += permuteDash(subdomain, words)
-			permutated_subdomains += permuteDot(subdomain, words)
-			permutated_subdomains += permuteWords(subdomain, words)
-			permutated_subdomains += permuteNumbers(subdomain)
+			permutations += permuteDash(subdomain, words)
+			permutations += permuteDot(subdomain, words)
+			permutations += permuteWords(subdomain, words)
+			permutations += permuteNumbers(subdomain)
 
-	permutated_subdomains = set(permutated_subdomains)
+	permutations = set(permutations)
 
-	for subdomain in permutated_subdomains:
-		permutations.append(".".join([subdomain, domain]))
+	for i in range(permutations):
+		permutations[i] = ".".join([permutations[i], domain])
 
 	for hostnames in wildcards.values():
 		for hostname in hostnames:
