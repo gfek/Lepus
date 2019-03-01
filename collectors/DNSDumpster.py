@@ -34,28 +34,28 @@ class DNSDumpsterAPI(object):
 			return list(res)
 
 		except requests.exceptions.RequestException as err:
-			print "  \__", colored(err, "red")
+			print("  \__", colored(err, "red"))
 			return []
 
 		except requests.exceptions.HTTPError as errh:
-			print "  \__", colored(errh, "red")
+			print("  \__", colored(errh, "red"))
 			return []
 
 		except requests.exceptions.ConnectionError as errc:
-			print "  \__", colored(errc, "red")
+			print("  \__", colored(errc, "red"))
 			return []
 
 		except requests.exceptions.Timeout as errt:
-			print "  \__", colored(errt, "red")
+			print("  \__", colored(errt, "red"))
 			return []
 
 
 def init(domain):
-	print colored("[*]-Searching DNSDumpster...", "yellow")
+	print(colored("[*]-Searching DNSDumpster...", "yellow"))
 
 	api = DNSDumpsterAPI()
 	DD = [".".join([subdomain, domain]) for subdomain in set(api.search(domain))]
 
-	print "  \__ {0}: {1}".format(colored("Unique subdomains found", "cyan"), colored(len(DD), "yellow"))
+	print("  \__ {0}: {1}".format(colored("Unique subdomains found", "cyan"), colored(len(DD), "yellow")))
 
 	return DD

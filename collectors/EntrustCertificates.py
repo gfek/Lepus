@@ -14,7 +14,7 @@ def parseSubject(subject, domain):
 def init(domain):
 	ENT = []
 
-	print colored("[*]-Searching Entrust Certificates...", "yellow")
+	print(colored("[*]-Searching Entrust Certificates...", "yellow"))
 
 	url = "https://ctsearch.entrust.com/api/v1/certificates?fields=subjectDN&domain={0}&includeExpired=true&exactMatch=false&limit=5000".format(domain)
 	headers = {"user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:52.0) Gecko/20100101 Firefox/52.0"}
@@ -28,25 +28,25 @@ def init(domain):
 
 		ENT = set(ENT)
 
-		print "  \__ {0}: {1}".format(colored("Unique subdomains found", "cyan"), colored(len(ENT), "yellow"))
+		print("  \__ {0}: {1}".format(colored("Unique subdomains found", "cyan"), colored(len(ENT), "yellow")))
 		return ENT
 
 	except ValueError as errv:
-		print "  \__", colored(errv, "red")
+		print("  \__", colored(errv, "red"))
 		return []
 
 	except requests.exceptions.RequestException as err:
-		print "  \__", colored(err, "red")
+		print("  \__", colored(err, "red"))
 		return []
 
 	except requests.exceptions.HTTPError as errh:
-		print "  \__", colored(errh, "red")
+		print("  \__", colored(errh, "red"))
 		return []
 
 	except requests.exceptions.ConnectionError as errc:
-		print "  \__", colored(errc, "red")
+		print("  \__", colored(errc, "red"))
 		return []
 
 	except requests.exceptions.Timeout as errt:
-		print "  \__", colored(errt, "red")
+		print("  \__", colored(errt, "red"))
 		return []

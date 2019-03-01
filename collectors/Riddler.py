@@ -1,14 +1,14 @@
 import requests
 from json import loads
-from urllib import quote
+from urllib.parse import quote
 from termcolor import colored
-from ConfigParser import RawConfigParser
+from configparser import RawConfigParser
 
 
 def init(domain):
 	riddler = []
 
-	print colored("[*]-Searching Riddler...", "yellow")
+	print(colored("[*]-Searching Riddler...", "yellow"))
 
 	parser = RawConfigParser()
 	parser.read("config.ini")
@@ -16,7 +16,7 @@ def init(domain):
 	RIDDLER_PASSWORD = parser.get("Riddler", "RIDDLER_PASSWORD")
 
 	if RIDDLER_USERNAME == "" or RIDDLER_PASSWORD == "":
-		print "  \__", colored("No Riddler API credentials configured", "red")
+		print("  \__", colored("No Riddler API credentials configured", "red"))
 		return []
 
 	else:
@@ -42,29 +42,29 @@ def init(domain):
 
 				riddler = set(riddler)
 
-				print "  \__ {0}: {1}".format(colored("Unique subdomains found", "cyan"), colored(len(riddler), "yellow"))
+				print("  \__ {0}: {1}".format(colored("Unique subdomains found", "cyan"), colored(len(riddler), "yellow")))
 				return riddler
 
 			else:
-				print "  \__", colored("Invalid Riddler API credentials", "red")
+				print("  \__", colored("Invalid Riddler API credentials", "red"))
 				return []
 
 		except requests.exceptions.RequestException as err:
-			print "  \__", colored(err, "red")
+			print("  \__", colored(err, "red"))
 			return []
 
 		except requests.exceptions.HTTPError as errh:
-			print "  \__", colored(errh, "red")
+			print("  \__", colored(errh, "red"))
 			return []
 
 		except requests.exceptions.ConnectionError as errc:
-			print "  \__", colored(errc, "red")
+			print("  \__", colored(errc, "red"))
 			return []
 
 		except requests.exceptions.Timeout as errt:
-			print "  \__", colored(errt, "red")
+			print("  \__", colored(errt, "red"))
 			return []
 
 		except ValueError as errv:
-			print "  \__", colored(errv, "red")
+			print("  \__", colored(errv, "red"))
 			return []

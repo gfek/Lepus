@@ -1,19 +1,19 @@
 import requests
 from termcolor import colored
-from ConfigParser import RawConfigParser
+from configparser import RawConfigParser
 
 
 def init(domain):
 	DT = []
 
-	print colored("[*]-Searching DNSTrails...", "yellow")
+	print(colored("[*]-Searching DNSTrails...", "yellow"))
 
 	parser = RawConfigParser()
 	parser.read("config.ini")
 	DNSTrails_API_KEY = parser.get("DNSTrails", "DNSTrails_API_KEY")
 
 	if DNSTrails_API_KEY == "":
-		print "  \__", colored("No DNSTrails API key configured", "red")
+		print("  \__", colored("No DNSTrails API key configured", "red"))
 		return []
 
 	else:
@@ -24,28 +24,28 @@ def init(domain):
 			response = requests.get(url, headers=headers)
 			payload = response.json()
 
-			for k, v in payload.items():
+			for k, v in list(payload.items()):
 				if v:
 					for dnsvalue in v:
 						DT.append(".".join([dnsvalue, domain]))
 
 			DT = set(DT)
 
-			print "  \__ {0}: {1}".format(colored("Unique subdomains found", "cyan"), colored(len(DT), "yellow"))
+			print("  \__ {0}: {1}".format(colored("Unique subdomains found", "cyan"), colored(len(DT), "yellow")))
 			return DT
 
 		except requests.exceptions.RequestException as err:
-			print "  \__", colored(err, "red")
+			print("  \__", colored(err, "red"))
 			return []
 
 		except requests.exceptions.HTTPError as errh:
-			print "  \__", colored(errh, "red")
+			print("  \__", colored(errh, "red"))
 			return []
 
 		except requests.exceptions.ConnectionError as errc:
-			print "  \__", colored(errc, "red")
+			print("  \__", colored(errc, "red"))
 			return []
 
 		except requests.exceptions.Timeout as errt:
-			print "  \__", colored(errt, "red")
+			print("  \__", colored(errt, "red"))
 			return []

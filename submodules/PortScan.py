@@ -40,10 +40,10 @@ def init(resolved, domain, IPs, port_scan, threads):
 			results_json[result[0]] = []
 			results_json[result[0]].append(result[1])
 
-	print "    \__ {0} {1}".format(colored("Open ports that were identified:", "yellow"), colored(len(results), "cyan"))
+	print("    \__ {0} {1}".format(colored("Open ports that were identified:", "yellow"), colored(len(results), "cyan")))
 
-	for key, values in results_json.items():
-		print "      \__ {0}: {1}".format(colored(key, "cyan"), ", ".join(colored(str(value), "yellow") for value in sorted(values)))
+	for key, values in list(results_json.items()):
+		print("      \__ {0}: {1}".format(colored(key, "cyan"), ", ".join(colored(str(value), "yellow") for value in sorted(values))))
 
 	try:
 		with open(join("results", domain, "urls.txt"), "w") as port_scan_file:
