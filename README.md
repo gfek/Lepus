@@ -1,3 +1,5 @@
+[![GitHub License](https://img.shields.io/badge/License-BSD%203--Clause-informational.svg)](https://github.com/GKNSB/Lepus/blob/master/LICENSE)
+
 ## Lepus
 **Sub-domain finder**
 

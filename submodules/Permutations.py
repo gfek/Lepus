@@ -105,7 +105,7 @@ def init(domain, resolved, collector_hosts, wildcards, wordlist):
 			permutations += permuteWords(subdomain, words)
 			permutations += permuteNumbers(subdomain)
 
-	permutations = set(permutations)
+	permutations = list(set(permutations))
 
 	for i in range(permutations):
 		permutations[i] = ".".join([permutations[i], domain])
