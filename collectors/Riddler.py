@@ -26,7 +26,7 @@ def init(domain):
 
 		try:
 			auth_response = requests.post(auth_url, json=auth, headers=headers)
-			auth_response_json = loads(auth_response.content)
+			auth_response_json = loads(auth_response.text)
 
 			if auth_response_json["meta"]["code"] == 200:
 				auth_token = auth_response_json["response"]["user"]["authentication_token"]
@@ -35,7 +35,7 @@ def init(domain):
 				headers = {"user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:52.0) Gecko/20100101 Firefox/52.0", "content-type": "application/json", "authentication-token": auth_token}
 
 				search_response = requests.post(search_url, json=search, headers=headers)
-				search_response_json = loads(search_response.content)
+				search_response_json = loads(search_response.text)
 
 				for item in search_response_json:
 					riddler.append(item["host"])

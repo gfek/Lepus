@@ -604,7 +604,7 @@ def connectScan(target):
 
 	except Exception as e:
 		if isOpen:
-			if "unsupported protocol" in e:
+			if "unsupported protocol" in str(e):
 				return (target[0], target[1], True)
 
 			else:
@@ -705,6 +705,7 @@ def massRDAP(domain, IPs, threads, out_to_json):
 	for asn in ASN:
 		if asn == ASN[-1]:
 			print("    __\__ {0}: {1}, {2}: {3}, {4}: {5}".format(colored("ASN", "cyan"), colored(asn[0], "yellow"), colored("Prefix", "cyan"), colored(asn[1], "yellow"), colored("Description", "cyan"), colored(asn[2], "yellow")))
+			print("   \\")
 
 		else:
 			print("      \__ {0}: {1}, {2}: {3}, {4}: {5}".format(colored("ASN", "cyan"), colored(asn[0], "yellow"), colored("Prefix", "cyan"), colored(asn[1], "yellow"), colored("Description", "cyan"), colored(asn[2], "yellow")))

@@ -5,7 +5,7 @@ from termcolor import colored
 
 def parseResponse(response, domain):
 	hostnameRegex = "([\w\.\-]+\.%s)" % (domain.replace(".", "\."))
-	hosts = findall(hostnameRegex, response)
+	hosts = findall(hostnameRegex, str(response))
 
 	return [host.lstrip(".") for host in hosts]
 

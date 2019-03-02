@@ -33,7 +33,7 @@ def init(domain):
 				url = "".join([baseURL, "/page?domain=", domain, "&include_expired=true&include_subdomains=true&p=", token])
 
 			response = requests.get(url, headers=headers)
-			token, hostnames = parseResponse(response.content, domain)
+			token, hostnames = parseResponse(response.text, domain)
 
 			for hostname in hostnames:
 				GTR.append(hostname)

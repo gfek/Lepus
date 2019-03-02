@@ -8,23 +8,27 @@ def init(domain):
 
 	print(colored("[*]-Searching CRT...", "yellow"))
 
-	parameters = {"q": "%.{}".format(domain), "output": "json"}
+	parameters = {"q": "%.{0}".format(domain), "output": "json"}
 	headers = {"user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:52.0) Gecko/20100101 Firefox/52.0", "content-type": "application/json"}
 
 	try:
 		response = requests.get("https://crt.sh/?", params=parameters, headers=headers)
 
 		if response.status_code == 200:
-			data = json.loads(response.content)
+			data = json.loads(response.text)
 
 			for d in data:
 				if not d["name_value"].startswith("*"):
 					CRT.append(d["name_value"])
 
-		CRT = set(CRT)
+			CRT = set(CRT)
 
-		print("  \__ {0}: {1}".format(colored("Unique subdomains found", "cyan"), colored(len(CRT), "yellow")))
-		return CRT
+			print("  \__ {0}: {1}".format(colored("Unique subdomains found", "cyan"), colored(len(CRT), "yellow")))
+			return CRT
+
+		elif response.status_code == 504:
+			print("  \__", colored("HTTP Error 504 - Gateway Timeout", "red"))
+			return []
 
 	except requests.exceptions.RequestException as err:
 		print("  \__", colored(err, "red"))
@@ -41,3 +45,4 @@ def init(domain):
 	except requests.exceptions.Timeout as errt:
 		print("  \__", colored(errt, "red"))
 		return []
+
