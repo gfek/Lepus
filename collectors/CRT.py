@@ -23,12 +23,8 @@ def init(domain):
 
 			CRT = set(CRT)
 
-			print("  \__ {0}: {1}".format(colored("Unique subdomains found", "cyan"), colored(len(CRT), "yellow")))
-			return CRT
-
-		elif response.status_code == 504:
-			print("  \__", colored("HTTP Error 504 - Gateway Timeout", "red"))
-			return []
+		print("  \__ {0}: {1}".format(colored("Unique subdomains found", "cyan"), colored(len(CRT), "yellow")))
+		return CRT
 
 	except requests.exceptions.RequestException as err:
 		print("  \__", colored(err, "red"))
