@@ -12,7 +12,7 @@ def init(domain):
 	headers = {"user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:52.0) Gecko/20100101 Firefox/52.0"}
 
 	try:
-		response = requests.get(url, headers=headers).content
+		response = requests.get(url, headers=headers).text
 		hostnames = [result.split(",")[0] for result in response.split("\n")]
 
 		for hostname in hostnames:

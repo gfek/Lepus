@@ -21,7 +21,7 @@ def init(domain):
 
 	try:
 		response = requests.get(url, headers=headers)
-		response_json = loads(response.content.replace("\\u003d", "="))
+		response_json = loads(response.text.replace("\\u003d", "="))
 
 		for item in response_json:
 			ENT += parseSubject(item["subjectDN"], domain)

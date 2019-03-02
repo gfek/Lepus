@@ -8,8 +8,6 @@ from os.path import join
 import collectors.Censys
 import collectors.CertSpotter
 import collectors.CRT
-import collectors.DNSDB
-import collectors.DNSDumpster
 import collectors.DNSTrails
 import collectors.EntrustCertificates
 import collectors.FindSubdomains
@@ -28,7 +26,7 @@ import utilities.MiscHelpers
 import utilities.ScanHelpers
 
 simplefilter("ignore")
-version = "3.0.0"
+version = "3.0.1"
 
 
 def printBanner():
@@ -97,8 +95,6 @@ if __name__ == "__main__":
 			collector_hosts += collectors.Censys.init(args.domain)
 			collector_hosts += collectors.CertSpotter.init(args.domain)
 			collector_hosts += collectors.CRT.init(args.domain)
-			collector_hosts += collectors.DNSDB.init(args.domain)
-			collector_hosts += collectors.DNSDumpster.init(args.domain)
 			collector_hosts += collectors.DNSTrails.init(args.domain)
 			collector_hosts += collectors.EntrustCertificates.init(args.domain)
 			collector_hosts += collectors.FindSubdomains.init(args.domain)
@@ -120,9 +116,9 @@ if __name__ == "__main__":
 			wordlist_hosts = []
 
 		hosts = utilities.MiscHelpers.filterDomain(args.domain, utilities.MiscHelpers.uniqueList(old_findings + zone_hosts + collector_hosts + wordlist_hosts))
-		wildcards = utilities.ScanHelpers.identifyWildcards(args.domain, {}, hosts, args.threads, args.json)
 
 		if len(hosts) > 0:
+			wildcards = utilities.ScanHelpers.identifyWildcards(args.domain, {}, hosts, args.threads, args.json)
 			resolved, resolved_public = utilities.ScanHelpers.massResolve(args.domain, hosts, collector_hosts, args.threads, wildcards, args.json, [])
 			hosts = list(set(old_findings + zone_hosts + collector_hosts + [hostname for hostname, address in list(resolved.items())]))
 
@@ -150,7 +146,8 @@ if __name__ == "__main__":
 				submodules.PortScan.init(resolved_public, args.domain, public_IPs, args.ports, args.threads)
 
 			utilities.MiscHelpers.deleteEmptyFiles(args.domain)
-			print()
+
+		print()
 
 	except KeyboardInterrupt:
 		print(colored("\n[*]-Received keyboard interrupt! Shutting down...\n", "red"))

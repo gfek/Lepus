@@ -1,9 +1,8 @@
-shodan==1.10.4
-termcolor==1.1.0
-ipwhois==1.0.0
-requests==2.21.0
-tqdm==4.29.1
-IPy==0.83
 beautifulsoup4==4.7.1
-futures==3.2.0
 dnspython==1.16.0
+ipwhois==1.1.0
+IPy==1.00
+requests==2.21.0
+shodan==1.11.1
+termcolor==1.1.0
+tqdm==4.31.1
