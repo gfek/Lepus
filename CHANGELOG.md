@@ -14,8 +14,6 @@
 5. Removed DNSDB collector
 6. Removed DNSDumpster collector
 
----
-
 # Version 2.3.7
 
 ### --- New Features
@@ -29,8 +27,6 @@
 2. Updated requirements
 3. New subdomain wordlist
 
----
-
 # Version 2.3.6
 
 ### --- New Features
@@ -42,8 +38,6 @@
 3. Changed some output in order to be consistent across all modules
 4. Updated README.md
 
----
-
 # Version 2.3.5
 
 ### --- Bug Fixes
@@ -52,8 +46,6 @@
 
 ### --- Misc
 1. Added .gitignore
-
----
 
 # Version 2.3.4
 
@@ -65,8 +57,6 @@
 ### --- Misc
 1. Updated requirements
 2. Updated README
-
----
 
 # Version 2.3.3
 
@@ -84,8 +74,6 @@
 ### --- Misc
 1. Utilities code redesign
 2. Updated README.md
-
----
 
 # Version 2.2.5
 
