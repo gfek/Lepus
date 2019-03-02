@@ -11,7 +11,7 @@
 2. Added CHANGELOG.md
 3. Updated README.md
 4. Updated requirements.txt
-5. Temporarily removed DNSDB collector
+5. Removed DNSDB collector
 6. Removed DNSDumpster collector
 
 ---
