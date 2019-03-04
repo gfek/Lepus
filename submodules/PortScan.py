@@ -40,15 +40,31 @@ def init(resolved, domain, IPs, port_scan, threads):
 			results_json[result[0]] = []
 			results_json[result[0]].append(result[1])
 
-	print("    \__ {0} {1}".format(colored("Open ports that were identified:", "yellow"), colored(len(results), "cyan")))
+	print("    \__ {0}: {1}".format(colored("Open ports that were identified", "yellow"), colored(len(results), "cyan")))
+	items = list(results_json.items())
 
-	for key, values in list(results_json.items()):
-		print("      \__ {0}: {1}".format(colored(key, "cyan"), ", ".join(colored(str(value), "yellow") for value in sorted(values))))
+	for key, values in items:
+		if key == items[-1][0]:
+			print("    __\__ {0}: {1}".format(colored(key, "cyan"), ", ".join(colored(str(value), "yellow") for value in sorted(values))))
+			print("   \\")
+
+		else:
+			print("      \__ {0}: {1}".format(colored(key, "cyan"), ", ".join(colored(str(value), "yellow") for value in sorted(values))))
+
+	urls = []
+
+	for target in results:
+		urls += utilities.MiscHelpers.urlize(target, resolved)
+
+	print("    \__ {0}: {1}".format(colored("URLs that were generated", "yellow"), colored(len(urls), "cyan")))
+
+	for url in sorted(urls):
+		print("      \__ {0}".format(colored(url, "cyan")))
 
 	try:
 		with open(join("results", domain, "urls.txt"), "w") as port_scan_file:
-			for target in results:
-				port_scan_file.write("{0}\n".format(utilities.MiscHelpers.urlize(target, resolved)))
+			for url in sorted(urls):
+				port_scan_file.write("{0}\n".format(url))
 
 	except OSError:
 		pass

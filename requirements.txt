@@ -1,4 +1,5 @@
 beautifulsoup4==4.7.1
+cfscrape==1.9.5
 dnspython==1.16.0
 ipwhois==1.1.0
 IPy==1.00

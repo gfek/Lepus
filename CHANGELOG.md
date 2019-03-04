@@ -1,3 +1,16 @@
+# Version 3.0.2
+
+### --- New Features
+1. Re-implemented DNSDB collector with CF Anti-DDOS bypass
+2. URLs generated from the Port Scan module are now also printed on the console
+
+### --- Bug Fixes
+1. Fixed a bug on Port Scan module where URLs were not generated correctly
+
+### --- Misc
+1. Updated requirements.txt
+2. Updated README.md
+
 # Version 3.0.1
 
 ### --- New Features
@@ -24,7 +37,7 @@
 
 ### --- Misc
 1. Minor tweak on permutations
-2. Updated requirements
+2. Updated requirements.txt
 3. New subdomain wordlist
 
 # Version 2.3.6
@@ -55,8 +68,8 @@
 3. Fixed a bug on wildcard identification
 
 ### --- Misc
-1. Updated requirements
-2. Updated README
+1. Updated requirements.txt
+2. Updated README.md
 
 # Version 2.3.3
 
