@@ -228,17 +228,20 @@ def chunks(list, numberInChunk):
 
 def urlize(target, domains):
 	hosts = [hostname for hostname, address in list(domains.items()) if address == target[0]]
+	urls = []
 
 	for host in hosts:
 		if target[1] == 80:
-			return "http://{0}/".format(host)
+			urls.append("http://{0}/".format(host))
 
 		elif target[1] == 443:
-			return "https://{0}/".format(host)
+			urls.append("https://{0}/".format(host))
 
 		else:
 			if target[2]:
-				return "https://{0}:{1}/".format(host, target[1])
+				urls.append("https://{0}:{1}/".format(host, target[1]))
 
 			else:
-				return "http://{0}:{1}/".format(host, target[1])
+				urls.append("http://{0}:{1}/".format(host, target[1]))
+
+	return urls
