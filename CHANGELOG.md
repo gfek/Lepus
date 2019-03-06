@@ -1,8 +1,9 @@
 # Version 3.0.2
 
 ### --- New Features
-1. Re-implemented DNSDB collector with CF Anti-DDOS bypass
-2. URLs generated from the Port Scan module are now also printed on the console
+1. Added Project Sonar collector
+2. Re-implemented DNSDB collector with CF Anti-DDOS bypass
+3. URLs generated from the Port Scan module are now also printed on the console
 
 ### --- Bug Fixes
 1. Fixed a bug on Port Scan module where URLs were not generated correctly
