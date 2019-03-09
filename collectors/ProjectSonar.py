@@ -16,11 +16,13 @@ def init(domain):
 		response = requests.get(url, headers=headers)
 		response_json = loads(response.text)
 
-		for record in response_json["FDNS_A"]:
-			Sonar += record.split(",")
+		if response_json["FDNS_A"]:
+			for record in response_json["FDNS_A"]:
+				Sonar += record.split(",")
 
-		for record in response_json["RDNS"]:
-			Sonar.append(record.split(",")[1])
+		if response_json["RDNS"]:
+			for record in response_json["RDNS"]:
+				Sonar.append(record.split(",")[1])
 
 		Sonar = utilities.MiscHelpers.filterDomain(domain, utilities.MiscHelpers.uniqueList(Sonar))
 
