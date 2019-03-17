@@ -11,7 +11,7 @@ def init(domain, ranges, resolved_public, IPs, threads, out_to_json):
 		IPs = []
 
 		for cidr in ranges.split(","):
-			for ip in ip_network(unicode(cidr.strip())):
+			for ip in ip_network(str(cidr.strip())):
 				IPs.append(str(ip))
 
 	results = utilities.ScanHelpers.massReverseLookup(IPs, threads)
@@ -24,10 +24,10 @@ def init(domain, ranges, resolved_public, IPs, threads, out_to_json):
 				resolved_public[result[0]] = result[1]
 				diff.append(result)
 
-	print "    \__ {0} {1}".format(colored("Additional hostnames that were identified:", "yellow"), colored(len(diff), "cyan"))
+	print("    \__ {0} {1}".format(colored("Additional hostnames that were identified:", "yellow"), colored(len(diff), "cyan")))
 
 	for hostname, address in diff:
-		print "      \__ {0} ({1})".format(colored(hostname, "cyan"), colored(address, "yellow"))
+		print("      \__ {0} ({1})".format(colored(hostname, "cyan"), colored(address, "yellow")))
 
 	if out_to_json:
 		try:
@@ -42,7 +42,7 @@ def init(domain, ranges, resolved_public, IPs, threads, out_to_json):
 
 	try:
 		with open(join("results", domain, "resolved_public.csv"), "w") as resolved_public_file:
-			for hostname, address in resolved_public.items():
+			for hostname, address in list(resolved_public.items()):
 				resolved_public_file.write("{0}|{1}\n".format(hostname, address))
 
 	except OSError:

@@ -1,12 +1,12 @@
 import shodan
 from termcolor import colored
-from ConfigParser import RawConfigParser
+from configparser import RawConfigParser
 
 
 def init(domain):
 	SD = []
 
-	print colored("[*]-Searching Shodan...", "yellow")
+	print(colored("[*]-Searching Shodan...", "yellow"))
 
 	parser = RawConfigParser()
 	parser.read("config.ini")
@@ -14,7 +14,7 @@ def init(domain):
 	api = shodan.Shodan(SHODAN_API_KEY)
 
 	if SHODAN_API_KEY == "":
-		print "  \__", colored("No Shodan API key configured", "red")
+		print("  \__", colored("No Shodan API key configured", "red"))
 		return []
 
 	else:
@@ -26,14 +26,14 @@ def init(domain):
 					SD.append("".join(res["hostnames"]))
 
 			except KeyError as errk:
-				print "  \__", colored(errk, "red")
+				print("  \__", colored(errk, "red"))
 				return []
 
 			SD = set(SD)
 
-			print "  \__ {0}: {1}".format(colored("Unique subdomains found", "cyan"), colored(len(SD), "yellow"))
+			print("  \__ {0}: {1}".format(colored("Unique subdomains found", "cyan"), colored(len(SD), "yellow")))
 			return SD
 
 		except shodan.exception.APIError as err:
-			print "  \__", colored(err, "red")
+			print("  \__", colored(err, "red"))
 			return []

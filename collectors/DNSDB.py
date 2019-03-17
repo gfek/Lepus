@@ -1,4 +1,4 @@
-import requests
+from cfscrape import create_scraper
 from bs4 import BeautifulSoup
 from termcolor import colored
 
@@ -6,16 +6,18 @@ from termcolor import colored
 def init(domain):
 	dnsdb = []
 
-	print colored("[*]-Searching DNSDB...", "yellow")
+	print(colored("[*]-Searching DNSDB...", "yellow"))
 
 	headers = {"user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:52.0) Gecko/20100101 Firefox/52.0"}
-	url = "http://www.dnsdb.org/{}/".format(domain)
+	url = "http://www.dnsdb.org/{0}/".format(domain)
 
 	try:
-		response = requests.get(url, headers=headers)
-		name_soup = BeautifulSoup(response.text, "html.parser")
+		scrapper = create_scraper()
+		response = scrapper.get(url, headers=headers)
 
-		for link in name_soup.findAll("a"):
+		soup = BeautifulSoup(response.text, "html.parser")
+
+		for link in soup.findAll("a"):
 			try:
 				if link.string is not None:
 					dnsdb.append(link.string)
@@ -25,21 +27,9 @@ def init(domain):
 
 		dnsdb = set(dnsdb)
 
-		print "  \__ {0}: {1}".format(colored("Unique subdomains found", "cyan"), colored(len(dnsdb), "yellow"))
+		print("  \__ {0}: {1}".format(colored("Unique subdomains found", "cyan"), colored(len(dnsdb), "yellow")))
 		return dnsdb
 
-	except requests.exceptions.RequestException as err:
-		print "  \__", colored(err, "red")
-		return []
-
-	except requests.exceptions.HTTPError as errh:
-		print "  \__", colored(errh, "red")
-		return []
-
-	except requests.exceptions.ConnectionError as errc:
-		print "  \__", colored(errc, "red")
-		return []
-
-	except requests.exceptions.Timeout as errt:
-		print "  \__", colored(errt, "red")
+	except EnvironmentError:
+		print("  \__", colored("Missing Node.js runtime. Node is required and must be in the PATH (check with `node -v`). Your Node binary may be called `nodejs` rather than `node`, in which case you may need to run `apt install nodejs-legacy`.", "red"))
 		return []

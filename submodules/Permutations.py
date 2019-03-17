@@ -81,7 +81,7 @@ def init(domain, resolved, collector_hosts, wildcards, wordlist):
 		resolved_hosts.append(host)
 
 	subdomains = utilities.MiscHelpers.uniqueList(resolved_hosts + collector_hosts)
-	print "{0} {1} {2}".format(colored("\n[*]-Performing permutations on", "yellow"), colored(len(subdomains), "cyan"), colored("hostnames...", "yellow"))
+	print("{0} {1} {2}".format(colored("\n[*]-Performing permutations on", "yellow"), colored(len(subdomains), "cyan"), colored("hostnames...", "yellow")))
 
 	permutations = []
 	words = [line.strip() for line in wordlist.readlines()]
@@ -90,7 +90,7 @@ def init(domain, resolved, collector_hosts, wildcards, wordlist):
 	for subdomain in subdomains:
 		is_wildcard = False
 
-		for hostnames in wildcards.values():
+		for hostnames in list(wildcards.values()):
 			for hostname in hostnames:
 				if hostname in subdomain:
 					is_wildcard = True
@@ -110,9 +110,9 @@ def init(domain, resolved, collector_hosts, wildcards, wordlist):
 	for i in range(len(permutations)):
 		permutations[i] = ".".join([permutations[i], domain])
 
-	for hostnames in wildcards.values():
+	for hostnames in list(wildcards.values()):
 		for hostname in hostnames:
 			permutations.append(".".join([str(int(time())), hostname]))
 
-	print "  \__ {0}: {1}".format(colored("Generated subdomains", "cyan"), colored(len(permutations), "yellow"))
+	print("  \__ {0}: {1}".format(colored("Generated subdomains", "cyan"), colored(len(permutations), "yellow")))
 	return permutations

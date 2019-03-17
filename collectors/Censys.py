@@ -1,12 +1,12 @@
 import requests
 from termcolor import colored
-from ConfigParser import RawConfigParser
+from configparser import RawConfigParser
 
 
 def init(domain):
 	C = []
 
-	print colored("[*]-Searching Censys...", "yellow")
+	print(colored("[*]-Searching Censys...", "yellow"))
 
 	parser = RawConfigParser()
 	parser.read("config.ini")
@@ -15,7 +15,7 @@ def init(domain):
 	SECRET = parser.get("Censys", "CENSYS_SECRET")
 
 	if UID == "" or SECRET == "":
-		print "  \__", colored("No Censys API credentials configured", "red")
+		print("  \__", colored("No Censys API credentials configured", "red"))
 		return []
 
 	else:
@@ -35,24 +35,24 @@ def init(domain):
 
 			C = set(C)
 
-			print "  \__ {0}: {1}".format(colored("Unique subdomains found", "cyan"), colored(len(C), "yellow"))
+			print("  \__ {0}: {1}".format(colored("Unique subdomains found", "cyan"), colored(len(C), "yellow")))
 			return C
 
 		except KeyError:
 			return []
 
 		except requests.exceptions.RequestException as err:
-			print "  \__", colored(err, "red")
+			print("  \__", colored(err, "red"))
 			return []
 
 		except requests.exceptions.HTTPError as errh:
-			print "  \__", colored(errh, "red")
+			print("  \__", colored(errh, "red"))
 			return []
 
 		except requests.exceptions.ConnectionError as errc:
-			print "  \__", colored(errc, "red")
+			print("  \__", colored(errc, "red"))
 			return []
 
 		except requests.exceptions.Timeout as errt:
-			print "  \__", colored(errt, "red")
+			print("  \__", colored(errt, "red"))
 			return []
