@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 from argparse import ArgumentParser, FileType
 from warnings import simplefilter
@@ -9,13 +9,13 @@ import collectors.Censys
 import collectors.CertSpotter
 import collectors.CRT
 import collectors.DNSDB
-import collectors.DNSDumpster
 import collectors.DNSTrails
 import collectors.EntrustCertificates
 import collectors.FindSubdomains
 import collectors.GoogleTransparency
 import collectors.HackerTarget
 import collectors.PassiveTotal
+import collectors.ProjectSonar
 import collectors.Riddler
 import collectors.Shodan
 import collectors.ThreatCrowd
@@ -28,14 +28,14 @@ import utilities.MiscHelpers
 import utilities.ScanHelpers
 
 simplefilter("ignore")
-version = "2.3.7"
+version = "3.0.2"
 
 
 def printBanner():
-	print colored("         ______  _____           ______", "yellow")
-	print colored(" |      |______ |_____) |     | (_____ ", "yellow")
-	print colored(" |_____ |______ |       |_____| ______)", "yellow")
-	print colored("                                v{0}".format(version), "cyan")
+	print(colored("         ______  _____           ______", "yellow"))
+	print(colored(" |      |______ |_____) |     | (_____ ", "yellow"))
+	print(colored(" |_____ |______ |       |_____| ______)", "yellow"))
+	print(colored("                                v{0}".format(version), "cyan"))
 	sleep(1)
 
 
@@ -92,19 +92,19 @@ if __name__ == "__main__":
 			pass
 
 		else:
-			print
+			print()
 			collector_hosts = []
 			collector_hosts += collectors.Censys.init(args.domain)
 			collector_hosts += collectors.CertSpotter.init(args.domain)
 			collector_hosts += collectors.CRT.init(args.domain)
 			collector_hosts += collectors.DNSDB.init(args.domain)
-			collector_hosts += collectors.DNSDumpster.init(args.domain)
 			collector_hosts += collectors.DNSTrails.init(args.domain)
 			collector_hosts += collectors.EntrustCertificates.init(args.domain)
 			collector_hosts += collectors.FindSubdomains.init(args.domain)
 			collector_hosts += collectors.GoogleTransparency.init(args.domain)
 			collector_hosts += collectors.HackerTarget.init(args.domain)
 			collector_hosts += collectors.PassiveTotal.init(args.domain)
+			collector_hosts += collectors.ProjectSonar.init(args.domain)
 			collector_hosts += collectors.Riddler.init(args.domain)
 			collector_hosts += collectors.Shodan.init(args.domain)
 			collector_hosts += collectors.ThreatCrowd.init(args.domain)
@@ -120,11 +120,11 @@ if __name__ == "__main__":
 			wordlist_hosts = []
 
 		hosts = utilities.MiscHelpers.filterDomain(args.domain, utilities.MiscHelpers.uniqueList(old_findings + zone_hosts + collector_hosts + wordlist_hosts))
-		wildcards = utilities.ScanHelpers.identifyWildcards(args.domain, {}, hosts, args.threads, args.json)
 
 		if len(hosts) > 0:
+			wildcards = utilities.ScanHelpers.identifyWildcards(args.domain, {}, hosts, args.threads, args.json)
 			resolved, resolved_public = utilities.ScanHelpers.massResolve(args.domain, hosts, collector_hosts, args.threads, wildcards, args.json, [])
-			hosts = list(set(old_findings + zone_hosts + collector_hosts + [hostname for hostname, address in resolved.items()]))
+			hosts = list(set(old_findings + zone_hosts + collector_hosts + [hostname for hostname, address in list(resolved.items())]))
 
 			if args.permutate:
 				permutated_hosts = submodules.Permutations.init(args.domain, resolved, collector_hosts, wildcards, args.permutation_wordlist)
@@ -135,11 +135,11 @@ if __name__ == "__main__":
 					wildcards = utilities.ScanHelpers.identifyWildcards(args.domain, wildcards, hosts, args.threads, args.json)
 					resolved, resolved_public = utilities.ScanHelpers.massResolve(args.domain, hosts, collector_hosts, args.threads, wildcards, args.json, resolved)
 
-			public_IPs = set([address for hostname, address in resolved_public.items()])
+			public_IPs = set([address for hostname, address in list(resolved_public.items())])
 
 			if args.reverse:
 				resolved_public = submodules.ReverseLookups.init(args.domain, args.ranges, resolved_public, public_IPs, args.threads, args.json)
-				public_IPs = set([address for hostname, address in resolved_public.items()])
+				public_IPs = set([address for hostname, address in list(resolved_public.items())])
 
 			if resolved_public and old_resolved_public:
 				utilities.MiscHelpers.diffLastRun(args.domain, wildcards, resolved_public, old_resolved_public, last_run, current_run)
@@ -150,8 +150,9 @@ if __name__ == "__main__":
 				submodules.PortScan.init(resolved_public, args.domain, public_IPs, args.ports, args.threads)
 
 			utilities.MiscHelpers.deleteEmptyFiles(args.domain)
-			print
+
+		print()
 
 	except KeyboardInterrupt:
-		print colored("\n[*]-Received keyboard interrupt! Shutting down...\n", "red")
+		print(colored("\n[*]-Received keyboard interrupt! Shutting down...\n", "red"))
 		exit(-1)

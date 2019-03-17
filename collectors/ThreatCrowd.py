@@ -6,7 +6,7 @@ from termcolor import colored
 def init(domain):
 	TC = []
 
-	print colored("[*]-Searching ThreatCrowd...", "yellow")
+	print(colored("[*]-Searching ThreatCrowd...", "yellow"))
 
 	try:
 		result = requests.get("https://www.threatcrowd.org/searchApi/v2/domain/report/", params={"domain": domain})
@@ -21,25 +21,25 @@ def init(domain):
 
 			TC = set(TC)
 
-			print "  \__ {0}: {1}".format(colored("Unique subdomains found", "cyan"), colored(len(TC), "yellow"))
+			print("  \__ {0}: {1}".format(colored("Unique subdomains found", "cyan"), colored(len(TC), "yellow")))
 			return TC
 
 		except ValueError as errv:
-			print "  \__", colored(errv, "red")
+			print("  \__", colored(errv, "red"))
 			return []
 
 	except requests.exceptions.RequestException as err:
-		print "  \__", colored(err, "red")
+		print("  \__", colored(err, "red"))
 		return []
 
 	except requests.exceptions.HTTPError as errh:
-		print "  \__", colored(errh, "red")
+		print("  \__", colored(errh, "red"))
 		return []
 
 	except requests.exceptions.ConnectionError as errc:
-		print "  \__", colored(errc, "red")
+		print("  \__", colored(errc, "red"))
 		return []
 
 	except requests.exceptions.Timeout as errt:
-		print "  \__", colored(errt, "red")
+		print("  \__", colored(errt, "red"))
 		return []
