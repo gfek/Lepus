@@ -94,52 +94,50 @@ Performs a portscan on well-known web ports. The mode can be enabled with `--por
 ### Takeover
 *(experimental)* Performs several checks on identified domains for potential subdomain-takeover vulnerabilities. The module is enabled with `--takeover` and is executed after all others. If such a vulnerability is identified, the results are printed in the output and in a .csv file in the respective project folder under the directory with the results. Checks are performed for the following services:
 
-|Services|
-|---|
-|Acquia|
-|Aftership|
-|Aha!|
-|Amazon AWS/S3|
-|Apigee|
-|Azure|
-|Bigcartel|
-|Bitbucket|
-|Brightcove|
-|Campaign Monitor|
-|Cargo Collective|
-|Feedpress|
-|Getresponse|
-|Ghost[]().io|
-|Github|
-|Helpjuice|
-|Helpscout|
-|Heroku|
-|Intercom|
-|JetBrains|
-|Maxcdn|
-|Pantheon|
-|Readme[]().io|
-|Simplebooklet|
-|Smugmug|
-|Strikingly|
-|Surge[]().sh|
-|Teamwork|
-|Tictail|
-|Tilda|
-|Tumblr|
-|Uptime Robot|
-|UserVoice|
-|Vend|
-|Webflow|
-|Wishpond|
-|Wordpress|
+* Acquia
+* Aftership
+* Aha!
+* Amazon AWS/S3
+* Apigee
+* Azure
+* Bigcartel
+* Bitbucket
+* Brightcove
+* Campaign Monitor
+* Cargo Collective
+* Feedpress
+* Getresponse
+* Ghost[]().io
+* Github
+* Helpjuice
+* Helpscout
+* Heroku
+* Intercom
+* JetBrains
+* Maxcdn
+* Pantheon
+* Readme[]().io
+* Simplebooklet
+* Smugmug
+* Strikingly
+* Surge[]().sh
+* Teamwork
+* Tictail
+* Tilda
+* Tumblr
+* Uptime Robot
+* UserVoice
+* Vend
+* Webflow
+* Wishpond
+* Wordpress
 
 ### Requirements
 
 |Package|Version|
 |---|---|
 |beautifulsoup4|4.7.1|
-|cfscrape|1.9.5|
+|cfscrape|1.9.6|
 |dnspython|1.16.0|
 |ipwhois|1.1.0|
 |IPy|1.00|
@@ -193,4 +191,4 @@ optional arguments:
 
 ### Example
 
-`python3 lepus.py python.org --wordlist lists/subdomains.txt --permutate`
+`python3 lepus.py python.org --wordlist lists/subdomains.txt --permutate --reverse --portscan -p huge --takeover`
