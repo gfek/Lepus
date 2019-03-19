@@ -22,7 +22,13 @@ def init(domain):
 
 		try:
 			response = requests.get(url, headers=headers)
-			payload = response.json()
+
+			if response.status_code == 429:
+				print("  \__", colored("You've exceeded the usage limits for your account.", "red"))
+				return []
+
+			else:
+				payload = response.json()
 
 			for k, v in list(payload.items()):
 				if v:

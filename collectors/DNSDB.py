@@ -33,3 +33,7 @@ def init(domain):
 	except EnvironmentError:
 		print("  \__", colored("Missing Node.js runtime. Node is required and must be in the PATH (check with `node -v`). Your Node binary may be called `nodejs` rather than `node`, in which case you may need to run `apt install nodejs-legacy`.", "red"))
 		return []
+
+	except ValueError:
+		print("  \__", colored("Error parsing Cloudflare IUAM Javascript challenge. Cloudflare may have changed their technique.", "red"))
+		return []

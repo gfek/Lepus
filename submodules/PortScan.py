@@ -4,7 +4,7 @@ import utilities.MiscHelpers
 import utilities.ScanHelpers
 
 
-def init(resolved, domain, IPs, port_scan, threads):
+def init(domain, resolved, IPs, port_scan, threads):
 	targets = []
 
 	if not port_scan:

@@ -35,7 +35,13 @@ def init(domain):
 				headers = {"user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:52.0) Gecko/20100101 Firefox/52.0", "content-type": "application/json", "authentication-token": auth_token}
 
 				search_response = requests.post(search_url, json=search, headers=headers)
-				search_response_json = loads(search_response.text)
+
+				if search_response.status_code == 500:
+					print("  \__", colored("Internal Server Error.", "red"))
+					return riddler
+
+				else:
+					search_response_json = loads(search_response.text)
 
 				for item in search_response_json:
 					riddler.append(item["host"])
