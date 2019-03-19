@@ -1,3 +1,19 @@
+# Version 3.1.0
+
+### --- New Features
+1. Added Takeover module
+
+### --- Bug Fixes
+1. Fix in Censys collector regarding pagination and false positives
+2. Fix in DNSDB collector - error handling to account for cloudflare changes
+3. Fix in Riddler collector - error handling when 500 internal server error occurs
+4. Fix in DNSTrails collector - error handling when api search limit has been exceeded
+
+### --- Misc
+1. Updated readme for Portscan and Takeover
+2. Updated requirements.txt to account for new cloudflare bypass
+3. Portscan module - slight change due to my OCDs
+
 # Version 3.0.2
 
 ### --- New Features

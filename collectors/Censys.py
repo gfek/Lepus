@@ -1,3 +1,4 @@
+import re
 import requests
 from termcolor import colored
 from configparser import RawConfigParser
@@ -23,15 +24,19 @@ def init(domain):
 
 		try:
 			res = requests.post(API_URL + "/search/certificates", json=payload, auth=(UID, SECRET))
-			payload = res.json()["results"]
 
-			for r in payload:
-				str = r["parsed.subject_dn"]
-				str1 = str.split("CN=")[1]
-				str1 = str1.split(",")
+			if res.status_code == 429:
+				print("  \__", colored("Rate limit exceeded. See https://www.censys.io/account for rate limit details.", "red"))
+				return C
 
-				if domain in str1[0] and not "".join(str1[0]).startswith("*"):
-					C.append("".join(str1[0]))
+			C = re.findall("CN=([\w\.\-\d]+)\." + domain, str(res.content))
+			numberOfPages = re.findall("pages\":\s(\d+)?}",str(res.content))
+
+			for page in range(2,int(numberOfPages[0])+1):
+				payload = {"query": domain, "page": page}
+				res = requests.post(API_URL + "/search/certificates", json=payload, auth=(UID, SECRET))
+				tempC = re.findall("CN=([\w\.\-\d]+)\." + domain, str(res.content))
+				C = C + tempC
 
 			C = set(C)
 

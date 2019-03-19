@@ -24,7 +24,7 @@ def init(domain):
 			response = requests.get(base_url + next_link, headers=headers)
 
 			if response.status_code == 429:
-				print("  \__", colored("Search rate limit exceeded!", "red"))
+				print("  \__", colored("Search rate limit exceeded.", "red"))
 				return []
 
 			CS += parseResponse(response.content, domain)

@@ -24,11 +24,12 @@ import collectors.WaybackMachine
 import submodules.Permutations
 import submodules.PortScan
 import submodules.ReverseLookups
+import submodules.TakeOver
 import utilities.MiscHelpers
 import utilities.ScanHelpers
 
 simplefilter("ignore")
-version = "3.0.2"
+version = "3.1.0"
 
 
 def printBanner():
@@ -53,6 +54,7 @@ if __name__ == "__main__":
 	parser.add_argument("-r", "--ranges", action="store", dest="ranges", help="comma seperated ip ranges to perform reverse dns lookups on", type=str, default=None)
 	parser.add_argument("--portscan", action="store_true", dest="portscan", help="scan resolved public IP addresses for open ports", default=False)
 	parser.add_argument("-p", "--ports", action="store", dest="ports", help="set of ports to be used by the portscan module [default is medium]", type=str)
+	parser.add_argument("--takeover", action="store_true", dest="takeover", help="check identified hosts for potential subdomain take-overs", default=False)
 	parser.add_argument("-v", "--version", action="version", version="Lepus v{0}".format(version))
 	args = parser.parse_args()
 
@@ -147,7 +149,13 @@ if __name__ == "__main__":
 			utilities.ScanHelpers.massRDAP(args.domain, public_IPs, args.threads, args.json)
 
 			if args.portscan:
-				submodules.PortScan.init(resolved_public, args.domain, public_IPs, args.ports, args.threads)
+				submodules.PortScan.init(args.domain, resolved_public, public_IPs, args.ports, args.threads)
+
+			if args.takeover:
+				if old_resolved_public:
+					collector_hosts = collector_hosts + old_resolved_public
+
+				submodules.TakeOver.init(args.domain, resolved_public, collector_hosts, args.threads, args.json)
 
 			utilities.MiscHelpers.deleteEmptyFiles(args.domain)
 
