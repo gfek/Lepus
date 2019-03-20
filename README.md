@@ -156,7 +156,7 @@ Performs a portscan on well-known web ports. The mode can be enabled with `--por
 ```
 usage: lepus.py [-h] [-w WORDLIST] [-t THREADS] [-j] [-nc] [-zt] [--permutate]
                 [-pw PERMUTATION_WORDLIST] [--reverse] [-r RANGES]
-                [--portscan] [-p PORTS] [-v]
+                [--portscan] [-p PORTS] [--takeover] [-v]
                 domain
 
 Infrastructure OSINT
@@ -186,6 +186,8 @@ optional arguments:
   -p PORTS, --ports PORTS
                         set of ports to be used by the portscan module
                         [default is medium]
+  --takeover            check identified hosts for potential subdomain take-
+                        overs
   -v, --version         show program's version number and exit
 ```
 
