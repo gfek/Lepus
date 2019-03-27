@@ -14,11 +14,7 @@ def init(domain):
 	try:
 		response = requests.get("https://crt.sh/?", params=parameters, headers=headers)
 
-		if response.status_code == 504:
-			print("  \__", colored("504 Gateway Time-out.", "red"))
-			return []
-
-		elif response.status_code == 200:
+		if response.status_code == 200:
 			data = json.loads(response.text)
 
 			for d in data:
@@ -29,6 +25,10 @@ def init(domain):
 
 			print("  \__ {0}: {1}".format(colored("Unique subdomains found", "cyan"), colored(len(CRT), "yellow")))
 			return CRT
+
+		else:
+			print("  \__", colored("Something went wrong server-side.", "red"))
+			return []
 
 	except requests.exceptions.RequestException as err:
 		print("  \__", colored(err, "red"))
