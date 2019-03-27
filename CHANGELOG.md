@@ -8,6 +8,7 @@
 2. Fix in DNSDB collector - error handling to account for cloudflare changes
 3. Fix in Riddler collector - error handling when 500 internal server error occurs
 4. Fix in DNSTrails collector - error handling when api search limit has been exceeded
+5. Fix in CRT collector - account for 504 server response when the query times out
 
 ### --- Misc
 1. Updated readme for Portscan and Takeover

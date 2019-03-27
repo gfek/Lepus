@@ -32,7 +32,7 @@ def init(domain):
 			C = re.findall("CN=([\w\.\-\d]+)\." + domain, str(res.content))
 			numberOfPages = re.findall("pages\":\s(\d+)?}",str(res.content))
 
-			for page in range(2,int(numberOfPages[0])+1):
+			for page in range(2, int(numberOfPages[0]) + 1):
 				payload = {"query": domain, "page": page}
 				res = requests.post(API_URL + "/search/certificates", json=payload, auth=(UID, SECRET))
 				tempC = re.findall("CN=([\w\.\-\d]+)\." + domain, str(res.content))
