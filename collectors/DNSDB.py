@@ -37,3 +37,7 @@ def init(domain):
 	except ValueError:
 		print("  \__", colored("Error parsing Cloudflare IUAM Javascript challenge. Cloudflare may have changed their technique.", "red"))
 		return []
+
+	except Exception:
+		print("  \__", colored("Something went wrong", "red"))
+		return []
