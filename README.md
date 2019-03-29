@@ -1,5 +1,5 @@
 [![GitHub License](https://img.shields.io/badge/License-BSD%203--Clause-informational.svg)](https://github.com/GKNSB/Lepus/blob/master/LICENSE)
-[![GitHub Python](https://img.shields.io/badge/Python-=%3E%203.5.3-informational.svg)](https://www.python.org/)
+[![GitHub Python](https://img.shields.io/badge/Python-%3E=%203.5.3-informational.svg)](https://www.python.org/)
 [![GitHub Version](https://img.shields.io/badge/Version-3.1.0-yellow.svg)](https://github.com/GKNSB/Lepus)
 
 ## Lepus
