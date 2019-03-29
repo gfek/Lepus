@@ -39,5 +39,5 @@ def init(domain):
 		return []
 
 	except Exception:
-		print("  \__", colored("Something went wrong", "red"))
+		print("  \__", colored("Something went wrong!", "red"))
 		return []
