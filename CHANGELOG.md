@@ -14,6 +14,7 @@
 1. Updated readme for Portscan and Takeover
 2. Updated requirements.txt to account for new cloudflare bypass
 3. Portscan module - slight change due to my OCDs
+4. Updated wordlists
 
 # Version 3.0.2
 

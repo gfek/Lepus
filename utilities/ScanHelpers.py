@@ -286,6 +286,7 @@ def massResolve(domain, hostnames, collector_hostnames, threads, wildcards, out_
 
 	if len(hostnames) <= 100000:
 		print("{0} {1} {2}".format(colored("\n[*]-Attempting to resolve", "yellow"), colored(len(hostnames), "cyan"), colored("hostnames...", "yellow")))
+
 	else:
 		print("{0} {1} {2}".format(colored("\n[*]-Attempting to resolve", "yellow"), colored(len(hostnames), "cyan"), colored("hostnames, in chunks of 100,000...", "yellow")))
 

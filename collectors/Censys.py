@@ -30,7 +30,7 @@ def init(domain):
 				return C
 
 			C = re.findall("CN=([\w\.\-\d]+)\." + domain, str(res.content))
-			numberOfPages = re.findall("pages\":\s(\d+)?}",str(res.content))
+			numberOfPages = re.findall("pages\":\s(\d+)?}", str(res.content))
 
 			for page in range(2, int(numberOfPages[0]) + 1):
 				payload = {"query": domain, "page": page}
