@@ -27,7 +27,7 @@ def init(domain):
 			return CRT
 
 		else:
-			print("  \__", colored("Something went wrong server-side.", "red"))
+			print("  \__", colored("Something went wrong!", "red"))
 			return []
 
 	except requests.exceptions.RequestException as err:

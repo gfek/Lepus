@@ -137,7 +137,7 @@ Performs a portscan on well-known web ports. The mode can be enabled with `--por
 |Package|Version|
 |---|---|
 |beautifulsoup4|4.7.1|
-|cfscrape|1.9.6|
+|cfscrape|1.9.7|
 |dnspython|1.16.0|
 |ipwhois|1.1.0|
 |IPy|1.00|
