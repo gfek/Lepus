@@ -61,3 +61,7 @@ def init(domain):
 	except requests.exceptions.Timeout as errt:
 		print("  \__", colored(errt, "red"))
 		return []
+
+	except Exception:
+		print("  \__", colored("Something went wrong!", "red"))
+		return []

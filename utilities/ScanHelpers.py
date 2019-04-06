@@ -1,3 +1,4 @@
+import sys
 from IPy import IP
 from time import time
 from tqdm import tqdm
@@ -11,7 +12,7 @@ from dns.name import EmptyLabel
 from dns.exception import DNSException
 from ssl import create_default_context, CERT_NONE
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from socket import gethostbyname, gethostbyaddr, socket, AF_INET, SOCK_STREAM
+from socket import gethostbyname, gethostbyaddr, socket, AF_INET, SOCK_STREAM, gethostbyname_ex
 from dns.resolver import Resolver, NXDOMAIN, NoAnswer, NoNameservers, Timeout
 import utilities.MiscHelpers
 
@@ -140,52 +141,50 @@ def getDNSrecords(domain, out_to_json):
 	return NS
 
 
-def checkWildcard(resolver, timestamp, domain):
-	resolution = []
+def checkWildcard(timestamp, domain):
+	resolver = Resolver()
+	resolver.timeout = 1
+	resolver.lifetime = 1
 
 	try:
-		resolution = resolver.query(".".join([timestamp, domain]), "A")
+		return (domain, gethostbyname_ex(".".join([str(timestamp), domain]))[2])
+
 	except Exception:
-		pass
-
-	if None in resolution:
-		return None
-
-	else:
-		return (domain, resolution)
+		return (domain, None)
 
 
 def identifyWildcards(domain, previously_identified, hosts, threads, out_to_json):
 	sub_levels = utilities.MiscHelpers.uniqueSubdomainLevels(hosts)
 	timestamp = str(int(time()))
 	wildcards = []
+	leaveFlag = False
 
 	if len(sub_levels) <= 100000:
 		print(colored("\n[*]-Checking for wildcards...", "yellow"))
 	else:
 		print(colored("\n[*]-Checking for wildcards, in chunks of 100,000...", "yellow"))
 
-	subLevelChunks = list(utilities.MiscHelpers.chunks(list(sub_levels), 100000))
+	subLevelChunks = list(utilities.MiscHelpers.chunks(sub_levels, 100000))
 	iteration = 1
-
-	resolver = Resolver()
-	resolver.timeout = 1
-	resolver.lifetime = 1
 
 	for subLevelChunk in subLevelChunks:
 		with ThreadPoolExecutor(max_workers=threads) as executor:
-			tasks = {executor.submit(checkWildcard, resolver, timestamp, sub_level) for sub_level in subLevelChunk}
+			tasks = {executor.submit(checkWildcard, timestamp, sub_level) for sub_level in subLevelChunk}
 
 			try:
 				completed = as_completed(tasks)
-				completed = tqdm(completed, total=len(subLevelChunk), desc="  \__ {0}".format(colored("Progress {0}/{1}".format(iteration, len(subLevelChunks)), "cyan")), dynamic_ncols=True)
+
+				if iteration == len(subLevelChunks):
+					leaveFlag = True
+
+				completed = tqdm(completed, total=len(subLevelChunk), desc="  \__ {0}".format(colored("Progress {0}/{1}".format(iteration, len(subLevelChunks)), "cyan")), dynamic_ncols=True, leave=leaveFlag)
 
 				for task in completed:
 					result = task.result()
 
-					if result is not None:
+					if result[1] is not None:
 						for res in result[1]:
-							wc = (result[0], str(res.address))
+							wc = (result[0], str(res))
 							wildcards.append(wc)
 
 			except KeyboardInterrupt:
@@ -193,6 +192,9 @@ def identifyWildcards(domain, previously_identified, hosts, threads, out_to_json
 				print(colored("\n[*]-Received keyboard interrupt! Shutting down...\n", "red"))
 				executor.shutdown(wait=False)
 				exit(-1)
+
+		if iteration < len(subLevelChunks):
+			sys.stderr.write("\033[F")
 
 		iteration += 1
 
@@ -283,6 +285,7 @@ def massResolve(domain, hostnames, collector_hostnames, threads, wildcards, out_
 	resolved_loopback = {}
 	resolved_carrier_grade_nat = {}
 	unresolved = {}
+	leaveFlag = False
 
 	if len(hostnames) <= 100000:
 		print("{0} {1} {2}".format(colored("\n[*]-Attempting to resolve", "yellow"), colored(len(hostnames), "cyan"), colored("hostnames...", "yellow")))
@@ -299,7 +302,11 @@ def massResolve(domain, hostnames, collector_hostnames, threads, wildcards, out_
 
 			try:
 				completed = as_completed(tasks)
-				completed = tqdm(completed, total=len(hostNameChunk), desc="  \__ {0}".format(colored("Progress {0}/{1}".format(iteration, len(hostNameChunks)), "cyan")), dynamic_ncols=True)
+
+				if iteration == len(hostNameChunks):
+					leaveFlag = True
+
+				completed = tqdm(completed, total=len(hostNameChunk), desc="  \__ {0}".format(colored("Progress {0}/{1}".format(iteration, len(hostNameChunks)), "cyan")), dynamic_ncols=True, leave=leaveFlag)
 
 				for task in completed:
 					try:
@@ -370,6 +377,9 @@ def massResolve(domain, hostnames, collector_hostnames, threads, wildcards, out_
 				print(colored("\n[*]-Received keyboard interrupt! Shutting down...\n", "red"))
 				executor.shutdown(wait=False)
 				exit(-1)
+
+		if iteration < len(hostNameChunks):
+			sys.stderr.write("\033[F")
 
 		iteration += 1
 
@@ -545,6 +555,7 @@ def reverseLookup(IP):
 
 def massReverseLookup(IPs, threads):
 	hosts = []
+	leaveFlag = False
 
 	if len(IPs) <= 100000:
 		print("{0} {1} {2}".format(colored("\n[*]-Performing reverse DNS lookups on", "yellow"), colored(len(IPs), "cyan"), colored("unique public IPs...", "yellow")))
@@ -560,7 +571,11 @@ def massReverseLookup(IPs, threads):
 
 			try:
 				completed = as_completed(tasks)
-				completed = tqdm(completed, total=len(IPChunk), desc="  \__ {0}".format(colored("Progress {0}/{1}".format(iteration, len(IPChunks)), "cyan")), dynamic_ncols=True)
+
+				if iteration == len(IPChunks):
+					leaveFlag = True
+
+				completed = tqdm(completed, total=len(IPChunk), desc="  \__ {0}".format(colored("Progress {0}/{1}".format(iteration, len(IPChunks)), "cyan")), dynamic_ncols=True, leave=leaveFlag)
 
 				for task in completed:
 					result = task.result()
@@ -573,6 +588,9 @@ def massReverseLookup(IPs, threads):
 				print(colored("\n[*]-Received keyboard interrupt! Shutting down...\n", "red"))
 				executor.shutdown(wait=False)
 				exit(-1)
+
+		if iteration < len(IPChunks):
+			sys.stderr.write("\033[F")
 
 		iteration += 1
 
@@ -620,6 +638,7 @@ def connectScan(target):
 
 def massConnectScan(IPs, targets, threads):
 	open_ports = []
+	leaveFlag = False
 
 	if len(targets) <= 100000:
 		print("{0} {1} {2} {3} {4}".format(colored("\n[*]-Scanning", "yellow"), colored(len(targets), "cyan"), colored("ports on", "yellow"), colored(len(IPs), "cyan"), colored("unique public IPs...", "yellow")))
@@ -635,7 +654,11 @@ def massConnectScan(IPs, targets, threads):
 
 			try:
 				completed = as_completed(tasks)
-				completed = tqdm(completed, total=len(PortChunk), desc="  \__ {0}".format(colored("Progress {0}/{1}".format(iteration, len(PortChunks)), "cyan")), dynamic_ncols=True)
+
+				if iteration == len(PortChunks):
+					leaveFlag = True
+
+				completed = tqdm(completed, total=len(PortChunk), desc="  \__ {0}".format(colored("Progress {0}/{1}".format(iteration, len(PortChunks)), "cyan")), dynamic_ncols=True, leave=leaveFlag)
 
 				for task in completed:
 					result = task.result()
@@ -648,6 +671,9 @@ def massConnectScan(IPs, targets, threads):
 				print(colored("\n[*]-Received keyboard interrupt! Shutting down...\n", "red"))
 				executor.shutdown(wait=False)
 				exit(-1)
+
+		if iteration < len(PortChunks):
+			sys.stderr.write("\033[F")
 
 		iteration += 1
 
@@ -666,28 +692,45 @@ def rdap(ip):
 
 
 def massRDAP(domain, IPs, threads, out_to_json):
-	print("{0} {1} {2}".format(colored("\n[*]-Performing RDAP lookups for", "yellow"), colored(len(IPs), "cyan"), colored("unique public IPs...", "yellow")))
-
 	rdap_records = []
+	leaveFlag = False
 
-	with ThreadPoolExecutor(max_workers=threads) as executor:
-		tasks = {executor.submit(rdap, ip): ip for ip in IPs}
+	if len(IPs) <= 100000:
+		print("{0} {1} {2}".format(colored("\n[*]-Performing RDAP lookups for", "yellow"), colored(len(IPs), "cyan"), colored("unique public IPs...", "yellow")))
+	else:
+		print("{0} {1} {2}".format(colored("\n[*]-Performing RDAP lookups for", "yellow"), colored(len(IPs), "cyan"), colored("unique public IPs, in chunks of 100,000...", "yellow")))
 
-		try:
-			completed = as_completed(tasks)
-			completed = tqdm(completed, total=len(IPs), desc="  \__ {0}".format(colored("Progress", "cyan")), dynamic_ncols=True)
+	IPChunks = list(utilities.MiscHelpers.chunks(list(IPs), 100000))
+	iteration = 1
 
-			for task in completed:
-				result = task.result()
+	for IPChunk in IPChunks:
+		with ThreadPoolExecutor(max_workers=threads) as executor:
+			tasks = {executor.submit(rdap, ip): ip for ip in IPChunk}
 
-				if result is not None:
-					rdap_records.append(result)
+			try:
+				completed = as_completed(tasks)
 
-		except KeyboardInterrupt:
-			completed.close()
-			print(colored("\n[*]-Received keyboard interrupt! Shutting down...\n", "red"))
-			executor.shutdown(wait=False)
-			exit(-1)
+				if iteration == len(IPChunks):
+					leaveFlag = True
+
+				completed = tqdm(completed, total=len(IPs), desc="  \__ {0}".format(colored("Progress", "cyan")), dynamic_ncols=True, leave=leaveFlag)
+
+				for task in completed:
+					result = task.result()
+
+					if result is not None:
+						rdap_records.append(result)
+
+			except KeyboardInterrupt:
+				completed.close()
+				print(colored("\n[*]-Received keyboard interrupt! Shutting down...\n", "red"))
+				executor.shutdown(wait=False)
+				exit(-1)
+
+		if iteration < len(IPChunks):
+			sys.stderr.write("\033[F")
+
+		iteration += 1
 
 	ASN = set()
 	NETS = set()
