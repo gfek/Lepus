@@ -154,7 +154,7 @@ Performs a portscan on well-known web ports. The mode can be enabled with `--por
 $ python3 -m pip install -r requirements.txt
 ```
 
-2. Preferably install in a virtualenv
+2. Preferably install in a virtualenv:
 ```
 $ pyenv virtualenv 3.7.2 lepus
 $ pyenv activate lepus
