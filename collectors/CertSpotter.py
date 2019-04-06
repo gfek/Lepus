@@ -51,6 +51,10 @@ def init(domain):
 			print("  \__", colored(errt, "red"))
 			return []
 
+		except Exception:
+			print("  \__", colored("Something went wrong!", "red"))
+			return []
+
 	CS = set(CS)
 
 	print("  \__ {0}: {1}".format(colored("Unique subdomains found", "cyan"), colored(len(CS), "yellow")))

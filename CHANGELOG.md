@@ -2,6 +2,9 @@
 
 ### --- New Features
 1. Added Takeover module
+2. Implemented chunking in places were it wasn't present but might be needed
+3. Progress bars now appear on the same line as different chunks are processed
+4. Added ports 9943 and 9980 in the "huge" preset for the portscan module
 
 ### --- Bug Fixes
 1. Fix in Censys collector regarding pagination and false positives
@@ -9,12 +12,14 @@
 3. Fix in Riddler collector - error handling when 500 internal server error occurs
 4. Fix in DNSTrails collector - error handling when api search limit has been exceeded
 5. Fix in CRT collector - account for 504 server response when the query times out
+6. Fix a bug during wildcard identification that didn't allow for threads to finish properly
 
 ### --- Misc
 1. Updated readme for Portscan and Takeover
 2. Updated requirements.txt to account for new cloudflare bypass
 3. Portscan module - slight change due to my OCDs
 4. Updated wordlists
+5. Added generic exception handling on all collectors in case something odd happens
 
 # Version 3.0.2
 

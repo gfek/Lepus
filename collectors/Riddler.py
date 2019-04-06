@@ -52,7 +52,7 @@ def init(domain):
 				return riddler
 
 			else:
-				print("  \__", colored("Invalid Riddler API credentials", "red"))
+				print("  \__", colored("Invalid Riddler API credentials.", "red"))
 				return []
 
 		except requests.exceptions.RequestException as err:
@@ -73,4 +73,8 @@ def init(domain):
 
 		except ValueError as errv:
 			print("  \__", colored(errv, "red"))
+			return []
+
+		except Exception:
+			print("  \__", colored("Something went wrong!", "red"))
 			return []

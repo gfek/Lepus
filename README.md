@@ -89,7 +89,7 @@ Performs a portscan on well-known web ports. The mode can be enabled with `--por
 |small|80, 443|
 |medium|80, 443, 8000, 8080, 8443|
 |large|80, 81, 443, 591, 2082, 2087, 2095, 2096, 3000, 8000, 8001, 8008, 8080, 8083, 8443, 8834, 8888, 9000, 9090, 9443|
-|huge|80, 81, 300, 443, 591, 593, 832, 981, 1010, 1311, 2082, 2087, 2095, 2096, 2480, 3000, 3128, 3333, 4243, 4567, 4711, 4712, 4993, 5000, 5104, 5108, 5800, 6543, 7000, 7396, 7474, 8000, 8001, 8008, 8014, 8042, 8069, 8080, 8081, 8088, 8090, 8091, 8118, 8123, 8172, 8222, 8243, 8280, 8281, 8333, 8443, 8500, 8834, 8880, 8888, 8983, 9000, 9043, 9060, 9080, 9090, 9091, 9200, 9443, 9800, 9981, 12443, 16080, 18091, 18092, 20720, 28017|
+|huge|80, 81, 300, 443, 591, 593, 832, 981, 1010, 1311, 2082, 2087, 2095, 2096, 2480, 3000, 3128, 3333, 4243, 4567, 4711, 4712, 4993, 5000, 5104, 5108, 5800, 6543, 7000, 7396, 7474, 8000, 8001, 8008, 8014, 8042, 8069, 8080, 8081, 8088, 8090, 8091, 8118, 8123, 8172, 8222, 8243, 8280, 8281, 8333, 8443, 8500, 8834, 8880, 8888, 8983, 9000, 9043, 9060, 9080, 9090, 9091, 9200, 9443, 9800, 9943, 9980, 9981, 12443, 16080, 18091, 18092, 20720, 28017|
 
 ### Takeover
 *(experimental)* Performs several checks on identified domains for potential subdomain-takeover vulnerabilities. The module is enabled with `--takeover` and is executed after all others. If such a vulnerability is identified, the results are printed in the output and in a .csv file in the respective project folder under the directory with the results. Checks are performed for the following services:
@@ -137,19 +137,30 @@ Performs a portscan on well-known web ports. The mode can be enabled with `--por
 |Package|Version|
 |---|---|
 |beautifulsoup4|4.7.1|
-|cfscrape|1.9.7|
 |dnspython|1.16.0|
 |ipwhois|1.1.0|
 |IPy|1.00|
+|js2py|0.60|
 |requests|2.21.0|
 |shodan|1.11.1|
 |termcolor|1.1.0|
 |tqdm|4.31.1|
+|cfscrape|2.0.0|
 
 ### Installation
 
-1. python3 -m pip install -r requirements.txt
-2. apt install nodejs (nodejs-legacy if running on Debian)
+1. Normal installation:
+```
+$ python3 -m pip install -r requirements.txt
+```
+
+2. Preferably install in a virtualenv
+```
+$ pyenv virtualenv 3.7.2 lepus
+$ pyenv activate lepus
+$ pip install -r requirements.txt
+```
+
 
 ### Help
 

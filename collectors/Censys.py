@@ -43,7 +43,8 @@ def init(domain):
 			print("  \__ {0}: {1}".format(colored("Unique subdomains found", "cyan"), colored(len(C), "yellow")))
 			return C
 
-		except KeyError:
+		except KeyError as errk:
+			print("  \__", colored(errk, "red"))
 			return []
 
 		except requests.exceptions.RequestException as err:
@@ -60,4 +61,8 @@ def init(domain):
 
 		except requests.exceptions.Timeout as errt:
 			print("  \__", colored(errt, "red"))
+			return []
+
+		except Exception:
+			print("  \__", colored("Something went wrong!", "red"))
 			return []
