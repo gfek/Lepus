@@ -109,10 +109,13 @@ eng
 engine
 engineering
 eu
+eue
+eune
 euro
 europe
 europeeast
 europewest
+euw
 events
 feb
 firewall
@@ -195,6 +198,7 @@ restricted
 reviews
 s
 s3
+sa
 sandbox
 search
 secure
@@ -235,6 +239,8 @@ web
 web1
 webapp
 westeurope
+ww1
+ww2
 www
 www1
 www2

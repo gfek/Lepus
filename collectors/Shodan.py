@@ -37,3 +37,7 @@ def init(domain):
 		except shodan.exception.APIError as err:
 			print("  \__", colored(err, "red"))
 			return []
+
+		except Exception:
+			print("  \__", colored("Something went wrong!", "red"))
+			return []

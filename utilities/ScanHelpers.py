@@ -1,3 +1,4 @@
+import sys
 from IPy import IP
 from time import time
 from tqdm import tqdm
@@ -9,41 +10,31 @@ from dns.zone import from_xfr
 from termcolor import colored
 from dns.name import EmptyLabel
 from dns.exception import DNSException
+from sqlalchemy.exc import IntegrityError
 from ssl import create_default_context, CERT_NONE
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from socket import gethostbyname, gethostbyaddr, socket, AF_INET, SOCK_STREAM
+from socket import getaddrinfo, gethostbyaddr, socket, AF_INET, SOCK_STREAM
 from dns.resolver import Resolver, NXDOMAIN, NoAnswer, NoNameservers, Timeout
+from utilities.DatabaseHelpers import Wildcard, Resolution
 import utilities.MiscHelpers
 
 
-def zoneTransfer(nameservers, domain):
+def zoneTransfer(domain, nameservers):
 	print(colored("\n[*]-Attempting to zone transfer from the identified nameservers...", "yellow"))
 
 	for nameserver in nameservers:
 		try:
 			zone = from_xfr(xfr(nameserver, domain))
-			hosts = ["{0}.{1}".format(key, domain) for key in sorted(list(set(zone.nodes.keys())))]
+			subdomains = set([str(key) for key in zone.nodes.keys()])
 
-			print("  \__", colored("Unique subdomains retrieved:", "cyan"), colored(len(hosts), "yellow"))
-
-			try:
-				with open(join("results", domain, "zone_transfer.txt"), "w") as zone_file:
-					for host in hosts:
-						zone_file.write("{0}\n".format(host))
-
-			except OSError:
-				pass
-
-			except IOError:
-				pass
-
-			return hosts
+			print("  \__ {0}: {1}".format(colored("Unique subdomains retrieved:", "cyan"), colored(len(subdomains), "yellow")))
+			return subdomains
 
 		except Exception:
 			continue
 
 	print("  \__", colored("Failed to zone transfer.", "red"))
-	return []
+	return None
 
 
 def getDNSrecords(domain, out_to_json):
@@ -140,59 +131,62 @@ def getDNSrecords(domain, out_to_json):
 	return NS
 
 
-def checkWildcard(resolver, timestamp, domain):
-	resolution = []
-
+def checkWildcard(timestamp, subdomain, domain):
 	try:
-		resolution = resolver.query(".".join([timestamp, domain]), "A")
+		return (subdomain, [item[4][0] for item in getaddrinfo(".".join([timestamp, subdomain, domain]), None)])
+
 	except Exception:
-		pass
-
-	if None in resolution:
-		return None
-
-	else:
-		return (domain, resolution)
+		return (subdomain, None)
 
 
-def identifyWildcards(domain, previously_identified, hosts, threads, out_to_json):
-	sub_levels = utilities.MiscHelpers.uniqueSubdomainLevels(hosts)
-	timestamp = str(int(time()))
-	wildcards = []
+def identifyWildcards(db, findings, domain, threads):
+	sub_levels = utilities.MiscHelpers.uniqueSubdomainLevels(findings)
+	timestamp = int(time())
+	wildcards = set()
+	numberOfChunks = 1
+	leaveFlag = False
 
 	if len(sub_levels) <= 100000:
 		print(colored("\n[*]-Checking for wildcards...", "yellow"))
+
 	else:
 		print(colored("\n[*]-Checking for wildcards, in chunks of 100,000...", "yellow"))
+		numberOfChunks = len(sub_levels) // 100000 + 1
 
-	subLevelChunks = list(utilities.MiscHelpers.chunks(list(sub_levels), 100000))
+	subLevelChunks = utilities.MiscHelpers.chunkify(sub_levels, 100000)
 	iteration = 1
-
-	resolver = Resolver()
-	resolver.timeout = 1
-	resolver.lifetime = 1
 
 	for subLevelChunk in subLevelChunks:
 		with ThreadPoolExecutor(max_workers=threads) as executor:
-			tasks = {executor.submit(checkWildcard, resolver, timestamp, sub_level) for sub_level in subLevelChunk}
+			tasks = {executor.submit(checkWildcard, str(timestamp), sub_level, domain) for sub_level in subLevelChunk}
 
 			try:
 				completed = as_completed(tasks)
-				completed = tqdm(completed, total=len(subLevelChunk), desc="  \__ {0}".format(colored("Progress {0}/{1}".format(iteration, len(subLevelChunks)), "cyan")), dynamic_ncols=True)
+
+				if iteration == numberOfChunks:
+					leaveFlag = True
+
+				if numberOfChunks == 1:
+					completed = tqdm(completed, total=len(subLevelChunk), desc="  \__ {0}".format(colored("Progress", "cyan")), dynamic_ncols=True, leave=leaveFlag)
+
+				else:
+					completed = tqdm(completed, total=len(subLevelChunk), desc="  \__ {0}".format(colored("Progress {0}/{1}".format(iteration, len(subLevelChunks)), "cyan")), dynamic_ncols=True, leave=leaveFlag)
 
 				for task in completed:
 					result = task.result()
 
-					if result is not None:
-						for res in result[1]:
-							wc = (result[0], str(res.address))
-							wildcards.append(wc)
+					if result[1] is not None:
+						for address in result[1]:
+							wildcards.add((".".join([result[0], domain]), address))
 
 			except KeyboardInterrupt:
 				completed.close()
 				print(colored("\n[*]-Received keyboard interrupt! Shutting down...\n", "red"))
 				executor.shutdown(wait=False)
 				exit(-1)
+
+		if iteration < numberOfChunks:
+			sys.stderr.write("\033[F")
 
 		iteration += 1
 
@@ -218,149 +212,78 @@ def identifyWildcards(domain, previously_identified, hosts, threads, out_to_json
 			else:
 				optimized_wildcards[ip] = [hostname]
 
-		diff_wildcards = {}
-
-		for ip, hostnames in list(optimized_wildcards.items()):
+		for address, hostnames in list(optimized_wildcards.items()):
 			for hostname in hostnames:
-				is_actually_new = True
+				db.add(Wildcard(subdomain=hostname.split(domain)[0][:-1], domain=domain, address=address, timestamp=timestamp))
 
-				if ip in previously_identified:
-					if hostname in previously_identified[ip]:
-						is_actually_new = False
+				try:
+					db.commit()
 
-				if is_actually_new:
-					if ip in diff_wildcards:
-						diff_wildcards[ip].append(hostname)
+				except IntegrityError:
+					db.rollback()
 
-					else:
-						diff_wildcards[ip] = [hostname]
+		new_wildcards = db.query(Wildcard).filter(Wildcard.domain == domain, Wildcard.timestamp == timestamp)
+		print("    \__ {0} {1}".format(colored("Wildcards that were identified:", "yellow"), colored(new_wildcards.count(), "cyan")))
 
-		print("    \__ {0} {1}".format(colored("Wildcards that were identified:", "yellow"), colored(sum(len(hostnames) for hostnames in list(diff_wildcards.values())), "cyan")))
-
-		for ip, hostnames in list(diff_wildcards.items()):
-			for hostname in hostnames:
-				print("      \__ {0}.{1} ==> {2}".format(colored("*", "red"), colored(hostname, "cyan"), colored(ip, "red")))
-
-		if out_to_json:
-			try:
-				with open(join("results", domain, "wildcards.json"), "w") as wildcard_file:
-					wildcard_file.write("{0}\n".format(dumps(optimized_wildcards)))
-
-			except OSError:
-				pass
-
-			except IOError:
-				pass
-
-		try:
-			with open(join("results", domain, "wildcards.csv"), "w") as wildcard_file:
-				for ip, hostnames in list(optimized_wildcards.items()):
-					for hostname in hostnames:
-						wildcard_file.write("{0}|{1}\n".format(hostname, ip))
-
-		except OSError:
-			pass
-
-		except IOError:
-			pass
-
-	return optimized_wildcards
+		for row in new_wildcards:
+			print("      \__ {0}.{1} ==> {2}".format(colored("*", "red"), colored(".".join([row.subdomain, row.domain]), "cyan"), colored(row.address, "red")))
 
 
-def resolve(hostname):
+def resolve(finding, domain):
 	try:
-		return (hostname, gethostbyname(hostname))
+		return (finding[0], [item[4][0] for item in getaddrinfo(".".join([finding[0], domain]), None)], finding[1])
 
 	except Exception:
-		return (hostname, None)
+		return (finding[0], None, finding[1])
 
 
-def massResolve(domain, hostnames, collector_hostnames, threads, wildcards, out_to_json, already_resolved):
-	resolved = {}
-	resolved_public = {}
-	resolved_private = {}
-	resolved_reserved = {}
-	resolved_loopback = {}
-	resolved_carrier_grade_nat = {}
-	unresolved = {}
+def massResolve(db, findings, domain, threads):
+	resolved = set()
+	wildcards = {}
+	numberOfChunks = 1
+	leaveFlag = False
 
-	if len(hostnames) <= 100000:
-		print("{0} {1} {2}".format(colored("\n[*]-Attempting to resolve", "yellow"), colored(len(hostnames), "cyan"), colored("hostnames...", "yellow")))
+	for row in db.query(Wildcard).filter(Wildcard.domain == domain):
+		if row.subdomain in wildcards:
+			wildcards[row.subdomain].append(row.address)
+
+		else:
+			wildcards[row.subdomain] = []
+			wildcards[row.subdomain].append(row.address)
+
+	if len(findings) <= 100000:
+		print("{0} {1} {2}".format(colored("\n[*]-Attempting to resolve", "yellow"), colored(len(findings), "cyan"), colored("hostnames...", "yellow")))
 
 	else:
-		print("{0} {1} {2}".format(colored("\n[*]-Attempting to resolve", "yellow"), colored(len(hostnames), "cyan"), colored("hostnames, in chunks of 100,000...", "yellow")))
+		print("{0} {1} {2}".format(colored("\n[*]-Attempting to resolve", "yellow"), colored(len(findings), "cyan"), colored("hostnames, in chunks of 100,000...", "yellow")))
+		numberOfChunks = len(findings) // 100000 + 1
 
-	hostNameChunks = list(utilities.MiscHelpers.chunks(list(hostnames), 100000))
+	findingsChunks = utilities.MiscHelpers.chunkify(findings, 100000)
 	iteration = 1
 
-	for hostNameChunk in hostNameChunks:
+	for findingsChunk in findingsChunks:
 		with ThreadPoolExecutor(max_workers=threads) as executor:
-			tasks = {executor.submit(resolve, hostname) for hostname in hostNameChunk}
+			tasks = {executor.submit(resolve, finding, domain) for finding in findingsChunk}
 
 			try:
 				completed = as_completed(tasks)
-				completed = tqdm(completed, total=len(hostNameChunk), desc="  \__ {0}".format(colored("Progress {0}/{1}".format(iteration, len(hostNameChunks)), "cyan")), dynamic_ncols=True)
+
+				if iteration == numberOfChunks:
+					leaveFlag = True
+
+				if numberOfChunks == 1:
+					completed = tqdm(completed, total=len(findingsChunk), desc="  \__ {0}".format(colored("Progress", "cyan")), dynamic_ncols=True, leave=leaveFlag)
+
+				else:
+					completed = tqdm(completed, total=len(findingsChunk), desc="  \__ {0}".format(colored("Progress {0}/{1}".format(iteration, numberOfChunks), "cyan")), dynamic_ncols=True, leave=leaveFlag)
 
 				for task in completed:
 					try:
 						result = task.result()
 
-						if None not in result and result[1] not in wildcards:
-							ip_type = IP(result[1]).iptype()
-
-							if ip_type == "PUBLIC":
-								resolved[result[0]] = result[1]
-								resolved_public[result[0]] = result[1]
-
-							elif ip_type == "PRIVATE":
-								resolved[result[0]] = result[1]
-								resolved_private[result[0]] = result[1]
-
-							elif ip_type == "RESERVED":
-								resolved[result[0]] = result[1]
-								resolved_reserved[result[0]] = result[1]
-
-							elif ip_type == "LOOPBACK":
-								resolved[result[0]] = result[1]
-								resolved_loopback[result[0]] = result[1]
-
-							elif ip_type == "CARRIER_GRADE_NAT":
-								resolved[result[0]] = result[1]
-								resolved_carrier_grade_nat[result[0]] = result[1]
-
-						elif None not in result and result[1] in wildcards:
-							actual_wildcard = False
-
-							for value in wildcards[result[1]]:
-								if value in result[0]:
-									actual_wildcard = True
-
-							if not actual_wildcard or result[0] in collector_hostnames:
-								ip_type = IP(result[1]).iptype()
-
-								if ip_type == "PUBLIC":
-									resolved[result[0]] = result[1]
-									resolved_public[result[0]] = result[1]
-
-								elif ip_type == "PRIVATE":
-									resolved[result[0]] = result[1]
-									resolved_private[result[0]] = result[1]
-
-								elif ip_type == "RESERVED":
-									resolved[result[0]] = result[1]
-									resolved_reserved[result[0]] = result[1]
-
-								elif ip_type == "LOOPBACK":
-									resolved[result[0]] = result[1]
-									resolved_loopback[result[0]] = result[1]
-
-								elif ip_type == "CARRIER_GRADE_NAT":
-									resolved[result[0]] = result[1]
-									resolved_carrier_grade_nat[result[0]] = result[1]
-
-						elif None in result:
-							if result[0] in collector_hostnames:
-								unresolved[result[0]] = result[1]
+						if result[1] is not None:
+							for address in result[1]:
+								resolved.add((".".join([result[0], domain]), address, result[2]))
 
 					except Exception:
 						continue
@@ -371,8 +294,13 @@ def massResolve(domain, hostnames, collector_hostnames, threads, wildcards, out_
 				executor.shutdown(wait=False)
 				exit(-1)
 
+		if iteration < numberOfChunks:
+			sys.stderr.write("\033[F")
+
 		iteration += 1
 
+	print(len(resolved))
+	"""
 	resolved_diff = {}
 
 	for hostname, address in list(resolved.items()):
@@ -398,142 +326,7 @@ def massResolve(domain, hostnames, collector_hostnames, threads, wildcards, out_
 
 			else:
 				print("      \__ {0} ({1})".format(colored(hostname, "cyan"), colored(address, "yellow")))
-
-	if out_to_json:
-		try:
-			with open(join("results", domain, "resolved_public.json"), "w") as resolved_public_file:
-				if resolved_public:
-					resolved_public_file.write("{0}\n".format(dumps(resolved_public)))
-
-		except OSError:
-			pass
-
-		except IOError:
-			pass
-
-		try:
-			with open(join("results", domain, "resolved_private.json"), "w") as resolved_private_file:
-				if resolved_private:
-					resolved_private_file.write("{0}\n".format(dumps(resolved_private)))
-
-		except OSError:
-			pass
-
-		except IOError:
-			pass
-
-		try:
-			with open(join("results", domain, "resolved_reserved.json"), "w") as resolved_reserved_file:
-				if resolved_reserved:
-					resolved_reserved_file.write("{0}\n".format(dumps(resolved_reserved)))
-
-		except OSError:
-			pass
-
-		except IOError:
-			pass
-
-		try:
-			with open(join("results", domain, "resolved_loopback.json"), "w") as resolved_loopback_file:
-				if resolved_loopback:
-					resolved_loopback_file.write("{0}\n".format(dumps(resolved_loopback)))
-
-		except OSError:
-			pass
-
-		except IOError:
-			pass
-
-		try:
-			with open(join("results", domain, "resolved_carrier_grade_nat.json"), "w") as resolved_carrier_grade_nat_file:
-				if resolved_carrier_grade_nat:
-					resolved_carrier_grade_nat_file.write("{0}\n".format(dumps(resolved_carrier_grade_nat)))
-
-		except OSError:
-			pass
-
-		except IOError:
-			pass
-
-		try:
-			with open(join("results", domain, "unresolved.json"), "w") as unresolved_file:
-				if unresolved:
-					unresolved_file.write("{0}\n".format(dumps(unresolved)))
-
-		except OSError:
-			pass
-
-		except IOError:
-			pass
-
-	try:
-		with open(join("results", domain, "resolved_public.csv"), "w") as resolved_public_file:
-			for hostname, address in list(resolved_public.items()):
-				resolved_public_file.write("{0}|{1}\n".format(hostname, address))
-
-	except OSError:
-		pass
-
-	except IOError:
-		pass
-
-	try:
-		with open(join("results", domain, "resolved_private.csv"), "w") as resolved_private_file:
-			for hostname, address in list(resolved_private.items()):
-				resolved_private_file.write("{0}|{1}\n".format(hostname, address))
-
-	except OSError:
-		pass
-
-	except IOError:
-		pass
-
-	try:
-		with open(join("results", domain, "resolved_reserved.csv"), "w") as resolved_reserved_file:
-			for hostname, address in list(resolved_reserved.items()):
-				resolved_reserved_file.write("{0}|{1}\n".format(hostname, address))
-
-	except OSError:
-		pass
-
-	except IOError:
-		pass
-
-	try:
-		with open(join("results", domain, "resolved_loopback.csv"), "w") as resolved_loopback_file:
-			for hostname, address in list(resolved_loopback.items()):
-				resolved_loopback_file.write("{0}|{1}\n".format(hostname, address))
-
-	except OSError:
-		pass
-
-	except IOError:
-		pass
-
-	try:
-		with open(join("results", domain, "resolved_carrier_grade_nat.csv"), "w") as resolved_carrier_grade_nat_file:
-			for hostname, address in list(resolved_carrier_grade_nat.items()):
-				resolved_carrier_grade_nat_file.write("{0}|{1}\n".format(hostname, address))
-
-	except OSError:
-		pass
-
-	except IOError:
-		pass
-
-	try:
-		with open(join("results", domain, "unresolved.csv"), "w") as unresolved_file:
-			for hostname, address in list(unresolved.items()):
-				unresolved_file.write("{0}|{1}\n".format(hostname, address))
-
-	except OSError:
-		pass
-
-	except IOError:
-		pass
-
-	return resolved, resolved_public
-
+	"""
 
 def reverseLookup(IP):
 	try:
@@ -545,6 +338,7 @@ def reverseLookup(IP):
 
 def massReverseLookup(IPs, threads):
 	hosts = []
+	leaveFlag = False
 
 	if len(IPs) <= 100000:
 		print("{0} {1} {2}".format(colored("\n[*]-Performing reverse DNS lookups on", "yellow"), colored(len(IPs), "cyan"), colored("unique public IPs...", "yellow")))
@@ -560,7 +354,11 @@ def massReverseLookup(IPs, threads):
 
 			try:
 				completed = as_completed(tasks)
-				completed = tqdm(completed, total=len(IPChunk), desc="  \__ {0}".format(colored("Progress {0}/{1}".format(iteration, len(IPChunks)), "cyan")), dynamic_ncols=True)
+
+				if iteration == len(IPChunks):
+					leaveFlag = True
+
+				completed = tqdm(completed, total=len(IPChunk), desc="  \__ {0}".format(colored("Progress {0}/{1}".format(iteration, len(IPChunks)), "cyan")), dynamic_ncols=True, leave=leaveFlag)
 
 				for task in completed:
 					result = task.result()
@@ -573,6 +371,9 @@ def massReverseLookup(IPs, threads):
 				print(colored("\n[*]-Received keyboard interrupt! Shutting down...\n", "red"))
 				executor.shutdown(wait=False)
 				exit(-1)
+
+		if iteration < len(IPChunks):
+			sys.stderr.write("\033[F")
 
 		iteration += 1
 
@@ -620,6 +421,7 @@ def connectScan(target):
 
 def massConnectScan(IPs, targets, threads):
 	open_ports = []
+	leaveFlag = False
 
 	if len(targets) <= 100000:
 		print("{0} {1} {2} {3} {4}".format(colored("\n[*]-Scanning", "yellow"), colored(len(targets), "cyan"), colored("ports on", "yellow"), colored(len(IPs), "cyan"), colored("unique public IPs...", "yellow")))
@@ -635,7 +437,11 @@ def massConnectScan(IPs, targets, threads):
 
 			try:
 				completed = as_completed(tasks)
-				completed = tqdm(completed, total=len(PortChunk), desc="  \__ {0}".format(colored("Progress {0}/{1}".format(iteration, len(PortChunks)), "cyan")), dynamic_ncols=True)
+
+				if iteration == len(PortChunks):
+					leaveFlag = True
+
+				completed = tqdm(completed, total=len(PortChunk), desc="  \__ {0}".format(colored("Progress {0}/{1}".format(iteration, len(PortChunks)), "cyan")), dynamic_ncols=True, leave=leaveFlag)
 
 				for task in completed:
 					result = task.result()
@@ -648,6 +454,9 @@ def massConnectScan(IPs, targets, threads):
 				print(colored("\n[*]-Received keyboard interrupt! Shutting down...\n", "red"))
 				executor.shutdown(wait=False)
 				exit(-1)
+
+		if iteration < len(PortChunks):
+			sys.stderr.write("\033[F")
 
 		iteration += 1
 
@@ -666,28 +475,45 @@ def rdap(ip):
 
 
 def massRDAP(domain, IPs, threads, out_to_json):
-	print("{0} {1} {2}".format(colored("\n[*]-Performing RDAP lookups for", "yellow"), colored(len(IPs), "cyan"), colored("unique public IPs...", "yellow")))
-
 	rdap_records = []
+	leaveFlag = False
 
-	with ThreadPoolExecutor(max_workers=threads) as executor:
-		tasks = {executor.submit(rdap, ip): ip for ip in IPs}
+	if len(IPs) <= 100000:
+		print("{0} {1} {2}".format(colored("\n[*]-Performing RDAP lookups for", "yellow"), colored(len(IPs), "cyan"), colored("unique public IPs...", "yellow")))
+	else:
+		print("{0} {1} {2}".format(colored("\n[*]-Performing RDAP lookups for", "yellow"), colored(len(IPs), "cyan"), colored("unique public IPs, in chunks of 100,000...", "yellow")))
 
-		try:
-			completed = as_completed(tasks)
-			completed = tqdm(completed, total=len(IPs), desc="  \__ {0}".format(colored("Progress", "cyan")), dynamic_ncols=True)
+	IPChunks = list(utilities.MiscHelpers.chunks(list(IPs), 100000))
+	iteration = 1
 
-			for task in completed:
-				result = task.result()
+	for IPChunk in IPChunks:
+		with ThreadPoolExecutor(max_workers=threads) as executor:
+			tasks = {executor.submit(rdap, ip): ip for ip in IPChunk}
 
-				if result is not None:
-					rdap_records.append(result)
+			try:
+				completed = as_completed(tasks)
 
-		except KeyboardInterrupt:
-			completed.close()
-			print(colored("\n[*]-Received keyboard interrupt! Shutting down...\n", "red"))
-			executor.shutdown(wait=False)
-			exit(-1)
+				if iteration == len(IPChunks):
+					leaveFlag = True
+
+				completed = tqdm(completed, total=len(IPs), desc="  \__ {0}".format(colored("Progress", "cyan")), dynamic_ncols=True, leave=leaveFlag)
+
+				for task in completed:
+					result = task.result()
+
+					if result is not None:
+						rdap_records.append(result)
+
+			except KeyboardInterrupt:
+				completed.close()
+				print(colored("\n[*]-Received keyboard interrupt! Shutting down...\n", "red"))
+				executor.shutdown(wait=False)
+				exit(-1)
+
+		if iteration < len(IPChunks):
+			sys.stderr.write("\033[F")
+
+		iteration += 1
 
 	ASN = set()
 	NETS = set()
