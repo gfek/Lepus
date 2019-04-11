@@ -1,14 +1,15 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 from argparse import ArgumentParser, FileType
 from warnings import simplefilter
 from termcolor import colored
 from time import sleep, time
 from os.path import join
+from gc import collect
 import collectors.Censys
 import collectors.CertSpotter
 import collectors.CRT
-import collectors.DNSDB
+# import collectors.DNSDB
 import collectors.DNSTrails
 import collectors.EntrustCertificates
 import collectors.FindSubdomains
@@ -21,15 +22,18 @@ import collectors.Shodan
 import collectors.ThreatCrowd
 import collectors.VirusTotal
 import collectors.WaybackMachine
+"""
 import submodules.Permutations
 import submodules.PortScan
 import submodules.ReverseLookups
 import submodules.TakeOver
+"""
+import utilities.DatabaseHelpers
 import utilities.MiscHelpers
 import utilities.ScanHelpers
 
 simplefilter("ignore")
-version = "3.1.0"
+version = "3.2.0"
 
 
 def printBanner():
@@ -64,11 +68,12 @@ if __name__ == "__main__":
 	printBanner()
 
 	try:
+		db = utilities.DatabaseHelpers.init()
 		workspace = utilities.MiscHelpers.createWorkspace(args.domain)
 		nameservers = utilities.ScanHelpers.getDNSrecords(args.domain, args.json)
 
 		if not workspace:
-			old_findings, old_resolved_public, last_run, collector_hosts = utilities.MiscHelpers.loadOldFindings(args.domain)
+			# old_findings, old_resolved_public, last_run, collector_hosts = utilities.MiscHelpers.loadOldFindings(args.domain)
 			current_run = str(int(time()))
 
 			with open(join("results", args.domain, ".timestamp"), "w") as timestamp_file:
@@ -84,50 +89,68 @@ if __name__ == "__main__":
 			with open(join("results", args.domain, ".timestamp"), "w") as timestamp_file:
 				timestamp_file.write(current_run)
 
+		# ------------------------------------------------ #
+
 		if args.zoneTransfer:
-			zone_hosts = utilities.ScanHelpers.zoneTransfer(nameservers, args.domain)
+			zt_subdomains = utilities.ScanHelpers.zoneTransfer(args.domain, nameservers)
 
 		else:
-			zone_hosts = []
+			zt_subdomains = None
+
+		# ------------------------------------------------ #
 
 		if args.noCollectors:
 			pass
 
 		else:
 			print()
-			collector_hosts = []
-			collector_hosts += collectors.Censys.init(args.domain)
-			collector_hosts += collectors.CertSpotter.init(args.domain)
-			collector_hosts += collectors.CRT.init(args.domain)
-			collector_hosts += collectors.DNSDB.init(args.domain)
-			collector_hosts += collectors.DNSTrails.init(args.domain)
-			collector_hosts += collectors.EntrustCertificates.init(args.domain)
-			collector_hosts += collectors.FindSubdomains.init(args.domain)
-			collector_hosts += collectors.GoogleTransparency.init(args.domain)
-			collector_hosts += collectors.HackerTarget.init(args.domain)
-			collector_hosts += collectors.PassiveTotal.init(args.domain)
-			collector_hosts += collectors.ProjectSonar.init(args.domain)
-			collector_hosts += collectors.Riddler.init(args.domain)
-			collector_hosts += collectors.Shodan.init(args.domain)
-			collector_hosts += collectors.ThreatCrowd.init(args.domain)
-			collector_hosts += collectors.VirusTotal.init(args.domain)
-			collector_hosts += collectors.WaybackMachine.init(args.domain)
-			collector_hosts = utilities.MiscHelpers.filterDomain(args.domain, utilities.MiscHelpers.uniqueList(collector_hosts))
-			utilities.MiscHelpers.saveCollectorResults(args.domain, collector_hosts)
+			collector_subdomains = []
+			collector_subdomains += collectors.Censys.init(args.domain)
+			collector_subdomains += collectors.CertSpotter.init(args.domain)
+			collector_subdomains += collectors.CRT.init(args.domain)
+			collector_subdomains += collectors.DNSDB.init(args.domain)
+			collector_subdomains += collectors.DNSTrails.init(args.domain)
+			collector_subdomains += collectors.EntrustCertificates.init(args.domain)
+			collector_subdomains += collectors.FindSubdomains.init(args.domain)
+			collector_subdomains += collectors.GoogleTransparency.init(args.domain)
+			collector_subdomains += collectors.HackerTarget.init(args.domain)
+			collector_subdomains += collectors.PassiveTotal.init(args.domain)
+			collector_subdomains += collectors.ProjectSonar.init(args.domain)
+			collector_subdomains += collectors.Riddler.init(args.domain)
+			collector_subdomains += collectors.Shodan.init(args.domain)
+			collector_subdomains += collectors.ThreatCrowd.init(args.domain)
+			collector_subdomains += collectors.VirusTotal.init(args.domain)
+			collector_subdomains += collectors.WaybackMachine.init(args.domain)
+			collector_subdomains = utilities.MiscHelpers.filterDomain(args.domain, utilities.MiscHelpers.uniqueList(collector_subdomains))
+
+		# ------------------------------------------------ #
 
 		if args.wordlist:
-			wordlist_hosts = utilities.MiscHelpers.loadWordlist(args.domain, args.wordlist)
+			wordlist_subdomains = utilities.MiscHelpers.loadWordlist(args.domain, args.wordlist)
 
 		else:
-			wordlist_hosts = []
+			wordlist_subdomains = None
 
-		hosts = utilities.MiscHelpers.filterDomain(args.domain, utilities.MiscHelpers.uniqueList(old_findings + zone_hosts + collector_hosts + wordlist_hosts))
+		# ------------------------------------------------ #
 
-		if len(hosts) > 0:
-			wildcards = utilities.ScanHelpers.identifyWildcards(args.domain, {}, hosts, args.threads, args.json)
-			resolved, resolved_public = utilities.ScanHelpers.massResolve(args.domain, hosts, collector_hosts, args.threads, wildcards, args.json, [])
-			hosts = list(set(old_findings + zone_hosts + collector_hosts + [hostname for hostname, address in list(resolved.items())]))
+		# TO-DO - redesign old findings
+		findings = utilities.MiscHelpers.combineFindings(zt_subdomains, collector_subdomains, wordlist_subdomains)
 
+		del zt_subdomains
+		del collector_subdomains
+		del wordlist_subdomains
+		collect()
+
+		if len(findings) > 0:
+			utilities.ScanHelpers.identifyWildcards(db, findings, args.domain, args.threads)
+			utilities.ScanHelpers.massResolve(db, findings, args.domain, args.threads)
+
+			del findings
+			collect()
+
+			# hosts = list(set(old_findings + zone_hosts + collector_hosts + [hostname for hostname, address in list(resolved.items())]))
+
+			"""
 			if args.permutate:
 				permutated_hosts = submodules.Permutations.init(args.domain, resolved, collector_hosts, wildcards, args.permutation_wordlist)
 				permutated_hosts = utilities.MiscHelpers.filterDomain(args.domain, utilities.MiscHelpers.uniqueList(permutated_hosts))
@@ -158,6 +181,7 @@ if __name__ == "__main__":
 				submodules.TakeOver.init(args.domain, resolved_public, collector_hosts, args.threads, args.json)
 
 			utilities.MiscHelpers.deleteEmptyFiles(args.domain)
+			"""
 
 		print()
 

@@ -1,4 +1,5 @@
 import re
+import sys
 from os.path import join
 from tqdm import tqdm
 from json import dumps
@@ -660,25 +661,44 @@ def takeOver(domain):
 
 def massTakeOver(targets, threads):
 	takeovers = []
+	leaveFlag = False
 
-	with ThreadPoolExecutor(max_workers=threads) as executor:
-		tasks = {executor.submit(takeOver, target) for target in targets}
+	if len(targets) <= 100000:
+		print("{0} {1} {2}".format(colored("\n[*]-Scanning", "yellow"), colored(len(targets), "cyan"), colored("domains for potential takeover...", "yellow")))
+	else:
+		print("{0} {1} {2}".format(colored("\n[*]-Scanning", "yellow"), colored(len(targets), "cyan"), colored("domains for potential takeover, in chunks of 100,000...", "yellow")))
 
-		try:
-			completed = as_completed(tasks)
-			completed = tqdm(completed, total=len(targets), desc="  \__ {0}".format(colored("Progress", "cyan")), dynamic_ncols=True)
+	targetChunks = list(utilities.MiscHelpers.chunks(list(targets), 100000))
+	iteration = 1
 
-			for task in completed:
-				result = task.result()
+	for targetChunk in targetChunks:
+		with ThreadPoolExecutor(max_workers=threads) as executor:
+			tasks = {executor.submit(takeOver, target) for target in targetChunk}
 
-				if result is not None:
-					takeovers.append(result)
+			try:
+				completed = as_completed(tasks)
 
-		except KeyboardInterrupt:
-			completed.close()
-			print(colored("\n[*]-Received keyboard interrupt! Shutting down...\n", "red"))
-			executor.shutdown(wait=False)
-			exit(-1)
+				if iteration == len(targetChunks):
+					leaveFlag = True
+
+				completed = tqdm(completed, total=len(targetChunk), desc="  \__ {0}".format(colored("Progress", "cyan")), dynamic_ncols=True, leave=leaveFlag)
+
+				for task in completed:
+					result = task.result()
+
+					if result is not None:
+						takeovers.append(result)
+
+			except KeyboardInterrupt:
+				completed.close()
+				print(colored("\n[*]-Received keyboard interrupt! Shutting down...\n", "red"))
+				executor.shutdown(wait=False)
+				exit(-1)
+
+		if iteration < len(targetChunks):
+			sys.stderr.write("\033[F")
+
+		iteration += 1
 
 	return takeovers
 
@@ -690,8 +710,6 @@ def init(domain, resolved, collector_hosts, threads, out_to_json):
 		resolved_hosts.append(host)
 
 	toTakeOver = utilities.MiscHelpers.uniqueList(resolved_hosts + collector_hosts)
-
-	print("{0} {1} {2}".format(colored("\n[*] Scanning", "yellow"), colored(len(toTakeOver), "cyan"), colored("domains for potential takeover...", "yellow")))
 
 	results = massTakeOver(toTakeOver, threads)
 	results_json = {}

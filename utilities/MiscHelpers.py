@@ -128,20 +128,6 @@ def createWorkspace(directory):
 		return False
 
 
-def saveCollectorResults(domain, subdomains):
-	if subdomains:
-		try:
-			with open(join("results", domain, "passive_findings.txt"), "w") as collector_file:
-				for subdomain in subdomains:
-					collector_file.write("{0}\n".format(subdomain))
-
-		except OSError:
-			pass
-
-		except IOError:
-			pass
-
-
 def loadOldFindings(directory):
 	filenames = [filename for filename in listdir(join("results", directory)) if isfile(join("results", directory, filename))]
 	OF = []
@@ -183,18 +169,46 @@ def loadOldFindings(directory):
 def loadWordlist(domain, wordlist):
 	print(colored("\n[*]-Loading Wordlist...", "yellow"))
 
-	WL = set([".".join([subdomain.strip().lower(), domain]) for subdomain in wordlist.readlines()])
+	WL = set([subdomain.strip().lower()for subdomain in wordlist.readlines()])
 	wordlist.close()
 
 	print("  \__ {0}: {1}".format(colored("Unique subdomains loaded", "cyan"), colored(len(WL), "yellow")))
-	return list(WL)
+	return WL
 
 
-def uniqueSubdomainLevels(hosts):
+def combineFindings(zt, collectors, wordlist):
+	unique_subdomains = set()
+	findings = []
+
+	if zt:
+		for subdomain in zt:
+			if subdomain not in unique_subdomains:
+				unique_subdomains.add(subdomain)
+				findings.append((subdomain, "Zone Transfer"))
+
+	if collectors:
+		for subdomain in collectors:
+			if subdomain not in unique_subdomains:
+				unique_subdomains.add(subdomain)
+				findings.append((subdomain, "Collectors"))
+
+	if wordlist:
+		for subdomain in wordlist:
+			if subdomain not in unique_subdomains:
+				unique_subdomains.add(subdomain)
+				findings.append((subdomain, "Wordlist"))
+
+	return findings
+
+
+def uniqueSubdomainLevels(subdomains):
 	unique_subs = set()
 
-	for host in hosts:
-		unique_subs.add(".".join(sub for sub in host.split(".")[1:]))
+	for subdomain in subdomains:
+		subdomain_parts = subdomain[0].split(".")
+
+		for i in range(len(subdomain_parts) - 1):
+			unique_subs.add(".".join(sub for sub in subdomain[0].split(".")[i + 1:]))
 
 	return list(unique_subs)
 
@@ -216,14 +230,17 @@ def filterDomain(domain, subdomains):
 		subdomain_parts = subdomain.split(".")
 
 		if domain_parts == subdomain_parts[-1 * len(domain_parts):]:
-			filtered.append(subdomain)
+			filtered_subdomain = subdomain.split(domain)[0][:-1]
+
+			if filtered_subdomain:
+				filtered.append(filtered_subdomain)
 
 	return filtered
 
 
-def chunks(list, numberInChunk):
-	for i in range(0, len(list), numberInChunk):
-		yield list[i:i + numberInChunk]
+def chunkify(original, numberOfItemsInChunk):
+	for i in range(0, len(original), numberOfItemsInChunk):
+		yield original[i:i + numberOfItemsInChunk]
 
 
 def urlize(target, domains):

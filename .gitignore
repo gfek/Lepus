@@ -1,3 +1,4 @@
 *.pyc
 config.ini
+findings.sqlite
 results/
