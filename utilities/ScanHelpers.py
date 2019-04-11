@@ -240,6 +240,7 @@ def resolve(finding, domain):
 def massResolve(db, findings, domain, threads):
 	resolved = set()
 	wildcards = {}
+	timestamp = int(time())
 	numberOfChunks = 1
 	leaveFlag = False
 
@@ -299,14 +300,7 @@ def massResolve(db, findings, domain, threads):
 
 		iteration += 1
 
-	print(len(resolved))
 	"""
-	resolved_diff = {}
-
-	for hostname, address in list(resolved.items()):
-		if hostname not in already_resolved:
-			resolved_diff[hostname] = address
-
 	print("    \__ {0} {1}".format(colored("Hostnames that were resolved:", "yellow"), colored(len(resolved_diff), "cyan")))
 
 	for hostname, address in list(resolved_diff.items()):

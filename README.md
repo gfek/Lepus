@@ -137,15 +137,17 @@ Performs a portscan on well-known web ports. The mode can be enabled with `--por
 |Package|Version|
 |---|---|
 |beautifulsoup4|4.7.1|
+|cloudflare-scrape-js2py|2.0.3|
 |dnspython|1.16.0|
 |ipwhois|1.1.0|
 |IPy|1.00|
 |js2py|0.60|
 |requests|2.21.0|
 |shodan|1.11.1|
+|sqlalchemy|1.3.2|
+|sqlalchemy_utils|0.33.11|
 |termcolor|1.1.0|
 |tqdm|4.31.1|
-|cfscrape|2.0.0|
 
 ### Installation
 
