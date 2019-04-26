@@ -40,7 +40,7 @@ def init(domain):
 
 			C = set(C)
 
-			print("  \__ {0}: {1}".format(colored("Unique subdomains found", "cyan"), colored(len(C), "yellow")))
+			print("  \__ {0}: {1}".format(colored("Subdomains found", "cyan"), colored(len(C), "yellow")))
 			return C
 
 		except KeyError as errk:

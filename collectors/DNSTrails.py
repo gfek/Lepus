@@ -37,7 +37,7 @@ def init(domain):
 
 			DT = set(DT)
 
-			print("  \__ {0}: {1}".format(colored("Unique subdomains found", "cyan"), colored(len(DT), "yellow")))
+			print("  \__ {0}: {1}".format(colored("Subdomains found", "cyan"), colored(len(DT), "yellow")))
 			return DT
 
 		except requests.exceptions.RequestException as err:

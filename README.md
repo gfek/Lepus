@@ -1,6 +1,6 @@
 [![GitHub License](https://img.shields.io/badge/License-BSD%203--Clause-informational.svg)](https://github.com/GKNSB/Lepus/blob/master/LICENSE)
 [![GitHub Python](https://img.shields.io/badge/Python-%3E=%203.5.3-informational.svg)](https://www.python.org/)
-[![GitHub Version](https://img.shields.io/badge/Version-3.1.0-yellow.svg)](https://github.com/GKNSB/Lepus)
+[![GitHub Version](https://img.shields.io/badge/Version-3.2.0-yellow.svg)](https://github.com/GKNSB/Lepus)
 
 ## Lepus
 **Sub-domain finder**
@@ -145,7 +145,6 @@ Performs a portscan on well-known web ports. The mode can be enabled with `--por
 |requests|2.21.0|
 |shodan|1.11.1|
 |sqlalchemy|1.3.2|
-|sqlalchemy_utils|0.33.11|
 |termcolor|1.1.0|
 |tqdm|4.31.1|
 

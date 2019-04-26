@@ -23,7 +23,7 @@ def init(domain):
 
 			CRT = set(CRT)
 
-			print("  \__ {0}: {1}".format(colored("Unique subdomains found", "cyan"), colored(len(CRT), "yellow")))
+			print("  \__ {0}: {1}".format(colored("Subdomains found", "cyan"), colored(len(CRT), "yellow")))
 			return CRT
 
 		else:

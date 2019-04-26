@@ -24,9 +24,7 @@ def init(domain):
 			for record in response_json["RDNS"]:
 				Sonar.append(record.split(",")[1])
 
-		Sonar = utilities.MiscHelpers.filterDomain(domain, utilities.MiscHelpers.uniqueList(Sonar))
-
-		print("  \__ {0}: {1}".format(colored("Unique subdomains found", "cyan"), colored(len(Sonar), "yellow")))
+		print("  \__ {0}: {1}".format(colored("subdomains found", "cyan"), colored(len(Sonar), "yellow")))
 		return Sonar
 
 	except requests.exceptions.RequestException as err:

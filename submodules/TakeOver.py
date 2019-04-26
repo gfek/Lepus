@@ -1,16 +1,19 @@
-import re
-import sys
-from os.path import join
+from time import time
 from tqdm import tqdm
-from json import dumps
+from gc import collect
+from re import findall
+from sys import stderr
 from requests import get
 from termcolor import colored
 from dns.name import EmptyLabel
 from warnings import simplefilter
 from dns.exception import DNSException
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm.exc import FlushError
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dns.resolver import Resolver, NXDOMAIN, NoAnswer, NoNameservers, Timeout
-import utilities.MiscHelpers
+from utilities.DatabaseHelpers import Resolution, Unresolved, Takeover
+from utilities.MiscHelpers import chunkify
 
 simplefilter("ignore")
 
@@ -59,7 +62,7 @@ def findSignatures(domainToTry, signature, neededMatches):
 	numberOfMatches = 0
 
 	try:
-		if signature in str(get("http://" + domainToTry, headers=headers, verify=False).content, "utf-8"):
+		if signature in str(get("http://" + domainToTry, headers=headers).content, "utf-8"):
 			numberOfMatches += 1
 
 			if neededMatches <= numberOfMatches:
@@ -102,7 +105,7 @@ def amazonS3(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(domain, signatures["Amazon AWS/S3"], 2):
-		outcome = ["Amazon AWS/S3 Takeover", domain, CNAME]
+		outcome = ["Amazon AWS/S3", domain, CNAME]
 
 	return outcome
 
@@ -111,7 +114,7 @@ def bitbucket(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(CNAME, signatures["Bitbucket"], 1):
-		outcome = ["Bitbucket Takeover", domain, CNAME]
+		outcome = ["Bitbucket", domain, CNAME]
 
 	return outcome
 
@@ -120,7 +123,7 @@ def campaignMonitor(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(CNAME, signatures["Campaign Monitor"], 1):
-		outcome = ["Campaign Monitor Takeover", domain, CNAME]
+		outcome = ["Campaign Monitor", domain, CNAME]
 
 	return outcome
 
@@ -129,7 +132,7 @@ def cargoCollective(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(CNAME, signatures["Cargo Collective"], 1):
-		outcome = ["Cargo Collective Takeover", domain, CNAME]
+		outcome = ["Cargo Collective", domain, CNAME]
 
 	return outcome
 
@@ -159,7 +162,7 @@ def ghost(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(domain, signatures["Ghost.io"], 1):
-		outcome = ["Ghost.io Takeover", domain, CNAME]
+		outcome = ["Ghost.io", domain, CNAME]
 
 	return outcome
 
@@ -168,7 +171,7 @@ def github(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(domain, signatures["Github"], 1):
-		outcome = ["Github Takeover", domain, CNAME]
+		outcome = ["Github", domain, CNAME]
 
 	return outcome
 
@@ -177,7 +180,7 @@ def helpjuice(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(CNAME, signatures["Helpjuice"], 1) or findSignatures(CNAME, signatures["Helpjuice 2"], 1):
-		outcome = ["Helpjuice Takeover", domain, CNAME]
+		outcome = ["Helpjuice", domain, CNAME]
 
 	return outcome
 
@@ -186,7 +189,7 @@ def helpscout(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(domain, signatures["Helpscout"], 1):
-		outcome = ["Helpscout Takeover", domain, CNAME]
+		outcome = ["Helpscout", domain, CNAME]
 
 	return outcome
 
@@ -195,7 +198,7 @@ def heroku(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(CNAME, signatures["Heroku"], 2):
-		outcome = ["Heroku Takeover", domain, CNAME]
+		outcome = ["Heroku", domain, CNAME]
 
 	return outcome
 
@@ -204,7 +207,7 @@ def jetbrains(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(domain, signatures["JetBrains"], 1):
-		outcome = ["JetBrains Takeover", domain, CNAME]
+		outcome = ["JetBrains", domain, CNAME]
 
 	return outcome
 
@@ -213,7 +216,7 @@ def azure(domain, ARecords, CNAME):
 	outcome = []
 
 	if findNX(CNAME):
-		outcome = ["Azure Takeover", domain, CNAME]
+		outcome = ["Azure", domain, CNAME]
 
 	return outcome
 
@@ -228,7 +231,7 @@ def readme(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(domain, signatures["Readme.io"], 1):
-		outcome = ["Readme.io Takeover", domain, CNAME]
+		outcome = ["Readme.io", domain, CNAME]
 
 	return outcome
 
@@ -243,7 +246,7 @@ def surge(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(domain, signatures["Surge.sh"], 1):
-		outcome = ["Surge.sh Takeover", domain, CNAME]
+		outcome = ["Surge.sh", domain, CNAME]
 
 	return outcome
 
@@ -252,7 +255,7 @@ def tumblr(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(domain, signatures["Tumblr"], 1):
-		outcome = ["Tumblr Takeover", domain, CNAME]
+		outcome = ["Tumblr", domain, CNAME]
 
 	return outcome
 
@@ -261,7 +264,7 @@ def tilda(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(domain, signatures["Tilda"], 1) or findSignatures(domain, signatures["Tilda 2"], 1):
-		outcome = ["Tilda Takeover", domain, CNAME]
+		outcome = ["Tilda", domain, CNAME]
 
 	return outcome
 
@@ -270,7 +273,7 @@ def uservoice(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(domain, signatures["UserVoice"], 1) or findSignatures(domain, signatures["UserVoice 2"], 1):
-		outcome = ["UserVoice Takeover", domain, CNAME]
+		outcome = ["UserVoice", domain, CNAME]
 
 	return outcome
 
@@ -279,7 +282,7 @@ def wordpress(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(domain, signatures["Wordpress"], 1):
-		outcome = ["Wordpress Takeover", domain, CNAME]
+		outcome = ["Wordpress", domain, CNAME]
 
 	return outcome
 
@@ -288,7 +291,7 @@ def smugmug(domain, ARecords, CNAME):
 	outcome = []
 
 	try:
-		if get("http://" + domain, headers=headers, verify=False).status_code == 404:
+		if get("http://" + domain, headers=headers).status_code == 404:
 			outcome = ["Smugmug Takeover", domain, CNAME]
 			return outcome
 
@@ -297,7 +300,7 @@ def smugmug(domain, ARecords, CNAME):
 
 	try:
 		if get("https://" + domain, headers=headers, verify=False).status_code == 404:
-			outcome = ["Smugmug Takeover", domain, CNAME]
+			outcome = ["Smugmug", domain, CNAME]
 			return outcome
 
 	except Exception:
@@ -311,7 +314,7 @@ def smugmug(domain, ARecords, CNAME):
 		resolver.query(CNAME)
 
 	except NXDOMAIN:
-		outcome = ["Smugmug Takeover", domain, CNAME]
+		outcome = ["Smugmug", domain, CNAME]
 
 	return outcome
 
@@ -320,7 +323,7 @@ def strikingly(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(domain, signatures["Strikingly"], 1):
-		outcome = ["Strikingly Takeover", domain, CNAME]
+		outcome = ["Strikingly", domain, CNAME]
 
 	return outcome
 
@@ -329,7 +332,7 @@ def uptimerobot(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(domain, signatures["Uptime Robot"], 1):
-		outcome = ["Uptime Robot Takeover", domain, CNAME]
+		outcome = ["Uptime Robot", domain, CNAME]
 
 	return outcome
 
@@ -338,7 +341,7 @@ def pantheon(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(domain, signatures["Pantheon"], 1):
-		outcome = ["Pantheon Takeover", domain, CNAME]
+		outcome = ["Pantheon", domain, CNAME]
 
 	return outcome
 
@@ -347,7 +350,7 @@ def teamwork(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(domain, signatures["Teamwork"], 1):
-		outcome = ["Teamwork Takeover", domain, CNAME]
+		outcome = ["Teamwork", domain, CNAME]
 
 	return outcome
 
@@ -356,7 +359,7 @@ def intercom(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(domain, signatures["Intercom"], 1):
-		outcome = ["Intercom Takeover", domain, CNAME]
+		outcome = ["Intercom", domain, CNAME]
 
 	return outcome
 
@@ -365,7 +368,7 @@ def webflow(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(domain, signatures["Webflow"], 1):
-		outcome = ["Webflow Takeover", domain, CNAME]
+		outcome = ["Webflow", domain, CNAME]
 
 	return outcome
 
@@ -374,7 +377,7 @@ def wishpond(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(domain, signatures["Wishpond"], 1):
-		outcome = ["Wishpond Takeover", domain, CNAME]
+		outcome = ["Wishpond", domain, CNAME]
 
 	return outcome
 
@@ -383,7 +386,7 @@ def aftership(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(domain, signatures["Aftership"], 1):
-		outcome = ["Aftership Takeover", domain, CNAME]
+		outcome = ["Aftership", domain, CNAME]
 
 	return outcome
 
@@ -392,7 +395,7 @@ def aha(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(domain, signatures["Aha!"], 1):
-		outcome = ["Aha! Takeover", domain, CNAME]
+		outcome = ["Aha!", domain, CNAME]
 
 	return outcome
 
@@ -401,12 +404,12 @@ def tictail(domain, ARecords, CNAME):
 	outcome = []
 
 	try:
-		if signatures["Tictail"] in str(get("http://" + domain, headers=headers, verify=False).history[0].content, "utf-8"):
-			outcome = ["Tictail Takeover", domain, CNAME]
+		if signatures["Tictail"] in str(get("http://" + domain, headers=headers).history[0].content, "utf-8"):
+			outcome = ["Tictail", domain, CNAME]
 			return outcome
 
 		if signatures["Tictail"] in str(get("https://" + domain, headers=headers, verify=False).history[0].content, "utf-8"):
-			outcome = ["Tictail Takeover", domain, CNAME]
+			outcome = ["Tictail", domain, CNAME]
 			return outcome
 
 	except Exception:
@@ -419,7 +422,7 @@ def brightcove(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(domain, signatures["Brightcove"], 1):
-		outcome = ["Brightcove Takeover", domain, CNAME]
+		outcome = ["Brightcove", domain, CNAME]
 
 	return outcome
 
@@ -428,7 +431,7 @@ def bigcartel(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(domain, signatures["Bigcartel"], 1):
-		outcome = ["Bigcartel Takeover", domain, CNAME]
+		outcome = ["Bigcartel", domain, CNAME]
 
 	return outcome
 
@@ -437,7 +440,7 @@ def acquia(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(domain, signatures["Acquia"], 1):
-		outcome = ["Acquia Takeover", domain, CNAME]
+		outcome = ["Acquia", domain, CNAME]
 
 	return outcome
 
@@ -446,7 +449,7 @@ def simplebooklet(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(domain, signatures["Simplebooklet"], 1):
-		outcome = ["Simplebooklet Takeover", domain, CNAME]
+		outcome = ["Simplebooklet", domain, CNAME]
 
 	return outcome
 
@@ -455,7 +458,7 @@ def getresponse(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(domain, signatures["Getresponse"], 1):
-		outcome = ["Getresponse Takeover", domain, CNAME]
+		outcome = ["Getresponse", domain, CNAME]
 
 	return outcome
 
@@ -464,7 +467,7 @@ def vend(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(domain, signatures["Vend"], 1):
-		outcome = ["Vend Takeover", domain, CNAME]
+		outcome = ["Vend", domain, CNAME]
 
 	return outcome
 
@@ -473,7 +476,7 @@ def maxcdn(domain, ARecords, CNAME):
 	outcome = []
 
 	if findNX(CNAME):
-		outcome = ["Maxcdn Takeover", domain, CNAME]
+		outcome = ["Maxcdn", domain, CNAME]
 
 	return outcome
 
@@ -482,7 +485,7 @@ def apigee(domain, ARecords, CNAME):
 	outcome = []
 
 	if findNX(CNAME):
-		outcome = ["Apigee Takeover", domain, CNAME]
+		outcome = ["Apigee", domain, CNAME]
 
 	return outcome
 
@@ -493,7 +496,7 @@ def identify(domain, ARecords, CNAMERecords):
 	for entry in CNAMERecords:
 		CNAME = str(entry)[:-1]
 
-		if (re.findall(".*s3.*.amazonaws\.com", CNAME)):
+		if (findall(".*s3.*.amazonaws\.com", CNAME)):
 			outcome = amazonS3(domain, ARecords, CNAME)
 
 		elif "bitbucket.io" in CNAME:
@@ -630,23 +633,23 @@ def identify(domain, ARecords, CNAMERecords):
 
 
 def takeOver(domain):
-	CNAME = []
 	A = []
+	CNAME = []
 	results = []
 	resolver = Resolver()
 	resolver.timeout = 1
 	resolver.lifetime = 1
-	rrtypes = ["A", "CNAME"]
+	types = ["A", "CNAME"]
 
-	for r in rrtypes:
+	for type in types:
 		try:
-			answers = resolver.query(domain, r)
+			answers = resolver.query(domain, type)
 
 			for answer in answers:
-				if r == "A":
+				if type == "A":
 					A.append(answer.address)
 
-				if r == "CNAME":
+				if type == "CNAME":
 					CNAME.append(answer.target)
 
 		except (NXDOMAIN, NoAnswer, EmptyLabel, NoNameservers, Timeout, DNSException):
@@ -661,14 +664,17 @@ def takeOver(domain):
 
 def massTakeOver(targets, threads):
 	takeovers = []
+	numberOfChunks = 1
 	leaveFlag = False
 
 	if len(targets) <= 100000:
 		print("{0} {1} {2}".format(colored("\n[*]-Scanning", "yellow"), colored(len(targets), "cyan"), colored("domains for potential takeover...", "yellow")))
+
 	else:
 		print("{0} {1} {2}".format(colored("\n[*]-Scanning", "yellow"), colored(len(targets), "cyan"), colored("domains for potential takeover, in chunks of 100,000...", "yellow")))
+		numberOfChunks = len(targets) // 100000 + 1
 
-	targetChunks = list(utilities.MiscHelpers.chunks(list(targets), 100000))
+	targetChunks = chunkify(targets, 100000)
 	iteration = 1
 
 	for targetChunk in targetChunks:
@@ -678,10 +684,14 @@ def massTakeOver(targets, threads):
 			try:
 				completed = as_completed(tasks)
 
-				if iteration == len(targetChunks):
+				if iteration == numberOfChunks:
 					leaveFlag = True
 
-				completed = tqdm(completed, total=len(targetChunk), desc="  \__ {0}".format(colored("Progress", "cyan")), dynamic_ncols=True, leave=leaveFlag)
+				if numberOfChunks == 1:
+					completed = tqdm(completed, total=len(targetChunk), desc="  \__ {0}".format(colored("Progress", "cyan")), dynamic_ncols=True, leave=leaveFlag)
+
+				else:
+					completed = tqdm(completed, total=len(targetChunk), desc="  \__ {0}".format(colored("Progress {0}/{1}".format(iteration, numberOfChunks), "cyan")), dynamic_ncols=True, leave=leaveFlag)
 
 				for task in completed:
 					result = task.result()
@@ -695,52 +705,60 @@ def massTakeOver(targets, threads):
 				executor.shutdown(wait=False)
 				exit(-1)
 
-		if iteration < len(targetChunks):
-			sys.stderr.write("\033[F")
+		if iteration < numberOfChunks:
+			stderr.write("\033[F")
 
 		iteration += 1
 
 	return takeovers
 
 
-def init(domain, resolved, collector_hosts, threads, out_to_json):
-	resolved_hosts = []
+def init(db, domain, threads):
+	targets = set()
+	takeovers = []
+	timestamp = int(time())
 
-	for host in resolved:
-		resolved_hosts.append(host)
+	for row in db.query(Resolution).filter(Resolution.domain == domain):
+		if row.subdomain:
+			targets.add(".".join([row.subdomain, domain]))
 
-	toTakeOver = utilities.MiscHelpers.uniqueList(resolved_hosts + collector_hosts)
+		else:
+			targets.add(domain)
 
-	results = massTakeOver(toTakeOver, threads)
-	results_json = {}
+	for row in db.query(Unresolved).filter(Unresolved.domain == domain):
+		if row.subdomain:
+			targets.add(".".join([row.subdomain, domain]))
+
+		else:
+			targets.add(domain)
+
+	targets = list(targets)
+	results = massTakeOver(targets, threads)
+
+	del targets
+	collect()
 
 	for result in results:
 		if result:
-			results_json[result[1]] = [result[0], result[2]]
+			db.add(Takeover(subdomain=".".join(result[1].split(".")[:-1 * len(domain.split("."))]), domain=domain, provider=result[0], signature=result[2], timestamp=timestamp))
 
-	print("    \__ {0} {1}".format(colored("Takeover vulnerabilities that were identified:", "yellow"), colored(len(results_json), "cyan")))
+			try:
+				db.commit()
 
-	for key, values in list(results_json.items()):
-		print("      \__", colored(key, "cyan"), ":", ", ".join(colored(str(value), "yellow") for value in values))
+			except (IntegrityError, FlushError):
+				db.rollback()
 
-	if out_to_json:
-		try:
-			with open(join("results", domain, "takeovers.json"), "w") as takeover_file:
-				takeover_file.write("{0}\n".format(dumps(results_json)))
+	del results
+	collect()
 
-		except OSError:
-			pass
+	for row in db.query(Takeover).filter(Takeover.domain == domain, Takeover.timestamp == timestamp).order_by(Takeover.subdomain):
+		if row.subdomain:
+			takeovers.append((".".join([row.subdomain, domain]), row.provider, row.signature))
 
-		except IOError:
-			pass
+		else:
+			takeovers.append((domain, row.provider, row.signature))
 
-	try:
-		with open(join("results", domain, "takeovers.csv"), "w") as takeover_file:
-			for key, values in list(results_json.items()):
-				takeover_file.write("{0}|{1}\n".format(key, "|".join(str(value) for value in values)))
+	print("    \__ {0} {1}".format(colored("Takeover vulnerabilities that were identified:", "yellow"), colored(len(takeovers), "cyan")))
 
-	except OSError as ex:
-		print(ex)
-
-	except IOError as ex:
-		print(ex)
+	for takeover in takeovers:
+		print("      \__ {0}: {1}, {2}".format(colored(takeover[0], "cyan"), colored(takeover[1], "yellow"), colored(takeover[2], "yellow")))
