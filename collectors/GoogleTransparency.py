@@ -43,7 +43,7 @@ def init(domain):
 
 		GTR = set(GTR)
 
-		print("  \__ {0}: {1}".format(colored("Unique subdomains found", "cyan"), colored(len(GTR), "yellow")))
+		print("  \__ {0}: {1}".format(colored("Subdomains found", "cyan"), colored(len(GTR), "yellow")))
 		return GTR
 
 	except requests.exceptions.RequestException as err:

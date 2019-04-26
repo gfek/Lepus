@@ -21,7 +21,7 @@ def init(domain):
 
 			TC = set(TC)
 
-			print("  \__ {0}: {1}".format(colored("Unique subdomains found", "cyan"), colored(len(TC), "yellow")))
+			print("  \__ {0}: {1}".format(colored("Subdomains found", "cyan"), colored(len(TC), "yellow")))
 			return TC
 
 		except ValueError as errv:

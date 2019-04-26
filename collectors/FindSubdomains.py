@@ -26,7 +26,7 @@ def init(domain):
 
 		FSD = set(FSD)
 
-		print("  \__ {0}: {1}".format(colored("Unique subdomains found", "cyan"), colored(len(FSD), "yellow")))
+		print("  \__ {0}: {1}".format(colored("Subdomains found", "cyan"), colored(len(FSD), "yellow")))
 		return FSD
 
 	except requests.exceptions.RequestException as err:

@@ -3,9 +3,11 @@
 ### --- New Features
 1. SQLite integration
 2. IPv6 support
+3. Memory management improvements
 
 ### --- Bug Fixes
 1. Fixed an issue on the wildcard identification logic
+2. Fixed a logic bug on the CertSpotter collector
 
 ### --- Misc
 1. Updated README.md
