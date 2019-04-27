@@ -166,9 +166,9 @@ $ pip install -r requirements.txt
 ### Help
 
 ```
-usage: lepus.py [-h] [-w WORDLIST] [-t THREADS] [-j] [-nc] [-zt] [--permutate]
-                [-pw PERMUTATION_WORDLIST] [--reverse] [-r RANGES]
-                [--portscan] [-p PORTS] [--takeover] [-v]
+usage: lepus.py [-h] [-w WORDLIST] [-hw] [-t THREADS] [-nc] [-zt]
+                [--permutate] [-pw PERMUTATION_WORDLIST] [--reverse]
+                [-r RANGES] [--portscan] [-p PORTS] [--takeover] [-v]
                 domain
 
 Infrastructure OSINT
@@ -180,9 +180,10 @@ optional arguments:
   -h, --help            show this help message and exit
   -w WORDLIST, --wordlist WORDLIST
                         wordlist with subdomains
+  -hw, --hide-wildcards
+                        hide wildcard resolutions
   -t THREADS, --threads THREADS
                         number of threads [default is 100]
-  -j, --json            output to json as well [default is '|' delimited csv]
   -nc, --no-collectors  skip passive subdomain enumeration
   -zt, --zone-transfer  attempt to zone transfer from identified name servers
   --permutate           perform permutations on resolved domains
