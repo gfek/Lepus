@@ -151,6 +151,7 @@ lax
 lax1
 lb
 loadbalancer
+loc
 login
 machine
 mail
@@ -206,7 +207,6 @@ security
 sept
 server
 service
-singed
 skins
 spring
 ssl
