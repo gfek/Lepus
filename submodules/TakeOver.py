@@ -51,7 +51,8 @@ signatures = {
 	"Simplebooklet": ">Sorry, we can't find this <a",
 	"Getresponse": "With GetResponse Landing Pages, lead generation has never been easier",
 	"Vend": "Looks like you've traveled too far into cyberspace",
-	"Tictail": "to target URL: <a href=\"https://tictail.com"
+	"Tictail": "to target URL: <a href=\"https://tictail.com",
+	"Fly.io": "not found:"
 }
 
 
@@ -112,6 +113,15 @@ def bitbucket(domain, ARecords, CNAME):
 
 	if findSignatures(CNAME, signatures["Bitbucket"], 1):
 		outcome = ["Bitbucket Takeover", domain, CNAME]
+
+	return outcome
+
+
+def flyio(domain, ARecords, CNAME):
+	outcome = []
+
+	if findSignatures(CNAME, signatures["Fly.io"], 1):
+		outcome = ["Fly.io Takeover", domain, CNAME]
 
 	return outcome
 
@@ -498,6 +508,9 @@ def identify(domain, ARecords, CNAMERecords):
 
 		elif "bitbucket.io" in CNAME:
 			outcome = bitbucket(domain, ARecords, CNAME)
+
+		elif "edgeapp.net" in CNAME:
+			outcome = flyio(domain,ARecords, CNAME)
 
 		elif "createsend.com" in CNAME:
 			outcome = campaignMonitor(domain, ARecords, CNAME)
