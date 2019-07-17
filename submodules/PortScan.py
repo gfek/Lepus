@@ -57,7 +57,7 @@ def init(db, domain, port_scan, threads):
 			open_ports[row.address] = []
 			open_ports[row.address].append((row.port, row.isSSL))
 
-	print("    \__ {0}: {1}".format(colored("Ports that were identified as open", "yellow"), colored(db.query(OpenPort).filter(OpenPort.domain == domain, OpenPort.timestamp == timestamp).count(), "cyan")))
+	print("    \__ {0}: {1}".format(colored("New ports that were identified as open", "yellow"), colored(db.query(OpenPort).filter(OpenPort.domain == domain, OpenPort.timestamp == timestamp).count(), "cyan")))
 
 	for address, ports in open_ports.items():
 		print("      \__ {0}: {1}".format(colored(address, "cyan"), ", ".join(colored(str(port[0]), "yellow") for port in ports)))
@@ -66,7 +66,7 @@ def init(db, domain, port_scan, threads):
 
 	generateURLs(db, domain, open_ports, timestamp)
 
-	print("  \__ {0}: {1}".format(colored("URLs that were generated", "yellow"), colored(db.query(URL).filter(URL.domain == domain, URL.timestamp == timestamp).count(), "cyan")))
+	print("  \__ {0}: {1}".format(colored("New URLs that were generated", "yellow"), colored(db.query(URL).filter(URL.domain == domain, URL.timestamp == timestamp).count(), "cyan")))
 
 	for row in db.query(URL).filter(URL.domain == domain, URL.timestamp == timestamp).order_by(URL.url):
 		print("    \__ {0}".format(colored(row.url, "cyan")))

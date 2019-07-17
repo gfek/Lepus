@@ -52,6 +52,7 @@
 9
 a
 acc
+account
 accounts
 admin
 admin1
@@ -65,7 +66,9 @@ api
 api-docs
 api1
 apollo
+app
 april
+auth
 aws
 b
 backend
@@ -78,6 +81,7 @@ bucket
 c
 cdn
 cf
+cfg
 ci
 client
 cloudfront
@@ -90,6 +94,7 @@ container
 control
 cpanel
 data
+db
 dec
 demo
 dev
@@ -102,6 +107,7 @@ drop
 easteurope
 edge
 elastic
+elasticbeanstalk
 elb
 elk
 email
@@ -116,12 +122,14 @@ europe
 europeeast
 europewest
 euw
+euwe
 events
 feb
 firewall
 forms
 forum
 frontpage
+ftp
 fw
 games
 gh
@@ -135,6 +143,7 @@ hw
 hwcdn
 i
 ids
+imap
 int
 internal
 jenkins
@@ -161,6 +170,7 @@ mirror
 na
 nautilus
 net
+new
 nginx
 nl
 node
@@ -168,6 +178,7 @@ northamerica
 nov
 oceania
 oct
+old
 ops
 org
 origin
@@ -179,6 +190,7 @@ pay
 payment
 pc
 php
+prd
 preferences
 priv
 private
@@ -189,6 +201,8 @@ profiles
 promo
 promotion
 proxy
+pub
+qa
 redirector
 region
 repo
@@ -208,13 +222,17 @@ sept
 server
 service
 skins
+smtp
 spring
+sql
 ssl
+sso
 staff
 stage
 stage1
 staging
 static
+stg
 support
 swagger
 system
@@ -228,6 +246,7 @@ testing1
 tomcat
 tpe
 trial
+tst
 uat
 v1
 v2
@@ -244,4 +263,6 @@ ww2
 www
 www1
 www2
+x
+y
 z

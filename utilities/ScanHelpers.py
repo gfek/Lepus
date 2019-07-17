@@ -209,7 +209,7 @@ def identifyWildcards(db, findings, domain, threads):
 				new_wildcards[hostname] = []
 				new_wildcards[hostname].append(row.address)
 
-		print("    \__ {0}: {1}".format(colored("Wildcards that were identified", "yellow"), colored(len(new_wildcards.items()), "cyan")))
+		print("    \__ {0}: {1}".format(colored("New wildcards that were identified", "yellow"), colored(len(new_wildcards.items()), "cyan")))
 
 		for hostname, addresses in new_wildcards.items():
 			print("      \__ {0}.{1} ==> {2}".format(colored("*", "red"), colored(hostname, "cyan"), ", ".join([colored(address, "red") for address in addresses])))
@@ -363,7 +363,7 @@ def massResolve(db, findings, domain, hideWildcards, threads):
 				new_resolutions[hostname] = []
 				new_resolutions[hostname].append(address)
 
-	print("    \__ {0}: {1}".format(colored("Hostnames that were resolved", "yellow"), colored(len(new_resolutions.items()), "cyan")))
+	print("    \__ {0}: {1}".format(colored("New hostnames that were resolved", "yellow"), colored(len(new_resolutions.items()), "cyan")))
 
 	for hostname, addresses in new_resolutions.items():
 		print("      \__ {0}: {1}".format(colored(hostname, "cyan"), ", ".join([address for address in addresses])))
@@ -691,7 +691,7 @@ def massRDAP(db, domain, threads):
 	del rdap_records
 	collect()
 
-	print("    \__ {0}:".format(colored("Autonomous Systems that were identified", "yellow")))
+	print("    \__ {0}:".format(colored("New autonomous Systems that were identified", "yellow")))
 
 	for row in db.query(ASN).filter(ASN.domain == domain).order_by(ASN.id, ASN.prefix):
 		if row == db.query(ASN).filter(ASN.domain == domain).order_by(ASN.id.desc(), ASN.prefix.desc()).first():
@@ -701,7 +701,7 @@ def massRDAP(db, domain, threads):
 		else:
 			print("      \__ {0}: {1}, {2}: {3}, {4}: {5}".format(colored("ASN", "cyan"), colored(row.id, "yellow"), colored("Prefix", "cyan"), colored(row.prefix, "yellow"), colored("Description", "cyan"), colored(row.description, "yellow")))
 
-	print("    \__ {0}:".format(colored("Networks that were identified", "yellow")))
+	print("    \__ {0}:".format(colored("New networks that were identified", "yellow")))
 
 	for row in db.query(Network).filter(Network.domain == domain).order_by(Network.cidr):
 		print("      \__ {0}: {1}, {2}: {3}".format(colored("CIDR", "cyan"), colored(row.cidr, "yellow"), colored("Identifier", "cyan"), colored(row.identifier, "yellow")))
