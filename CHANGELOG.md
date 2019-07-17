@@ -4,11 +4,11 @@
 1. SQLite integration
 2. IPv6 support
 3. Memory management improvements
+4. Spyse API collector
 
 ### --- Bug Fixes
 1. Fixed an issue on the wildcard identification logic
 2. Fixed a logic bug on the CertSpotter collector
-3. Replaced Findsubdomains collector with Spyse API
 
 ### --- Misc
 1. Updated README.md
@@ -16,6 +16,7 @@
 3. Updated .gitignore
 4. Added new takeover signatures
 5. Added various records to the words.txt list used for permutations
+6. Removed FindSubdomains collector
 
 # Version 3.1.0
 
