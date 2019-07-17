@@ -54,7 +54,8 @@ signatures = {
 	"Simplebooklet": ">Sorry, we can't find this <a",
 	"Getresponse": "With GetResponse Landing Pages, lead generation has never been easier",
 	"Vend": "Looks like you've traveled too far into cyberspace",
-	"Tictail": "to target URL: <a href=\"https://tictail.com"
+	"Tictail": "to target URL: <a href=\"https://tictail.com",
+	"Fly.io": "not found:"
 }
 
 
@@ -128,6 +129,15 @@ def campaignMonitor(domain, ARecords, CNAME):
 	return outcome
 
 
+def flyio(domain, ARecords, CNAME):
+	outcome = []
+
+	if findSignatures(CNAME, signatures["Fly.io"], 1):
+		outcome = ["Fly.io", domain, CNAME]
+
+	return outcome
+
+
 def cargoCollective(domain, ARecords, CNAME):
 	outcome = []
 
@@ -153,7 +163,7 @@ def feedpress(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(domain, signatures["Feedpress"], 2):
-		outcome = ["Feedpress Takeover", domain, CNAME]
+		outcome = ["Feedpress", domain, CNAME]
 
 	return outcome
 
@@ -292,7 +302,7 @@ def smugmug(domain, ARecords, CNAME):
 
 	try:
 		if get("http://" + domain, headers=headers).status_code == 404:
-			outcome = ["Smugmug Takeover", domain, CNAME]
+			outcome = ["Smugmug", domain, CNAME]
 			return outcome
 
 	except Exception:
@@ -501,6 +511,9 @@ def identify(domain, ARecords, CNAMERecords):
 
 		elif "bitbucket.io" in CNAME:
 			outcome = bitbucket(domain, ARecords, CNAME)
+
+		elif "edgeapp.net" in CNAME:
+			outcome = flyio(domain, ARecords, CNAME)
 
 		elif "createsend.com" in CNAME:
 			outcome = campaignMonitor(domain, ARecords, CNAME)
