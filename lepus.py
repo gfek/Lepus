@@ -11,13 +11,13 @@ import collectors.CRT
 import collectors.DNSDB
 import collectors.DNSTrails
 import collectors.EntrustCertificates
-import collectors.FindSubdomains
 import collectors.GoogleTransparency
 import collectors.HackerTarget
 import collectors.PassiveTotal
 import collectors.ProjectSonar
 import collectors.Riddler
 import collectors.Shodan
+import collectors.Spyse
 import collectors.ThreatCrowd
 import collectors.VirusTotal
 import collectors.WaybackMachine
@@ -87,13 +87,13 @@ if __name__ == "__main__":
 			collector_subdomains += collectors.DNSDB.init(args.domain)
 			collector_subdomains += collectors.DNSTrails.init(args.domain)
 			collector_subdomains += collectors.EntrustCertificates.init(args.domain)
-			collector_subdomains += collectors.FindSubdomains.init(args.domain)
 			collector_subdomains += collectors.GoogleTransparency.init(args.domain)
 			collector_subdomains += collectors.HackerTarget.init(args.domain)
 			collector_subdomains += collectors.PassiveTotal.init(args.domain)
 			collector_subdomains += collectors.ProjectSonar.init(args.domain)
 			collector_subdomains += collectors.Riddler.init(args.domain)
 			collector_subdomains += collectors.Shodan.init(args.domain)
+			collector_subdomains += collectors.Spyse.init(args.domain)
 			collector_subdomains += collectors.ThreatCrowd.init(args.domain)
 			collector_subdomains += collectors.VirusTotal.init(args.domain)
 			collector_subdomains += collectors.WaybackMachine.init(args.domain)

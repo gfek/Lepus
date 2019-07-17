@@ -771,7 +771,7 @@ def init(db, domain, threads):
 		else:
 			takeovers.append((domain, row.provider, row.signature))
 
-	print("    \__ {0} {1}".format(colored("Takeover vulnerabilities that were identified:", "yellow"), colored(len(takeovers), "cyan")))
+	print("    \__ {0} {1}".format(colored("New takeover vulnerabilities that were identified:", "yellow"), colored(len(takeovers), "cyan")))
 
 	for takeover in takeovers:
 		print("      \__ {0}: {1}, {2}".format(colored(takeover[0], "cyan"), colored(takeover[1], "yellow"), colored(takeover[2], "yellow")))
