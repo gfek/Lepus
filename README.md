@@ -106,6 +106,7 @@ Performs a portscan on well-known web ports. The mode can be enabled with `--por
 * Campaign Monitor
 * Cargo Collective
 * Feedpress
+* Fly[]().io
 * Getresponse
 * Ghost[]().io
 * Github
