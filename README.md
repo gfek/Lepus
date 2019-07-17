@@ -32,13 +32,13 @@ The utility is collecting data from the following services:
 |[DNSDB](http://dnsdb.org/)|No|
 |[DNSTrails](https://securitytrails.com/dns-trails/)|Yes|
 |[Entrust Certificates](https://www.entrust.com/ct-search/)|No|
-|[Findsubdomains](https://findsubdomains.com/)|No|
 |[Google Transparency](https://transparencyreport.google.com/)|No|
 |[HackerTarget](https://hackertarget.com/)|No|
 |[PassiveTotal](https://www.riskiq.com/products/passivetotal/)|Yes|
 |[Project Sonar](https://www.rapid7.com/research/project-sonar/)|No|
 |[Riddler](https://riddler.io/)|Yes|
 |[Shodan](https://www.shodan.io/)|Yes|
+|[Spyse API](https://api-doc.spyse.com/)|Yes|
 |[ThreatCrowd](https://www.threatcrowd.org/)|No|
 |[VirusTotal](https://www.virustotal.com/)|Yes|
 |[Wayback Machine](https://archive.org/web/)|No|
@@ -62,7 +62,10 @@ RIDDLER_USERNAME=<YourRiddlerUsername>
 RIDDLER_PASSWORD=<YourRiddlerPassword>
 
 [Shodan]
-SHODAN_API_KEY=<YourShodanAPI>
+SHODAN_API_KEY=<YourShodanAPIKey>
+
+[Spyse]
+SPYSE_API_TOKEN=<YourSpyseAPIToken>
 
 [VirusTotal]
 VT_API_KEY=<YourVirusTotalAPIKey>
