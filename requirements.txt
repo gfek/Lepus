@@ -3,9 +3,9 @@ cloudscraper==1.1.36
 dnspython==1.16.0
 ipwhois==1.1.0
 IPy==1.00
-js2py==0.60
-requests==2.21.0
-shodan==1.11.1
-sqlalchemy==1.3.2
+js2py==0.66
+requests==2.22.0
+shodan==1.13.0
+sqlalchemy==1.3.5
 termcolor==1.1.0
-tqdm==4.31.1
+tqdm==4.32.2
