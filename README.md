@@ -151,7 +151,6 @@ Performs a portscan on well-known web ports. The mode can be enabled with `--por
 |sqlalchemy|1.3.2|
 |termcolor|1.1.0|
 |tqdm|4.31.1|
-|cfscrape|2.0.0|
 
 ### Installation
 

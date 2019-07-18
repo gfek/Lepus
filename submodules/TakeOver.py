@@ -120,15 +120,6 @@ def bitbucket(domain, ARecords, CNAME):
 	return outcome
 
 
-def flyio(domain, ARecords, CNAME):
-	outcome = []
-
-	if findSignatures(CNAME, signatures["Fly.io"], 1):
-		outcome = ["Fly.io Takeover", domain, CNAME]
-
-	return outcome
-
-
 def campaignMonitor(domain, ARecords, CNAME):
 	outcome = []
 
