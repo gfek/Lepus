@@ -141,7 +141,7 @@ Performs a portscan on well-known web ports. The mode can be enabled with `--por
 |Package|Version|
 |---|---|
 |beautifulsoup4|4.7.1|
-|cloudflare-scrape-js2py|2.0.3|
+|cloudscraper|1.1.36|
 |dnspython|1.16.0|
 |ipwhois|1.1.0|
 |IPy|1.00|
