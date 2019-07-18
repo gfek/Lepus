@@ -1,12 +1,10 @@
-from json import dumps
-from os.path import join
+from IPy import IP
 from termcolor import colored
 from ipaddress import ip_network
-import utilities.MiscHelpers
-import utilities.ScanHelpers
+from utilities.DatabaseHelpers import Resolution
+from utilities.ScanHelpers import massReverseLookup
 
-
-def init(domain, ranges, resolved_public, IPs, threads, out_to_json):
+def init(db, domain, ranges, threads):
 	if ranges:
 		IPs = []
 
@@ -14,41 +12,17 @@ def init(domain, ranges, resolved_public, IPs, threads, out_to_json):
 			for ip in ip_network(str(cidr.strip())):
 				IPs.append(str(ip))
 
-	results = utilities.ScanHelpers.massReverseLookup(IPs, threads)
-	filtered = utilities.MiscHelpers.filterDomain(domain, [result[0] for result in results])
-	diff = []
+	else:
+		IPs = set()
 
-	for result in results:
-		if result[0] in filtered:
-			if result[0] not in resolved_public:
-				resolved_public[result[0]] = result[1]
-				diff.append(result)
+		for row in db.query(Resolution).filter(Resolution.domain == domain):
+			if "." in row.address:
+				if IP(row.address).iptype() == "PUBLIC":
+					IPs.add(row.address)
 
-	print("    \__ {0} {1}".format(colored("Additional hostnames that were identified:", "yellow"), colored(len(diff), "cyan")))
+			else:
+				IPs.add(row.address)
 
-	for hostname, address in diff:
-		print("      \__ {0} ({1})".format(colored(hostname, "cyan"), colored(address, "yellow")))
+		IPs = list(IPs)
 
-	if out_to_json:
-		try:
-			with open(join("results", domain, "resolved_public.json"), "w") as resolved_public_file:
-				resolved_public_file.write("{0}\n".format(dumps(resolved_public)))
-
-		except OSError:
-			pass
-
-		except IOError:
-			pass
-
-	try:
-		with open(join("results", domain, "resolved_public.csv"), "w") as resolved_public_file:
-			for hostname, address in list(resolved_public.items()):
-				resolved_public_file.write("{0}|{1}\n".format(hostname, address))
-
-	except OSError:
-		pass
-
-	except IOError:
-		pass
-
-	return resolved_public
+	massReverseLookup(db, domain, IPs, threads)

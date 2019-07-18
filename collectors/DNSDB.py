@@ -27,7 +27,7 @@ def init(domain):
 
 		dnsdb = set(dnsdb)
 
-		print("  \__ {0}: {1}".format(colored("Unique subdomains found", "cyan"), colored(len(dnsdb), "yellow")))
+		print("  \__ {0}: {1}".format(colored("Subdomains found", "cyan"), colored(len(dnsdb), "yellow")))
 		return dnsdb
 
 	except EnvironmentError as erre:

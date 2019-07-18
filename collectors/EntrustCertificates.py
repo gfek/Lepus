@@ -28,7 +28,7 @@ def init(domain):
 
 		ENT = set(ENT)
 
-		print("  \__ {0}: {1}".format(colored("Unique subdomains found", "cyan"), colored(len(ENT), "yellow")))
+		print("  \__ {0}: {1}".format(colored("Subdomains found", "cyan"), colored(len(ENT), "yellow")))
 		return ENT
 
 	except ValueError as errv:

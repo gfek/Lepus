@@ -23,9 +23,12 @@ def init(domain):
 		try:
 			response = requests.get(base_url + next_link, headers=headers)
 
-			if response.status_code == 429:
+			if response.status_code == 429 and len(CS) == 0:
 				print("  \__", colored("Search rate limit exceeded.", "red"))
 				return []
+
+			elif response.status_code == 429 and len(CS) > 0:
+				break
 
 			CS += parseResponse(response.content, domain)
 
@@ -57,5 +60,5 @@ def init(domain):
 
 	CS = set(CS)
 
-	print("  \__ {0}: {1}".format(colored("Unique subdomains found", "cyan"), colored(len(CS), "yellow")))
+	print("  \__ {0}: {1}".format(colored("Subdomains found", "cyan"), colored(len(CS), "yellow")))
 	return CS

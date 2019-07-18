@@ -1,6 +1,6 @@
 [![GitHub License](https://img.shields.io/badge/License-BSD%203--Clause-informational.svg)](https://github.com/GKNSB/Lepus/blob/master/LICENSE)
 [![GitHub Python](https://img.shields.io/badge/Python-%3E=%203.5.3-informational.svg)](https://www.python.org/)
-[![GitHub Version](https://img.shields.io/badge/Version-3.1.0-yellow.svg)](https://github.com/GKNSB/Lepus)
+[![GitHub Version](https://img.shields.io/badge/Version-3.2.0-yellow.svg)](https://github.com/GKNSB/Lepus)
 
 ## Lepus
 **Sub-domain finder**
@@ -32,13 +32,13 @@ The utility is collecting data from the following services:
 |[DNSDB](http://dnsdb.org/)|No|
 |[DNSTrails](https://securitytrails.com/dns-trails/)|Yes|
 |[Entrust Certificates](https://www.entrust.com/ct-search/)|No|
-|[Findsubdomains](https://findsubdomains.com/)|No|
 |[Google Transparency](https://transparencyreport.google.com/)|No|
 |[HackerTarget](https://hackertarget.com/)|No|
 |[PassiveTotal](https://www.riskiq.com/products/passivetotal/)|Yes|
 |[Project Sonar](https://www.rapid7.com/research/project-sonar/)|No|
 |[Riddler](https://riddler.io/)|Yes|
 |[Shodan](https://www.shodan.io/)|Yes|
+|[Spyse API](https://api-doc.spyse.com/)|Yes|
 |[ThreatCrowd](https://www.threatcrowd.org/)|No|
 |[VirusTotal](https://www.virustotal.com/)|Yes|
 |[Wayback Machine](https://archive.org/web/)|No|
@@ -62,7 +62,10 @@ RIDDLER_USERNAME=<YourRiddlerUsername>
 RIDDLER_PASSWORD=<YourRiddlerPassword>
 
 [Shodan]
-SHODAN_API_KEY=<YourShodanAPI>
+SHODAN_API_KEY=<YourShodanAPIKey>
+
+[Spyse]
+SPYSE_API_TOKEN=<YourSpyseAPIToken>
 
 [VirusTotal]
 VT_API_KEY=<YourVirusTotalAPIKey>
@@ -106,6 +109,7 @@ Performs a portscan on well-known web ports. The mode can be enabled with `--por
 * Campaign Monitor
 * Cargo Collective
 * Feedpress
+* Fly[]().io
 * Getresponse
 * Ghost[]().io
 * Github
@@ -137,12 +141,14 @@ Performs a portscan on well-known web ports. The mode can be enabled with `--por
 |Package|Version|
 |---|---|
 |beautifulsoup4|4.7.1|
+|cloudflare-scrape-js2py|2.0.3|
 |dnspython|1.16.0|
 |ipwhois|1.1.0|
 |IPy|1.00|
 |js2py|0.60|
 |requests|2.21.0|
 |shodan|1.11.1|
+|sqlalchemy|1.3.2|
 |termcolor|1.1.0|
 |tqdm|4.31.1|
 |cfscrape|2.0.0|
@@ -165,9 +171,9 @@ $ pip install -r requirements.txt
 ### Help
 
 ```
-usage: lepus.py [-h] [-w WORDLIST] [-t THREADS] [-j] [-nc] [-zt] [--permutate]
-                [-pw PERMUTATION_WORDLIST] [--reverse] [-r RANGES]
-                [--portscan] [-p PORTS] [--takeover] [-v]
+usage: lepus.py [-h] [-w WORDLIST] [-hw] [-t THREADS] [-nc] [-zt]
+                [--permutate] [-pw PERMUTATION_WORDLIST] [--reverse]
+                [-r RANGES] [--portscan] [-p PORTS] [--takeover] [-v]
                 domain
 
 Infrastructure OSINT
@@ -179,9 +185,10 @@ optional arguments:
   -h, --help            show this help message and exit
   -w WORDLIST, --wordlist WORDLIST
                         wordlist with subdomains
+  -hw, --hide-wildcards
+                        hide wildcard resolutions
   -t THREADS, --threads THREADS
                         number of threads [default is 100]
-  -j, --json            output to json as well [default is '|' delimited csv]
   -nc, --no-collectors  skip passive subdomain enumeration
   -zt, --zone-transfer  attempt to zone transfer from identified name servers
   --permutate           perform permutations on resolved domains

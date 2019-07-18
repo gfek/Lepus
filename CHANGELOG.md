@@ -1,3 +1,23 @@
+# Version 3.2.0
+
+### --- New Features
+1. SQLite integration
+2. IPv6 support
+3. Memory management improvements
+4. Spyse API collector
+
+### --- Bug Fixes
+1. Fixed an issue on the wildcard identification logic
+2. Fixed a logic bug on the CertSpotter collector
+
+### --- Misc
+1. Updated README.md
+2. Updated requirements.txt
+3. Updated .gitignore
+4. Added new takeover signatures
+5. Added various records to the words.txt list used for permutations
+6. Removed FindSubdomains collector
+
 # Version 3.1.0
 
 ### --- New Features
@@ -15,7 +35,7 @@
 6. Fix a bug during wildcard identification that didn't allow for threads to finish properly
 
 ### --- Misc
-1. Updated readme for Portscan and Takeover
+1. Updated README.md for Portscan and Takeover
 2. Updated requirements.txt to account for new cloudflare bypass
 3. Portscan module - slight change due to my OCDs
 4. Updated wordlists
