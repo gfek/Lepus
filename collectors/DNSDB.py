@@ -1,4 +1,4 @@
-from cfscrape import create_scraper
+from cloudscraper import create_scraper
 from bs4 import BeautifulSoup
 from termcolor import colored
 
