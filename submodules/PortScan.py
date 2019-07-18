@@ -1,11 +1,17 @@
-from os.path import join
+from IPy import IP
+from time import time
+from gc import collect
 from termcolor import colored
-import utilities.MiscHelpers
-import utilities.ScanHelpers
+from collections import OrderedDict
+from utilities.MiscHelpers import generateURLs
+from utilities.ScanHelpers import massConnectScan
+from utilities.DatabaseHelpers import Resolution, OpenPort, URL
 
 
-def init(domain, resolved, IPs, port_scan, threads):
-	targets = []
+def init(db, domain, port_scan, threads):
+	targets = set()
+	open_ports = OrderedDict()
+	timestamp = int(time())
 
 	if not port_scan:
 		port_scan = "medium"
@@ -25,49 +31,42 @@ def init(domain, resolved, IPs, port_scan, threads):
 	else:
 		ports = [int(port.strip()) for port in port_scan.split(",")]
 
-	for ip in IPs:
-		for port in ports:
-			targets.append((ip, port))
-
-	results = utilities.ScanHelpers.massConnectScan(IPs, targets, threads)
-	results_json = {}
-
-	for result in results:
-		if result[0] in results_json:
-			results_json[result[0]].append(result[1])
+	for row in db.query(Resolution).filter(Resolution.domain == domain):
+		if "." in row.address:
+			if IP(row.address).iptype() == "PUBLIC":
+				for port in ports:
+					targets.add((row.address, port))
 
 		else:
-			results_json[result[0]] = []
-			results_json[result[0]].append(result[1])
+			for port in ports:
+				targets.add((row.address, port))
 
-	print("    \__ {0}: {1}".format(colored("Open ports that were identified", "yellow"), colored(len(results), "cyan")))
-	items = list(results_json.items())
+	targets = list(targets)
+	numberOfUniqueIPs = len(targets) // len(ports)
+	massConnectScan(db, domain, numberOfUniqueIPs, targets, threads, timestamp)
 
-	for key, values in items:
-		if key == items[-1][0]:
-			print("    __\__ {0}: {1}".format(colored(key, "cyan"), ", ".join(colored(str(value), "yellow") for value in sorted(values))))
-			print("   \\")
+	del targets
+	collect()
+
+
+	for row in db.query(OpenPort).filter(OpenPort.domain == domain, OpenPort.timestamp == timestamp).order_by(OpenPort.address, OpenPort.port):
+		if row.address in open_ports:
+			open_ports[row.address].append((row.port, row.isSSL))
 
 		else:
-			print("      \__ {0}: {1}".format(colored(key, "cyan"), ", ".join(colored(str(value), "yellow") for value in sorted(values))))
+			open_ports[row.address] = []
+			open_ports[row.address].append((row.port, row.isSSL))
 
-	urls = []
+	print("    \__ {0}: {1}".format(colored("New ports that were identified as open", "yellow"), colored(db.query(OpenPort).filter(OpenPort.domain == domain, OpenPort.timestamp == timestamp).count(), "cyan")))
 
-	for target in results:
-		urls += utilities.MiscHelpers.urlize(target, resolved)
+	for address, ports in open_ports.items():
+		print("      \__ {0}: {1}".format(colored(address, "cyan"), ", ".join(colored(str(port[0]), "yellow") for port in ports)))
 
-	print("    \__ {0}: {1}".format(colored("URLs that were generated", "yellow"), colored(len(urls), "cyan")))
+	print(colored("\n[*]-Generating URLs based on Port Scan results...", "yellow"))
 
-	for url in sorted(urls):
-		print("      \__ {0}".format(colored(url, "cyan")))
+	generateURLs(db, domain, open_ports, timestamp)
 
-	try:
-		with open(join("results", domain, "urls.txt"), "w") as port_scan_file:
-			for url in sorted(urls):
-				port_scan_file.write("{0}\n".format(url))
+	print("  \__ {0}: {1}".format(colored("New URLs that were generated", "yellow"), colored(db.query(URL).filter(URL.domain == domain, URL.timestamp == timestamp).count(), "cyan")))
 
-	except OSError:
-		pass
-
-	except IOError:
-		pass
+	for row in db.query(URL).filter(URL.domain == domain, URL.timestamp == timestamp).order_by(URL.url):
+		print("    \__ {0}".format(colored(row.url, "cyan")))

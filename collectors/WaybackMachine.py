@@ -29,7 +29,7 @@ def init(domain):
 
 		WB = set(WB)
 
-		print("  \__ {0}: {1}".format(colored("Unique subdomains found", "cyan"), colored(len(WB), "yellow")))
+		print("  \__ {0}: {1}".format(colored("Subdomains found", "cyan"), colored(len(WB), "yellow")))
 		return WB
 
 	except ValueError as errv:

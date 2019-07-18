@@ -30,7 +30,7 @@ def init(domain):
 
 			VT = set(VT)
 
-			print("  \__ {0}: {1}".format(colored("Unique subdomains found", "cyan"), colored(len(VT), "yellow")))
+			print("  \__ {0}: {1}".format(colored("Subdomains found", "cyan"), colored(len(VT), "yellow")))
 			return VT
 
 		except requests.exceptions.RequestException as err:
