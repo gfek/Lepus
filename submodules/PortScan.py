@@ -1,7 +1,7 @@
-from IPy import IP
 from time import time
 from gc import collect
 from termcolor import colored
+from ipaddress import ip_address
 from collections import OrderedDict
 from utilities.MiscHelpers import generateURLs
 from utilities.ScanHelpers import massConnectScan
@@ -33,7 +33,7 @@ def init(db, domain, port_scan, threads):
 
 	for row in db.query(Resolution).filter(Resolution.domain == domain):
 		if "." in row.address:
-			if IP(row.address).iptype() == "PUBLIC":
+			if ip_address(row.address).is_global:
 				for port in ports:
 					targets.add((row.address, port))
 

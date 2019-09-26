@@ -2,7 +2,6 @@ beautifulsoup4==4.8.0
 cloudscraper==1.1.43
 dnspython==1.16.0
 ipwhois==1.1.0
-IPy==1.00
 js2py==0.66
 requests==2.22.0
 shodan==1.17.0

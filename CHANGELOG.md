@@ -17,6 +17,7 @@
 4. Added new takeover signatures
 5. Added various records to the words.txt list used for permutations
 6. Removed FindSubdomains collector
+7. Removed DNSDB collector
 
 # Version 3.1.0
 
