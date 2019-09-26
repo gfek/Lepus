@@ -140,17 +140,17 @@ Performs a portscan on well-known web ports. The mode can be enabled with `--por
 
 |Package|Version|
 |---|---|
-|beautifulsoup4|4.7.1|
-|cloudscraper|1.1.36|
+|beautifulsoup4|4.8.0|
+|cloudscraper|1.1.43|
 |dnspython|1.16.0|
 |ipwhois|1.1.0|
 |IPy|1.00|
 |js2py|0.66|
 |requests|2.22.0|
-|shodan|1.13.0|
-|sqlalchemy|1.3.5|
+|shodan|1.17.0|
+|sqlalchemy|1.3.8|
 |termcolor|1.1.0|
-|tqdm|4.32.2|
+|tqdm|4.36.1|
 
 ### Installation
 
