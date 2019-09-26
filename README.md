@@ -29,7 +29,6 @@ The utility is collecting data from the following services:
 |[Censys](https://censys.io/)|Yes|
 |[CertSpotter](https://sslmate.com/certspotter/)|No|
 |[CRT](https://crt.sh/)|No|
-|[DNSDB](http://dnsdb.org/)|No|
 |[DNSTrails](https://securitytrails.com/dns-trails/)|Yes|
 |[Entrust Certificates](https://www.entrust.com/ct-search/)|No|
 |[Google Transparency](https://transparencyreport.google.com/)|No|
@@ -141,11 +140,8 @@ Performs a portscan on well-known web ports. The mode can be enabled with `--por
 |Package|Version|
 |---|---|
 |beautifulsoup4|4.8.0|
-|cloudscraper|1.1.43|
 |dnspython|1.16.0|
 |ipwhois|1.1.0|
-|IPy|1.00|
-|js2py|0.66|
 |requests|2.22.0|
 |shodan|1.17.0|
 |sqlalchemy|1.3.8|

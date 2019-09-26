@@ -1,6 +1,5 @@
-from IPy import IP
 from termcolor import colored
-from ipaddress import ip_network
+from ipaddress import ip_address, ip_network
 from utilities.DatabaseHelpers import Resolution
 from utilities.ScanHelpers import massReverseLookup
 
@@ -17,7 +16,7 @@ def init(db, domain, ranges, threads):
 
 		for row in db.query(Resolution).filter(Resolution.domain == domain):
 			if "." in row.address:
-				if IP(row.address).iptype() == "PUBLIC":
+				if ip_address(row.address).is_global:
 					IPs.add(row.address)
 
 			else:

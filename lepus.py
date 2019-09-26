@@ -8,7 +8,6 @@ from gc import collect
 import collectors.Censys
 import collectors.CertSpotter
 import collectors.CRT
-import collectors.DNSDB
 import collectors.DNSTrails
 import collectors.EntrustCertificates
 import collectors.GoogleTransparency
@@ -84,7 +83,6 @@ if __name__ == "__main__":
 			collector_subdomains += collectors.Censys.init(args.domain)
 			collector_subdomains += collectors.CertSpotter.init(args.domain)
 			collector_subdomains += collectors.CRT.init(args.domain)
-			collector_subdomains += collectors.DNSDB.init(args.domain)
 			collector_subdomains += collectors.DNSTrails.init(args.domain)
 			collector_subdomains += collectors.EntrustCertificates.init(args.domain)
 			collector_subdomains += collectors.GoogleTransparency.init(args.domain)

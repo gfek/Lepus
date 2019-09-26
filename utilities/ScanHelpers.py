@@ -6,6 +6,7 @@ from dns.query import xfr
 from ipwhois import IPWhois
 from dns.zone import from_xfr
 from termcolor import colored
+from ipaddress import ip_address
 from dns.resolver import Resolver
 from collections import OrderedDict
 from sqlalchemy.exc import IntegrityError
@@ -15,7 +16,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from socket import getaddrinfo, gethostbyaddr, socket, AF_INET, AF_INET6, SOCK_STREAM
 from utilities.DatabaseHelpers import Record, Wildcard, Resolution, Unresolved, ASN, Network, OpenPort
 import utilities.MiscHelpers
-import IPy
+
 
 def zoneTransfer(db, domain):
 	print(colored("\n[*]-Attempting to zone transfer from the identified nameservers...", "yellow"))
@@ -614,7 +615,7 @@ def massRDAP(db, domain, threads):
 
 	for row in db.query(Resolution).filter(Resolution.domain == domain):
 		if "." in row.address:
-			if IPy.IP(row.address).iptype() == "PUBLIC":
+			if ip_address(row.address).is_global:
 				IPs.add(row.address)
 
 		else:
