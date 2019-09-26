@@ -134,7 +134,7 @@ if __name__ == "__main__":
 			if args.takeover:
 				submodules.TakeOver.init(db, args.domain, args.threads)
 
-		print()
+		utilities.MiscHelpers.exportFindings(db, args.domain)
 
 	except KeyboardInterrupt:
 		print(colored("\n[*]-Received keyboard interrupt! Shutting down...\n", "red"))

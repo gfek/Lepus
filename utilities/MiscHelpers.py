@@ -1,8 +1,10 @@
 from termcolor import colored
-from ipaddress import ip_network
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import FlushError
-from utilities.DatabaseHelpers import Resolution, Unresolved, URL
+from ipaddress import ip_address, ip_network
+from os import makedirs, listdir, stat, remove
+from utilities.DatabaseHelpers import Record, Resolution, Unresolved, ASN, Network, OpenPort, URL, Takeover
+
 
 def checkArgumentValidity(parser, args):
 	if args.permutation_wordlist and not args.permutate and args.permutation_wordlist.name != "lists/words.txt":
@@ -62,7 +64,6 @@ def loadOldFindings(db, domain):
 		old_unresolved.add(row.subdomain)
 
 	print("  \__ {0}: {1}".format(colored("Subdomains loaded", "cyan"), colored(len(old_resolved) + len(old_unresolved), "yellow")))
-
 	return old_resolved, old_unresolved
 
 
@@ -190,3 +191,58 @@ def generateURLs(db, domain, portscan, timestamp):
 
 					except (IntegrityError, FlushError):
 						db.rollback()
+
+
+def exportFindings(db, domain):
+	print(colored("\n[*]-Exporting Findings...", "yellow"))
+
+	path = "findings/{0}".format(domain)
+	makedirs(path, exist_ok=True)
+
+	with open("{0}/{1}".format(path, "records.csv"), "w") as records:
+		for row in db.query(Record).filter(Record.domain == domain).order_by(Record.type):
+			records.write("{0}|{1}\n".format(row.type, row.value))
+
+	with open("{0}/{1}".format(path, "resolved_public.csv"), "w") as resolved_public:
+		with open("{0}/{1}".format(path, "resolved_private.csv"), "w") as resolved_private:
+			with open("{0}/{1}".format(path, "resolved_ipv6.csv"), "w") as resolved_ipv6:
+				for row in db.query(Resolution).filter(Resolution.domain == domain).order_by(Resolution.subdomain):
+					if ":" in row.address:
+						resolved_ipv6.write("{0}.{1}|{2}\n".format(row.subdomain, domain, row.address))
+
+					else:
+						if ip_address(row.address).is_private:
+							resolved_private.write("{0}.{1}|{2}\n".format(row.subdomain, domain, row.address))
+
+						elif ip_address(row.address).is_global:
+							resolved_public.write("{0}.{1}|{2}\n".format(row.subdomain, domain, row.address))
+
+	with open("{0}/{1}".format(path, "unresolved.csv"), "w") as unresolved:
+		for row in db.query(Unresolved.subdomain).filter(Unresolved.domain == domain).order_by(Unresolved.subdomain):
+			unresolved.write("{0}.{1}\n".format(row.subdomain, domain))
+
+	with open("{0}/{1}".format(path, "asn.csv"), "w") as asn:
+		for row in db.query(ASN).filter(ASN.domain == domain).order_by(ASN.id):
+			asn.write("{0}|{1}|{2}\n".format(row.id, row.prefix, row.description))
+
+	with open("{0}/{1}".format(path, "networks.csv"), "w") as networks:
+		for row in db.query(Network).filter(Network.domain == domain).order_by(Network.cidr):
+			networks.write("{0}|{1}\n".format(row.cidr, row.identifier))
+
+	with open("{0}/{1}".format(path, "open_ports.csv"), "w") as open_ports:
+		for row1 in db.query(OpenPort.address).order_by(OpenPort.address).distinct():
+			open_ports.write("{0}|{1}\n".format(row1.address, ",".join([str(row2.port) for row2 in db.query(OpenPort.port).filter(OpenPort.domain == domain, OpenPort.address == row1.address).order_by(OpenPort.port)])))
+
+	with open("{0}/{1}".format(path, "urls.csv"), "w") as urls:
+		for row in db.query(URL.url).filter(URL.domain == domain):
+			urls.write("{0}\n".format(row.url))
+
+	with open("{0}/{1}".format(path, "takeovers.csv"), "w") as takeovers:
+		for row in db.query(Takeover).filter(Takeover.domain == domain).order_by(Takeover.subdomain):
+			takeovers.write("{0}.{1}|{2}|{3}\n".format(row.subdomain, domain, row.provider, row.signature))
+
+	for exported_file in listdir(path):
+		if stat("{0}/{1}".format(path, exported_file)).st_size == 0:
+			remove("{0}/{1}".format(path, exported_file))
+
+	print("  \__ {0}!\n".format(colored("Done", "cyan")))
