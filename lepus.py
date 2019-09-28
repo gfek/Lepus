@@ -67,6 +67,7 @@ if __name__ == "__main__":
 		db = utilities.DatabaseHelpers.init()
 		utilities.ScanHelpers.retrieveDNSRecords(db, args.domain)
 		old_resolved, old_unresolved = utilities.MiscHelpers.loadOldFindings(db, args.domain)
+		utilities.MiscHelpers.purgeOldFindings(db, args.domain)
 
 		if args.zoneTransfer:
 			zt_subdomains = utilities.ScanHelpers.zoneTransfer(db, args.domain)
@@ -80,21 +81,21 @@ if __name__ == "__main__":
 		else:
 			print()
 			collector_subdomains = []
-			collector_subdomains += collectors.Censys.init(args.domain)
-			collector_subdomains += collectors.CertSpotter.init(args.domain)
-			collector_subdomains += collectors.CRT.init(args.domain)
-			collector_subdomains += collectors.DNSTrails.init(args.domain)
-			collector_subdomains += collectors.EntrustCertificates.init(args.domain)
-			collector_subdomains += collectors.GoogleTransparency.init(args.domain)
+			# collector_subdomains += collectors.Censys.init(args.domain)
+			# collector_subdomains += collectors.CertSpotter.init(args.domain)
+			# collector_subdomains += collectors.CRT.init(args.domain)
+			# collector_subdomains += collectors.DNSTrails.init(args.domain)
+			# collector_subdomains += collectors.EntrustCertificates.init(args.domain)
+			# collector_subdomains += collectors.GoogleTransparency.init(args.domain)
 			collector_subdomains += collectors.HackerTarget.init(args.domain)
-			collector_subdomains += collectors.PassiveTotal.init(args.domain)
-			collector_subdomains += collectors.ProjectSonar.init(args.domain)
-			collector_subdomains += collectors.Riddler.init(args.domain)
-			collector_subdomains += collectors.Shodan.init(args.domain)
-			collector_subdomains += collectors.Spyse.init(args.domain)
-			collector_subdomains += collectors.ThreatCrowd.init(args.domain)
-			collector_subdomains += collectors.VirusTotal.init(args.domain)
-			collector_subdomains += collectors.WaybackMachine.init(args.domain)
+			# collector_subdomains += collectors.PassiveTotal.init(args.domain)
+			# collector_subdomains += collectors.ProjectSonar.init(args.domain)
+			# collector_subdomains += collectors.Riddler.init(args.domain)
+			# collector_subdomains += collectors.Shodan.init(args.domain)
+			# collector_subdomains += collectors.Spyse.init(args.domain)
+			# collector_subdomains += collectors.ThreatCrowd.init(args.domain)
+			# collector_subdomains += collectors.VirusTotal.init(args.domain)
+			# collector_subdomains += collectors.WaybackMachine.init(args.domain)
 
 		if args.wordlist:
 			wordlist_subdomains = utilities.MiscHelpers.loadWordlist(args.domain, args.wordlist)

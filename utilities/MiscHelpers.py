@@ -3,7 +3,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import FlushError
 from ipaddress import ip_address, ip_network
 from os import makedirs, listdir, stat, remove
-from utilities.DatabaseHelpers import Record, Resolution, Unresolved, ASN, Network, OpenPort, URL, Takeover
+from utilities.DatabaseHelpers import Record, Wildcard, Resolution, Unresolved, ASN, Network, OpenPort, URL, Takeover
 
 
 def checkArgumentValidity(parser, args):
@@ -65,6 +65,37 @@ def loadOldFindings(db, domain):
 
 	print("  \__ {0}: {1}".format(colored("Subdomains loaded", "cyan"), colored(len(old_resolved) + len(old_unresolved), "yellow")))
 	return old_resolved, old_unresolved
+
+
+def purgeOldFindings(db, domain):
+	db.query(Record).filter(Record.domain == domain).delete()
+	db.commit()
+
+	db.query(Wildcard).filter(Wildcard.domain == domain).delete()
+	db.commit()
+
+	db.query(Resolution).filter(Resolution.domain == domain).delete()
+	db.commit()
+
+	db.query(Unresolved).filter(Unresolved.domain == domain).delete()
+	db.commit()
+
+	db.query(ASN).filter(ASN.domain == domain).delete()
+	db.commit()
+
+	db.query(Network).filter(Network.domain == domain).delete()
+	db.commit()
+
+	db.query(OpenPort).filter(OpenPort.domain == domain).delete()
+	db.commit()
+
+	db.query(URL).filter(URL.domain == domain).delete()
+	db.commit()
+
+	db.query(Takeover).filter(Takeover.domain == domain).delete()
+	db.commit()
+
+	db.execute("VACUUM;")
 
 
 def loadWordlist(domain, wordlist):
