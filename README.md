@@ -143,7 +143,7 @@ Performs a portscan on well-known web ports. The mode can be enabled with `--por
 |dnspython|1.16.0|
 |ipwhois|1.1.0|
 |requests|2.22.0|
-|shodan|1.17.0|
+|shodan|1.18.0|
 |sqlalchemy|1.3.8|
 |termcolor|1.1.0|
 |tqdm|4.36.1|
