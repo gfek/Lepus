@@ -8,12 +8,13 @@ from termcolor import colored
 from dns.name import EmptyLabel
 from warnings import simplefilter
 from dns.exception import DNSException
+from configparser import RawConfigParser
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import FlushError
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dns.resolver import Resolver, NXDOMAIN, NoAnswer, NoNameservers, Timeout
 from utilities.DatabaseHelpers import Resolution, Unresolved, Takeover
-from utilities.MiscHelpers import chunkify
+from utilities.MiscHelpers import chunkify, slackNotification
 
 simplefilter("ignore")
 
@@ -726,10 +727,19 @@ def massTakeOver(targets, threads):
 	return takeovers
 
 
-def init(db, domain, threads):
+def init(db, domain, old_takeovers, threads):
 	targets = set()
+	notify = False
 	takeovers = []
 	timestamp = int(time())
+
+	parser = RawConfigParser()
+	parser.read("config.ini")
+	LEGACY_TOKEN = parser.get("Slack", "LEGACY_TOKEN")
+	CHANNEL = parser.get("Slack", "CHANNEL")
+
+	if LEGACY_TOKEN and CHANNEL:
+		notify = True
 
 	for row in db.query(Resolution).filter(Resolution.domain == domain):
 		if row.subdomain:
@@ -775,3 +785,7 @@ def init(db, domain, threads):
 
 	for takeover in takeovers:
 		print("      \__ {0}: {1}, {2}".format(colored(takeover[0], "cyan"), colored(takeover[1], "yellow"), colored(takeover[2], "yellow")))
+
+		if notify:
+			if takeover[0] not in old_takeovers:
+				slackNotification(LEGACY_TOKEN, CHANNEL, takeover[0], takeover[1], takeover[2])

@@ -1,6 +1,6 @@
 [![GitHub License](https://img.shields.io/badge/License-BSD%203--Clause-informational.svg)](https://github.com/GKNSB/Lepus/blob/master/LICENSE)
-[![GitHub Python](https://img.shields.io/badge/Python-%3E=%203.5.3-informational.svg)](https://www.python.org/)
-[![GitHub Version](https://img.shields.io/badge/Version-3.2.0-yellow.svg)](https://github.com/GKNSB/Lepus)
+[![GitHub Python](https://img.shields.io/badge/Python-%3E=%203.6-informational.svg)](https://www.python.org/)
+[![GitHub Version](https://img.shields.io/badge/Version-3.2.1-green.svg)](https://github.com/GKNSB/Lepus)
 
 ## Lepus
 **Sub-domain finder**
@@ -62,6 +62,10 @@ RIDDLER_PASSWORD=<YourRiddlerPassword>
 
 [Shodan]
 SHODAN_API_KEY=<YourShodanAPIKey>
+
+[Slack]
+LEGACY_TOKEN=<YourSlackLegacyToken>
+CHANNEL=<YourSlackChannel>
 
 [Spyse]
 SPYSE_API_TOKEN=<YourSpyseAPIToken>
@@ -135,6 +139,8 @@ Performs a portscan on well-known web ports. The mode can be enabled with `--por
 * Wishpond
 * Wordpress
 
+This module also supports slack notifications on newly identified potential takeover vulnerabilities.
+
 ### Requirements
 
 |Package|Version|
@@ -143,7 +149,8 @@ Performs a portscan on well-known web ports. The mode can be enabled with `--por
 |dnspython|1.16.0|
 |ipwhois|1.1.0|
 |requests|2.22.0|
-|shodan|1.18.0|
+|shodan|1.19.0|
+|slackclient|2.2.0|
 |sqlalchemy|1.3.8|
 |termcolor|1.1.0|
 |tqdm|4.36.1|
@@ -157,11 +164,21 @@ $ python3 -m pip install -r requirements.txt
 
 2. Preferably install in a virtualenv:
 ```
-$ pyenv virtualenv 3.7.2 lepus
+$ pyenv virtualenv 3.7.4 lepus
 $ pyenv activate lepus
 $ pip install -r requirements.txt
 ```
 
+3. Installing latest python on debian:
+```
+$ apt install build-essential zlib1g-dev libncurses5-dev libgdbm-dev libnss3-dev libssl-dev libreadline-dev libffi-dev libsqlite3-dev wget
+$ curl -O https://www.python.org/ftp/python/3.7.4/Python-3.7.4.tar.xz
+$ tar -xf Python-3.7.4.tar.xz
+$ cd Python-3.7.4
+$ ./configure --enable-optimizations --enable-loadable-sqlite-extensions
+$ make
+$ make altinstall
+```
 
 ### Help
 
@@ -206,4 +223,4 @@ optional arguments:
 
 ### Example
 
-`python3 lepus.py python.org --wordlist lists/subdomains.txt --permutate --reverse --portscan -p huge --takeover`
+`python3.7 lepus.py python.org --wordlist lists/subdomains.txt --permutate --reverse --portscan -p huge --takeover`

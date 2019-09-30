@@ -1,3 +1,17 @@
+# Version 3.2.1
+
+### --- New Features
+1. Slack notifications on new potential takeovers
+
+### --- Bug Fixes
+1. Fixed a logic bug on the handling of old findings
+
+### --- Misc
+1. Database improvements
+2. Removed DNSDB collector
+3. Updated README.md
+4. Updated requirements.txt
+
 # Version 3.2.0
 
 ### --- New Features
@@ -17,7 +31,6 @@
 4. Added new takeover signatures
 5. Added various records to the words.txt list used for permutations
 6. Removed FindSubdomains collector
-7. Removed DNSDB collector
 
 # Version 3.1.0
 

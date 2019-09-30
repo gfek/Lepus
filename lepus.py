@@ -29,7 +29,7 @@ import utilities.MiscHelpers
 import utilities.ScanHelpers
 
 simplefilter("ignore")
-version = "3.2.0"
+version = "3.2.1"
 
 
 def printBanner():
@@ -66,7 +66,7 @@ if __name__ == "__main__":
 	try:
 		db = utilities.DatabaseHelpers.init()
 		utilities.ScanHelpers.retrieveDNSRecords(db, args.domain)
-		old_resolved, old_unresolved = utilities.MiscHelpers.loadOldFindings(db, args.domain)
+		old_resolved, old_unresolved, old_takeovers = utilities.MiscHelpers.loadOldFindings(db, args.domain)
 		utilities.MiscHelpers.purgeOldFindings(db, args.domain)
 
 		if args.zoneTransfer:
@@ -131,7 +131,7 @@ if __name__ == "__main__":
 				submodules.PortScan.init(db, args.domain, args.ports, args.threads)
 
 			if args.takeover:
-				submodules.TakeOver.init(db, args.domain, args.threads)
+				submodules.TakeOver.init(db, args.domain, old_takeovers, args.threads)
 
 		utilities.MiscHelpers.exportFindings(db, args.domain)
 
