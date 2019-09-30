@@ -1,3 +1,4 @@
+from slack import WebClient
 from termcolor import colored
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import FlushError
@@ -54,17 +55,21 @@ def checkArgumentValidity(parser, args):
 def loadOldFindings(db, domain):
 	old_resolved = set()
 	old_unresolved = set()
+	old_takeovers = set()
 
 	print(colored("\n[*]-Loading Old Findings...", "yellow"))
 
 	for row in db.query(Resolution).filter(Resolution.domain == domain):
-		old_resolved.add(row.subdomain)
+		old_resolved.add((row.subdomain, row.source))
 
 	for row in db.query(Unresolved).filter(Unresolved.domain == domain):
 		old_unresolved.add(row.subdomain)
 
+	for row in db.query(Takeover).filter(Takeover.domain == domain):
+		old_takeovers.add(".".join([row.subdomain, domain]))
+
 	print("  \__ {0}: {1}".format(colored("Subdomains loaded", "cyan"), colored(len(old_resolved) + len(old_unresolved), "yellow")))
-	return old_resolved, old_unresolved
+	return old_resolved, old_unresolved, old_takeovers
 
 
 def purgeOldFindings(db, domain):
@@ -112,22 +117,6 @@ def cleanupFindings(domain, old_resolved, old_unresolved, zt, collectors, wordli
 	unique_subdomains = set()
 	findings = [("", "Collectors")]
 
-	if old_resolved:
-		for subdomain in old_resolved:
-			subdomain = subdomain.lower()
-
-			if subdomain not in unique_subdomains:
-				unique_subdomains.add(subdomain)
-				findings.append((subdomain, "Previously Resolved"))
-
-	if old_unresolved:
-		for subdomain in old_unresolved:
-			subdomain = subdomain.lower()
-
-			if subdomain not in unique_subdomains:
-				unique_subdomains.add(subdomain)
-				findings.append((subdomain, "Previously Unresolved"))
-
 	if zt:
 		for subdomain in zt:
 			subdomain = subdomain.lower()
@@ -153,6 +142,22 @@ def cleanupFindings(domain, old_resolved, old_unresolved, zt, collectors, wordli
 			if subdomain not in unique_subdomains:
 				unique_subdomains.add(subdomain)
 				findings.append((subdomain, "Wordlist"))
+
+	if old_resolved:
+		for item in old_resolved:
+			subdomain = item[0].lower()
+
+			if subdomain not in unique_subdomains:
+				unique_subdomains.add(subdomain)
+				findings.append((subdomain, item[1]))
+
+	if old_unresolved:
+		for subdomain in old_unresolved:
+			subdomain = subdomain.lower()
+
+			if subdomain not in unique_subdomains:
+				unique_subdomains.add(subdomain)
+				findings.append((subdomain, "Collectors"))
 
 	return findings
 
@@ -222,6 +227,12 @@ def generateURLs(db, domain, portscan, timestamp):
 
 					except (IntegrityError, FlushError):
 						db.rollback()
+
+
+def slackNotification(token, channel, subdomain, provider, signature):
+	text = """```\nSubdomain: {0}\nProvider: {1}\nSignature: {2}\n```""".format(subdomain, provider, signature)
+	client = WebClient(token=token)
+	client.chat_postMessage(channel=channel, text=text, username="Lepus", icon_emoji=":rabbit2:")
 
 
 def exportFindings(db, domain):
