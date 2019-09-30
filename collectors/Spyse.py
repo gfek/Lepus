@@ -26,7 +26,6 @@ def init(domain):
 		while(True):
 			response = requests.get(url + str(page), headers=headers, verify=False)
 			response_json = loads(response.text)
-			print(response_json)
 
 			if len(response_json["records"]) == 0:
 				break
