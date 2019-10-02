@@ -681,7 +681,7 @@ def massRDAP(db, domain, threads):
 					db.rollback()
 
 		for cidr in record["network"]["cidr"].split(", "):
-			db.add(Network(domain=domain, cidr=cidr, identifier=record["network"]["name"], timestamp=timestamp))
+			db.add(Network(domain=domain, cidr=cidr, identifier=record["network"]["name"], country=record["asn_country_code"], timestamp=timestamp))
 
 			try:
 				db.commit()
@@ -705,4 +705,4 @@ def massRDAP(db, domain, threads):
 	print("    \__ {0}:".format(colored("New networks that were identified", "yellow")))
 
 	for row in db.query(Network).filter(Network.domain == domain).order_by(Network.cidr):
-		print("      \__ {0}: {1}, {2}: {3}".format(colored("CIDR", "cyan"), colored(row.cidr, "yellow"), colored("Identifier", "cyan"), colored(row.identifier, "yellow")))
+		print("      \__ {0}: {1}, {2}: {3}, {4}: {5}".format(colored("CIDR", "cyan"), colored(row.cidr, "yellow"), colored("Identifier", "cyan"), colored(row.identifier, "yellow"), colored("Country", "cyan"), colored(row.country, "yellow")))

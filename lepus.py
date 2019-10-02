@@ -29,7 +29,7 @@ import utilities.MiscHelpers
 import utilities.ScanHelpers
 
 simplefilter("ignore")
-version = "3.2.1"
+version = "3.2.2"
 
 
 def printBanner():
@@ -105,7 +105,6 @@ if __name__ == "__main__":
 
 		findings = utilities.MiscHelpers.cleanupFindings(args.domain, old_resolved, old_unresolved, zt_subdomains, collector_subdomains, wordlist_subdomains)
 
-		del old_resolved
 		del old_unresolved
 		del zt_subdomains
 		del collector_subdomains
@@ -133,7 +132,7 @@ if __name__ == "__main__":
 			if args.takeover:
 				submodules.TakeOver.init(db, args.domain, old_takeovers, args.threads)
 
-		utilities.MiscHelpers.exportFindings(db, args.domain)
+		utilities.MiscHelpers.exportFindings(db, args.domain, old_resolved)
 
 	except KeyboardInterrupt:
 		print(colored("\n[*]-Received keyboard interrupt! Shutting down...\n", "red"))
