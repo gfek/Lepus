@@ -1,7 +1,17 @@
+# Version 3.2.2
+
+### --- New Features
+1. Display location information on networks identified by the RDAP submodule
+2. Diff between runs against the same domain
+
+### --- Misc
+1. Various enhancements on export functionality
+
 # Version 3.2.1
 
 ### --- New Features
 1. Slack notifications on new potential takeovers
+2. Export of findings
 
 ### --- Bug Fixes
 1. Fixed a logic bug on the handling of old findings

@@ -1,6 +1,6 @@
 [![GitHub License](https://img.shields.io/badge/License-BSD%203--Clause-informational.svg)](https://github.com/GKNSB/Lepus/blob/master/LICENSE)
 [![GitHub Python](https://img.shields.io/badge/Python-%3E=%203.6-informational.svg)](https://www.python.org/)
-[![GitHub Version](https://img.shields.io/badge/Version-3.2.1-green.svg)](https://github.com/GKNSB/Lepus)
+[![GitHub Version](https://img.shields.io/badge/Version-3.2.2-green.svg)](https://github.com/GKNSB/Lepus)
 
 ## Lepus
 **Sub-domain finder**

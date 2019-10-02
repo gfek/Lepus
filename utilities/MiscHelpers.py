@@ -235,9 +235,10 @@ def slackNotification(token, channel, subdomain, provider, signature):
 	client.chat_postMessage(channel=channel, text=text, username="Lepus", icon_emoji=":rabbit2:")
 
 
-def exportFindings(db, domain):
+def exportFindings(db, domain, old_resolved):
 	print(colored("\n[*]-Exporting Findings...", "yellow"))
 
+	old_hostnames = [items[0] for items in old_resolved]
 	path = "findings/{0}".format(domain)
 	makedirs(path, exist_ok=True)
 
@@ -248,16 +249,55 @@ def exportFindings(db, domain):
 	with open("{0}/{1}".format(path, "resolved_public.csv"), "w") as resolved_public:
 		with open("{0}/{1}".format(path, "resolved_private.csv"), "w") as resolved_private:
 			with open("{0}/{1}".format(path, "resolved_ipv6.csv"), "w") as resolved_ipv6:
-				for row in db.query(Resolution).filter(Resolution.domain == domain).order_by(Resolution.subdomain):
-					if ":" in row.address:
-						resolved_ipv6.write("{0}.{1}|{2}\n".format(row.subdomain, domain, row.address))
+				with open("{0}/{1}".format(path, "diff.csv"), "w") as diff:
+					for row1 in db.query(Resolution.subdomain).filter(Resolution.domain == domain).order_by(Resolution.subdomain).distinct():
+						diff_list = []
+						public = []
+						private = []
+						ipv6 = []
 
-					else:
-						if ip_address(row.address).is_private:
-							resolved_private.write("{0}.{1}|{2}\n".format(row.subdomain, domain, row.address))
+						for row2 in db.query(Resolution.address).filter(Resolution.domain == domain, Resolution.subdomain == row1.subdomain).order_by(Resolution.address):
+							if old_hostnames:
+								if row1.subdomain not in old_hostnames:
+									diff_list.append(row2.address)
 
-						elif ip_address(row.address).is_global:
-							resolved_public.write("{0}.{1}|{2}\n".format(row.subdomain, domain, row.address))
+							if ":" in row2.address:
+								ipv6.append(row2.address)
+
+							else:
+								if ip_address(row2.address).is_private:
+									private.append(row2.address)
+
+								elif ip_address(row2.address).is_global:
+									public.append(row2.address)
+
+						if diff_list:
+							if row1.subdomain == "":
+								diff.write("{0}|{1}\n".format(domain, ",".join(diff_list)))
+
+							else:
+								diff.write("{0}.{1}|{2}\n".format(row1.subdomain, domain, ",".join(diff_list)))
+
+						if ipv6:
+							if row1.subdomain == "":
+								resolved_ipv6.write("{0}|{1}\n".format(domain, ",".join(ipv6)))
+
+							else:
+								resolved_ipv6.write("{0}.{1}|{2}\n".format(row1.subdomain, domain, ",".join(ipv6)))
+
+						if private:
+							if row1.subdomain == "":
+								resolved_private.write("{0}|{1}\n".format(domain, ",".join(private)))
+
+							else:
+								resolved_private.write("{0}.{1}|{2}\n".format(row1.subdomain, domain, ",".join(private)))
+
+						if public:
+							if row1.subdomain == "":
+								resolved_public.write("{0}|{1}\n".format(domain, ",".join(public)))
+
+							else:
+								resolved_public.write("{0}.{1}|{2}\n".format(row1.subdomain, domain, ",".join(public)))
 
 	with open("{0}/{1}".format(path, "unresolved.csv"), "w") as unresolved:
 		for row in db.query(Unresolved.subdomain).filter(Unresolved.domain == domain).order_by(Unresolved.subdomain):
@@ -269,7 +309,7 @@ def exportFindings(db, domain):
 
 	with open("{0}/{1}".format(path, "networks.csv"), "w") as networks:
 		for row in db.query(Network).filter(Network.domain == domain).order_by(Network.cidr):
-			networks.write("{0}|{1}\n".format(row.cidr, row.identifier))
+			networks.write("{0}|{1}|{2}\n".format(row.cidr, row.identifier, row.country))
 
 	with open("{0}/{1}".format(path, "open_ports.csv"), "w") as open_ports:
 		for row1 in db.query(OpenPort.address).order_by(OpenPort.address).distinct():

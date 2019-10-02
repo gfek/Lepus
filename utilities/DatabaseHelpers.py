@@ -52,6 +52,7 @@ class Network(Base):
 	domain = Column(String(100), primary_key=True)
 	cidr = Column(String(50), primary_key=True)
 	identifier = Column(String(200), nullable=False)
+	country = Column(String(10), nullable=False)
 	timestamp = Column(Integer, nullable=False)
 
 
