@@ -6,6 +6,7 @@
 
 ### --- Misc
 1. Various enhancements on export functionality
+2. Updated README.md
 
 # Version 3.2.1
 
