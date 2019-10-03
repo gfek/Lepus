@@ -735,10 +735,10 @@ def init(db, domain, old_takeovers, threads):
 
 	parser = RawConfigParser()
 	parser.read("config.ini")
-	LEGACY_TOKEN = parser.get("Slack", "LEGACY_TOKEN")
-	CHANNEL = parser.get("Slack", "CHANNEL")
+	SLACK_LEGACY_TOKEN = parser.get("Slack", "SLACK_LEGACY_TOKEN")
+	SLACK_CHANNEL = parser.get("Slack", "SLACK_CHANNEL")
 
-	if LEGACY_TOKEN and CHANNEL:
+	if SLACK_LEGACY_TOKEN and SLACK_CHANNEL:
 		notify = True
 
 	for row in db.query(Resolution).filter(Resolution.domain == domain):
@@ -788,4 +788,4 @@ def init(db, domain, old_takeovers, threads):
 
 		if notify:
 			if takeover[0] not in old_takeovers:
-				slackNotification(LEGACY_TOKEN, CHANNEL, takeover[0], takeover[1], takeover[2])
+				slackNotification(SLACK_LEGACY_TOKEN, SLACK_CHANNEL, takeover[0], takeover[1], takeover[2])
