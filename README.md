@@ -144,13 +144,13 @@ This module also supports slack notifications on newly identified potential take
 
 |Package|Version|
 |---|---|
-|beautifulsoup4|4.8.0|
+|beautifulsoup4|4.8.1|
 |dnspython|1.16.0|
 |ipwhois|1.1.0|
 |requests|2.22.0|
 |shodan|1.19.0|
 |slackclient|2.2.0|
-|sqlalchemy|1.3.8|
+|sqlalchemy|1.3.9|
 |termcolor|1.1.0|
 |tqdm|4.36.1|
 
