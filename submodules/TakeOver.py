@@ -20,65 +20,79 @@ simplefilter("ignore")
 
 headers = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:52.0) Gecko/20100101 Firefox/52.0", "Content-Type": "application/json"}
 signatures = {
-	"Amazon AWS/S3": "NoSuchBucket",
-	"Bitbucket": "Repository not found",
-	"Campaign Monitor": "Double check the URL or <a href=\"mailto:help@createsend.com",
-	"Cargo Collective": "<title>404 &mdash; File not found</title>",
-	"Feedpress": "The feed has not been found.",
-	"Ghost.io": "The thing you were looking for is no longer here, or never was",
-	"Github": "There isn't a GitHub Pages site here.",
-	"Helpjuice": "There's nothing here, yet.",
-	"Helpjuice 2": "We could not find what you're looking for.",
-	"Helpscout": "No settings were found for this company",
-	"Heroku": "<title>No such app</title>",
-	"JetBrains": "is not a registered InCloud YouTrack",
-	"Readme.io": "Project doesnt exist... yet!",
-	"Surge.sh": "project not found",
-	"Tumblr": "Whatever you were looking for doesn't currently exist at this address.",
-	"Tilda": "Domain has been assigned.",
-	"Tilda 2": "Please renew your subscription",
-	"UserVoice": "Perhaps you meant to visit",
-	"UserVoice 2": "This UserVoice subdomain is currently available!",
-	"Wordpress": "Do you want to register",
-	"Strikingly": "But if you're looking to build your own website",
-	"Uptime Robot": "page not found",
-	"Pantheon": "The gods are wise",
-	"Teamwork": "Oops - We didn't find your site.",
-	"Intercom": "This page is reserved for artistic dogs",
-	"Webflow": "The page you are looking for doesn't exist or has been moved",
-	"Wishpond": "https://www.wishpond.com/404?campaign=true",
-	"Aftership": "Oops.</h2><p class=\"text-muted text-tight\">The page you're looking for doesn't exist.",
-	"Aha!": "There is no portal here ... sending you back to Aha!",
-	"Brightcove": "<p class=\"bc-gallery-error-code\">Error Code: 404</p>",
-	"Bigcartel": "<h1>Oops! We couldn&#8217;t find that page.</h1>",
-	"Acquia": "Sorry, we could not find any content for this web address",
-	"Simplebooklet": ">Sorry, we can't find this <a",
-	"Getresponse": "With GetResponse Landing Pages, lead generation has never been easier",
-	"Vend": "Looks like you've traveled too far into cyberspace",
-	"Tictail": "to target URL: <a href=\"https://tictail.com",
-	"Fly.io": "not found:"
+	"Amazon AWS/S3": ["NoSuchBucket"],
+	"Bitbucket": ["Repository not found"],
+	"Campaign Monitor": ["Double check the URL or <a href=\"mailto:help@createsend.com"],
+	"Cargo Collective": ["<title>404 &mdash; File not found</title>"],
+	"Feedpress": ["The feed has not been found."],
+	"Ghost.io": ["The thing you were looking for is no longer here, or never was"],
+	"Github": ["There isn't a GitHub Pages site here."],
+	"Helpjuice": ["There's nothing here, yet.", "We could not find what you're looking for."],
+	"Helpscout": ["No settings were found for this company"],
+	"Heroku": ["<title>No such app</title>"],
+	"JetBrains": ["is not a registered InCloud YouTrack"],
+	"Readme.io": ["Project doesnt exist... yet!"],
+	"Surge.sh": ["project not found"],
+	"Tumblr": ["Whatever you were looking for doesn't currently exist at this address."],
+	"Tilda": ["Domain has been assigned."],
+	"Tilda 2": ["Please renew your subscription"],
+	"UserVoice": ["Perhaps you meant to visit", "This UserVoice subdomain is currently available!"],
+	"Wordpress": ["Do you want to register"],
+	"Strikingly": ["But if you're looking to build your own website"],
+	"Uptime Robot": ["page not found"],
+	"Pantheon": ["The gods are wise"],
+	"Teamwork": ["Oops - We didn't find your site."],
+	"Intercom": ["This page is reserved for artistic dogs"],
+	"Webflow": ["The page you are looking for doesn't exist or has been moved"],
+	"Wishpond": ["https://www.wishpond.com/404?campaign=true"],
+	"Aftership": ["Oops.</h2><p class=\"text-muted text-tight\">The page you're looking for doesn't exist."],
+	"Aha!": ["There is no portal here ... sending you back to Aha!"],
+	"Brightcove": ["<p class=\"bc-gallery-error-code\">Error Code: 404</p>"],
+	"Bigcartel": ["<h1>Oops! We couldn&#8217;t find that page.</h1>"],
+	"Acquia": ["Sorry, we could not find any content for this web address"],
+	"Simplebooklet": [">Sorry, we can't find this <a"],
+	"Getresponse": ["With GetResponse Landing Pages, lead generation has never been easier"],
+	"Vend": ["Looks like you've traveled too far into cyberspace"],
+	"Tictail": ["to target URL: <a href=\"https://tictail.com"],
+	"Fly.io": ["not found:"],
+	"Desk": ["Sorry, we couldn't find that page."],
+	"Zendesk": ["Help Center Closed"],
+	"Statuspage": ["Statuspage | Hosted Status Pages for Your Company"],
+	"Thinkific": ["You may have mistyped the address or the page may have moved."],
+	"Tave": ["You're at a page that doesn't exist."],
+	"Activecampaign": ["LIGHTTPD - fly light."],
+	"Pingdom": ["Sorry, couldn&rsquo;t find the status page"],
+	"Surveygizmo": ["609-6480"],
+	"Mashery": ["Unrecognized domain <strong>"],
+	"Instapage": ["Looks Like You're Lost"],
+	"Kajabi": ["No such app", "not found"],
+	"Airee": ["https://xn--80aqc2a.xn--p1ai/"],
+	"Hatena": ["404 Blog is not found"],
+	"Launchrock": ["you may have taken a wrong turn somewhere"]
 }
 
 
-def findSignatures(domainToTry, signature, neededMatches):
+def findSignatures(domainToTry, signatures, neededMatches):
 	numberOfMatches = 0
 
 	try:
-		if signature in str(get("http://" + domainToTry, headers=headers).content, "utf-8"):
-			numberOfMatches += 1
+		for signature in signatures:
+			if signature in str(get("http://" + domainToTry, headers=headers, verify=False).content, "utf-8"):
+				numberOfMatches += 1
 
-			if neededMatches <= numberOfMatches:
-				return True
+				if neededMatches <= numberOfMatches:
+					return True
 
 	except Exception:
 		pass
 
 	try:
-		if signature in str(get("https://" + domainToTry, headers=headers, verify=False).content, "utf-8"):
-			numberOfMatches += 1
+		for signature in signatures:
+			if signature in str(get("https://" + domainToTry, headers=headers, verify=False).content, "utf-8"):
+				numberOfMatches += 1
 
-			if neededMatches <= numberOfMatches:
-				return True
+				if neededMatches <= numberOfMatches:
+					return True
 
 	except Exception:
 		pass
@@ -126,6 +140,132 @@ def campaignMonitor(domain, ARecords, CNAME):
 
 	if findSignatures(CNAME, signatures["Campaign Monitor"], 1):
 		outcome = ["Campaign Monitor", domain, CNAME]
+
+	return outcome
+
+
+def desk(domain, ARecords, CNAME):
+	outcome = []
+
+	if findSignatures(domain, signatures["Desk"], 1):
+		outcome = ["Desk", domain, CNAME]
+
+	return outcome
+
+
+def zendesk(domain, ARecords, CNAME):
+	outcome = []
+
+	if findSignatures(domain, signatures["Zendesk"], 1):
+		outcome = ["Zendesk", domain, CNAME]
+
+	return outcome
+
+
+def statuspage(domain, ARecords, CNAME):
+	outcome = []
+
+	if findSignatures(domain, signatures["Statuspage"], 1):
+		outcome = ["Statuspage", domain, CNAME]
+
+	return outcome
+
+
+def thinkific(domain, ARecords, CNAME):
+	outcome = []
+
+	if findSignatures(domain, signatures["Thinkific"], 1):
+		outcome = ["Thinkific", domain, CNAME]
+
+	return outcome
+
+
+def tave(domain, ARecords, CNAME):
+	outcome = []
+
+	if findSignatures(domain, signatures["Tave"], 1):
+		outcome = ["Tave", domain, CNAME]
+
+	return outcome
+
+
+def activecampaign(domain, ARecords, CNAME):
+	outcome = []
+
+	if findSignatures(domain, signatures["Activecampaign"], 1):
+		outcome = ["Activecampaign", domain, CNAME]
+
+	return outcome
+
+
+def pingdom(domain, ARecords, CNAME):
+	outcome = []
+
+	if findSignatures(domain, signatures["Pingdom"], 1):
+		outcome = ["Pingdom", domain, CNAME]
+
+	return outcome
+
+
+def surveygizmo(domain, ARecords, CNAME):
+	outcome = []
+
+	if findSignatures(domain, signatures["Surveygizmo"], 2):
+		outcome = ["Surveygizmo", domain, CNAME]
+
+	return outcome
+
+
+def mashery(domain, ARecords, CNAME):
+	outcome = []
+
+	if findSignatures(domain, signatures["Mashery"], 1):
+		outcome = ["Mashery", domain, CNAME]
+
+	return outcome
+
+
+def instapage(domain, ARecords, CNAME):
+	outcome = []
+
+	if findSignatures(domain, signatures["Instapage"], 1):
+		outcome = ["Instapage", domain, CNAME]
+
+	return outcome
+
+
+def kajabi(domain, ARecords, CNAME):
+	outcome = []
+
+	if findSignatures(domain, signatures["Kajabi"], 2):
+		outcome = ["Kajabi", domain, CNAME]
+
+	return outcome
+
+
+def airee(domain, ARecords, CNAME):
+	outcome = []
+
+	if findSignatures(domain, signatures["Airee"], 1):
+		outcome = ["Airee", domain, CNAME]
+
+	return outcome
+
+
+def hatena(domain, ARecords, CNAME):
+	outcome = []
+
+	if findSignatures(domain, signatures["Hatena"], 2):
+		outcome = ["Hatena", domain, CNAME]
+
+	return outcome
+
+
+def launchrock(domain, ARecords, CNAME):
+	outcome = []
+
+	if findSignatures(domain, signatures["Launchrock"], 1):
+		outcome = ["Launchrock", domain, CNAME]
 
 	return outcome
 
@@ -190,7 +330,7 @@ def github(domain, ARecords, CNAME):
 def helpjuice(domain, ARecords, CNAME):
 	outcome = []
 
-	if findSignatures(CNAME, signatures["Helpjuice"], 1) or findSignatures(CNAME, signatures["Helpjuice 2"], 1):
+	if findSignatures(CNAME, signatures["Helpjuice"], 1):
 		outcome = ["Helpjuice", domain, CNAME]
 
 	return outcome
@@ -283,7 +423,7 @@ def tilda(domain, ARecords, CNAME):
 def uservoice(domain, ARecords, CNAME):
 	outcome = []
 
-	if findSignatures(domain, signatures["UserVoice"], 1) or findSignatures(domain, signatures["UserVoice 2"], 1):
+	if findSignatures(domain, signatures["UserVoice"], 1):
 		outcome = ["UserVoice", domain, CNAME]
 
 	return outcome
@@ -513,6 +653,48 @@ def identify(domain, ARecords, CNAMERecords):
 		elif "bitbucket.io" in CNAME:
 			outcome = bitbucket(domain, ARecords, CNAME)
 
+		elif ".desk.com" in CNAME:
+			outcome = desk(domain, ARecords, CNAME)
+
+		elif ".zendesk.com" in CNAME:
+			outcome = zendesk(domain, ARecords, CNAME)
+
+		elif "statuspage.io" in CNAME:
+			outcome = statuspage(domain, ARecords, CNAME)
+
+		elif "thinkific.com" in CNAME:
+			outcome = thinkific(domain, ARecords, CNAME)
+
+		elif "clientaccess.tave.com" in CNAME:
+			outcome = tave(domain, ARecords, CNAME)
+
+		elif "activehosted.com" in CNAME:
+			outcome = activecampaign(domain, ARecords, CNAME)
+
+		elif "stats.pingdom.com" in CNAME:
+			outcome = pingdom(domain, ARecords, CNAME)
+
+		elif "privatedomain.sgizmo.com" in CNAME or "privatedomain.surveygizmo.eu" in CNAME or "privatedomain.sgizmoca.com" in CNAME:
+			outcome = surveygizmo(domain, ARecords, CNAME)
+
+		elif "mashery.com" in CNAME:
+			outcome = mashery(domain, ARecords, CNAME)
+
+		elif "pageserve.co" in CNAME or "secure.pageserve.co" in CNAME:
+			outcome = instapage(domain, ARecords, CNAME)
+
+		elif "endpoint.mykajabi.com" in CNAME or "ssl.kajabi.com" in CNAME:
+			outcome = kajabi(domain, ARecords, CNAME)
+
+		elif "cdn.airee.ru" in CNAME:
+			outcome = airee(domain, ARecords, CNAME)
+
+		elif "hatenablog.com" in CNAME or "hatenadiary.com" in CNAME:
+			outcome = hatena(domain, ARecords, CNAME)
+
+		elif "launchrock.com" in CNAME:
+			outcome = launchrock(domain, ARecords, CNAME)
+
 		elif "edgeapp.net" in CNAME:
 			outcome = flyio(domain, ARecords, CNAME)
 
@@ -543,7 +725,7 @@ def identify(domain, ARecords, CNAMERecords):
 		elif "myjetbrains.com" in CNAME:
 			outcome = jetbrains(domain, ARecords, CNAME)
 
-		elif "readme.io" in CNAME:
+		elif "readme.io" in CNAME or "ssl.readmessl.com" in CNAME:
 			outcome = readme(domain, ARecords, CNAME)
 
 		elif "surge.sh" in CNAME:
@@ -616,9 +798,11 @@ def identify(domain, ARecords, CNAMERecords):
 			outcome = wordpress(domain, ARecords, CNAME)
 
 		elif any(azureSub in CNAME for azureSub in [
-			"azure-api.net", "azurecontainer.io", "azurecr.io", "azuredatalakestore.net", "azureedge.net", "azurehdinsight.net",
-			"azurewebsites.net", "blob.core.windows.net", "cloudapp.azure.com", "cloudapp.net", "database.windows.net",
-			"redis.cache.windows.net", "search.windows.net", "servicebus.windows.net", "trafficmanager.net", "visualstudio.com"]):
+			"azure-api.net", "azurecontainer.io", "azurecr.io", "azuredatalakeanalytics.net", "azuredatalakestore.net", "azureedge.net",
+			"azurehdinsight.net", "azurefd.net", "azurehealthcareapis.com", "azureiotcentral.com", "azurewebsites.net", "batch.azure.com",
+			"blob.core.windows.net", "cloudapp.azure.com", "cloudapp.net", "core.windows.net", "database.windows.net", "p.azurewebsites.net",
+			"redis.cache.windows.net", "search.windows.net", "service.signalr.net", "servicebus.windows.net", "trafficmanager.net",
+			"visualstudio.com"]):
 			outcome = azure(domain, ARecords, CNAME)
 
 	for entry in ARecords:
@@ -637,10 +821,13 @@ def identify(domain, ARecords, CNAMERecords):
 		elif str(entry) == "34.193.69.252" or str(entry) == "34.193.204.92" or str(entry) == "23.235.33.229" or str(entry) == "104.156.81.229":
 			outcome = webflow(domain, ARecords, str(entry))
 
+		elif str(entry) == "54.243.190.28" or str(entry) == "54.243.190.39" or str(entry) == "54.243.190.47" or str(entry) == "54.243.190.54":
+			outcome = launchrock(domain, ARecords, str(entry))
+
 		elif "23.185.0." in str(entry) or "23.253." in str(entry):
 			outcome = pantheon(domain, ARecords, str(entry))
 
-		elif str(entry) in ["192.30.252.153", "192.30.252.154"]:
+		elif str(entry) == "192.30.252.153" or str(entry) == "192.30.252.154":
 			outcome = github(domain, ARecords, str(entry))
 
 	return outcome
