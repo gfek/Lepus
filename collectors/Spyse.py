@@ -27,7 +27,7 @@ def init(domain):
 			response = requests.get(url + str(page), headers=headers, verify=False)
 			response_json = loads(response.text)
 
-			if len(response_json["records"]) == 0:
+			if "records" not in response.text or len(response_json["records"]) == 0:
 				break
 
 			else:

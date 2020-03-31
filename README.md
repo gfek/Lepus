@@ -100,8 +100,10 @@ Performs a portscan on well-known web ports. The mode can be enabled with `--por
 *(experimental)* Performs several checks on identified domains for potential subdomain-takeover vulnerabilities. The module is enabled with `--takeover` and is executed after all others. Checks are performed for the following services:
 
 * Acquia
+* Activecampaign
 * Aftership
 * Aha!
+* Airee
 * Amazon AWS/S3
 * Apigee
 * Azure
@@ -110,24 +112,35 @@ Performs a portscan on well-known web ports. The mode can be enabled with `--por
 * Brightcove
 * Campaign Monitor
 * Cargo Collective
+* Desk
 * Feedpress
 * Fly[]().io
 * Getresponse
 * Ghost[]().io
 * Github
+* Hatena
 * Helpjuice
 * Helpscout
 * Heroku
+* Instapage
 * Intercom
 * JetBrains
+* Kajabi
+* Launchrock
+* Mashery
 * Maxcdn
 * Pantheon
+* Pingdom
 * Readme[]().io
 * Simplebooklet
 * Smugmug
+* Statuspage
 * Strikingly
 * Surge[]().sh
+* Surveygizmo
+* Tave
 * Teamwork
+* Thinkific
 * Tictail
 * Tilda
 * Tumblr
@@ -137,6 +150,7 @@ Performs a portscan on well-known web ports. The mode can be enabled with `--por
 * Webflow
 * Wishpond
 * Wordpress
+* Zendesk
 
 This module also supports slack notifications on newly identified potential takeover vulnerabilities.
 

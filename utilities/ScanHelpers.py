@@ -1,7 +1,7 @@
 from time import time
 from tqdm import tqdm
 from gc import collect
-from sys import stderr
+from sys import stderr,stdout
 from dns.query import xfr
 from ipwhois import IPWhois
 from dns.zone import from_xfr
@@ -94,60 +94,72 @@ def checkWildcard(timestamp, subdomain, domain):
 
 
 def identifyWildcards(db, findings, domain, threads):
-	sub_levels = utilities.MiscHelpers.uniqueSubdomainLevels(findings)
+	if len(findings) <= 10000:
+		print(colored("\n[*]-Generating samples for wildcard identification...", "yellow"))
+	
+	else:
+		print(colored("\n[*]-Generating samples for wildcard identification in chunks of 10,000...", "yellow"))
+
+	numberOfFindingsChunks = len(findings) // 10000 + 1
+	findingsChunks = utilities.MiscHelpers.chunkify(findings, 10000)
+	findingsChunkIterator = 1
+
 	timestamp = int(time())
 	wildcards = set()
 	optimized_wildcards = {}
 	new_wildcards = OrderedDict()
-	numberOfChunks = 1
-	leaveFlag = False
 
-	if len(sub_levels) <= 100000:
-		print(colored("\n[*]-Checking for wildcards...", "yellow"))
-
-	else:
-		print(colored("\n[*]-Checking for wildcards, in chunks of 100,000...", "yellow"))
+	for findingsChunk in findingsChunks:
+		sub_levels = utilities.MiscHelpers.uniqueSubdomainLevels(findingsChunk)
 		numberOfChunks = len(sub_levels) // 100000 + 1
+		leaveFlag = False
 
-	subLevelChunks = utilities.MiscHelpers.chunkify(sub_levels, 100000)
-	iteration = 1
+		print("  \__ {0} {1}".format(colored("Checking for wildcards for chunk", "yellow"), colored(str(findingsChunkIterator) + "/" + str(numberOfFindingsChunks), "cyan")))
 
-	del sub_levels
-	collect()
+		subLevelChunks = utilities.MiscHelpers.chunkify(sub_levels, 100000)
+		iteration = 1
 
-	for subLevelChunk in subLevelChunks:
-		with ThreadPoolExecutor(max_workers=threads) as executor:
-			tasks = {executor.submit(checkWildcard, str(timestamp), sub_level, domain) for sub_level in subLevelChunk}
+		del sub_levels
+		collect()
 
-			try:
-				completed = as_completed(tasks)
+		for subLevelChunk in subLevelChunks:
+			with ThreadPoolExecutor(max_workers=threads) as executor:
+				tasks = {executor.submit(checkWildcard, str(timestamp), sub_level, domain) for sub_level in subLevelChunk}
 
-				if iteration == numberOfChunks:
-					leaveFlag = True
+				try:
+					completed = as_completed(tasks)
 
-				if numberOfChunks == 1:
-					completed = tqdm(completed, total=len(subLevelChunk), desc="  \__ {0}".format(colored("Progress", "cyan")), dynamic_ncols=True, leave=leaveFlag)
+					if iteration == numberOfChunks:
+						leaveFlag = True
 
-				else:
-					completed = tqdm(completed, total=len(subLevelChunk), desc="  \__ {0}".format(colored("Progress {0}/{1}".format(iteration, numberOfChunks), "cyan")), dynamic_ncols=True, leave=leaveFlag)
+					if numberOfChunks == 1:
+						completed = tqdm(completed, total=len(subLevelChunk), desc="    \__ {0}".format(colored("Progress", "cyan")), dynamic_ncols=True, leave=leaveFlag)
 
-				for task in completed:
-					result = task.result()
+					else:
+						completed = tqdm(completed, total=len(subLevelChunk), desc="    \__ {0}".format(colored("Progress {0}/{1}".format(iteration, numberOfChunks), "cyan")), dynamic_ncols=True, leave=leaveFlag)
 
-					if result[1] is not None:
-						for address in result[1]:
-							wildcards.add((".".join([result[0], domain]), address))
+					for task in completed:
+						result = task.result()
 
-			except KeyboardInterrupt:
-				completed.close()
-				print(colored("\n[*]-Received keyboard interrupt! Shutting down...\n", "red"))
-				executor.shutdown(wait=False)
-				exit(-1)
+						if result[1] is not None:
+							for address in result[1]:
+								wildcards.add((".".join([result[0], domain]), address))
 
-		if iteration < numberOfChunks:
-			stderr.write("\033[F")
+				except KeyboardInterrupt:
+					completed.close()
+					print(colored("\n[*]-Received keyboard interrupt! Shutting down...\n", "red"))
+					executor.shutdown(wait=False)
+					exit(-1)
 
-		iteration += 1
+			if iteration < numberOfChunks:
+				stderr.write("\033[F")
+
+			iteration += 1
+		
+		if findingsChunkIterator < numberOfFindingsChunks:
+			stdout.write("\033[F\033[F")
+		
+		findingsChunkIterator += 1
 
 	if wildcards:
 		reversed_wildcards = [(".".join(reversed(hostname.split("."))).rstrip("."), ip) for hostname, ip in wildcards]

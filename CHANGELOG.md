@@ -1,3 +1,18 @@
+# Version 3.3.2
+
+### --- New Features
+1. Added various new signatures for takeover identification
+2. Added the ability to have more than one signature per service 
+
+### --- Bug Fixes
+1. Fixed the Spyse collector so that it's working due to changes in the API
+
+### --- Misc
+1. Changed handling of permutations so now they happen in chunks
+2. Changed handling of wildcard identification to use chunks
+3. Memory handling is a lot better
+4. Updated README.md
+
 # Version 3.2.2
 
 ### --- New Features
