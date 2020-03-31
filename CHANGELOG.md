@@ -3,6 +3,7 @@
 ### --- New Features
 1. Added various new signatures for takeover identification
 2. Added the ability to have more than one signature per service 
+3. Added new permutation function for numeric iteration
 
 ### --- Bug Fixes
 1. Fixed the Spyse collector so that it's working due to changes in the API
