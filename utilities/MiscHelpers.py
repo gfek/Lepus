@@ -1,4 +1,5 @@
 from slack import WebClient
+from datetime import datetime
 from termcolor import colored
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import FlushError
@@ -229,8 +230,7 @@ def generateURLs(db, domain, portscan, timestamp):
 						db.rollback()
 
 
-def slackNotification(token, channel, subdomain, provider, signature):
-	text = """```\nSubdomain: {0}\nProvider: {1}\nSignature: {2}\n```""".format(subdomain, provider, signature)
+def slackNotification(token, channel, text):
 	client = WebClient(token=token)
 	client.chat_postMessage(channel=channel, text=text, username="Lepus", icon_emoji=":rabbit2:")
 
@@ -249,7 +249,9 @@ def exportFindings(db, domain, old_resolved):
 	with open("{0}/{1}".format(path, "resolved_public.csv"), "w") as resolved_public:
 		with open("{0}/{1}".format(path, "resolved_private.csv"), "w") as resolved_private:
 			with open("{0}/{1}".format(path, "resolved_ipv6.csv"), "w") as resolved_ipv6:
-				with open("{0}/{1}".format(path, "diff.csv"), "w") as diff:
+				with open("{0}/{1}".format(path, "diff.log"), "a") as diff:
+					new = True
+
 					for row1 in db.query(Resolution.subdomain).filter(Resolution.domain == domain).order_by(Resolution.subdomain).distinct():
 						diff_list = []
 						public = []
@@ -272,11 +274,15 @@ def exportFindings(db, domain, old_resolved):
 									public.append(row2.address)
 
 						if diff_list:
+							if new:
+								diff.write("\n[!] {0}\n".format(datetime.now()))
+								new = False
+
 							if row1.subdomain == "":
-								diff.write("{0}|{1}\n".format(domain, ",".join(diff_list)))
+								diff.write("  \__ {0}: {1}\n".format(domain, ", ".join(diff_list)))
 
 							else:
-								diff.write("{0}.{1}|{2}\n".format(row1.subdomain, domain, ",".join(diff_list)))
+								diff.write("  \__ {0}.{1}: {2}\n".format(row1.subdomain, domain, ", ".join(diff_list)))
 
 						if ipv6:
 							if row1.subdomain == "":

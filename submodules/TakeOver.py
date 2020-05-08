@@ -918,6 +918,7 @@ def init(db, domain, old_takeovers, threads):
 	targets = set()
 	notify = False
 	takeovers = []
+	notifications = []
 	timestamp = int(time())
 
 	parser = RawConfigParser()
@@ -975,4 +976,19 @@ def init(db, domain, old_takeovers, threads):
 
 		if notify:
 			if takeover[0] not in old_takeovers:
-				slackNotification(SLACK_LEGACY_TOKEN, SLACK_CHANNEL, takeover[0], takeover[1], takeover[2])
+				notifications.append([takeover[0], takeover[1], takeover[2]])
+	
+	if notify:
+		text = ""
+		counter = 0			
+		
+		for notification in notifications:
+			text += """Subdomain: {0}\nProvider: {1}\nSignature: {2}\n\n""".format(notification[0], notification[1], notification[2])
+			counter += 1
+
+			if counter % 25 == 0:
+				slackNotification(SLACK_LEGACY_TOKEN, SLACK_CHANNEL, "```{0}```".format(text[:-1]))
+				text = ""
+
+		if text != "":
+			slackNotification(SLACK_LEGACY_TOKEN, SLACK_CHANNEL, "```{0}```".format(text[:-1]))

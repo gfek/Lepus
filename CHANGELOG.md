@@ -1,4 +1,15 @@
-# Version 3.3.2
+# Version 3.3.1
+
+### --- New Features
+1. Added history on diff log
+
+### --- Bug Fixes
+1. Fixed a bug on the Slack messaging mechanism
+
+### --- Misc
+1. Updated requirements.txt
+
+# Version 3.3.0
 
 ### --- New Features
 1. Added various new signatures for takeover identification
