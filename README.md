@@ -1,6 +1,6 @@
 [![GitHub License](https://img.shields.io/badge/License-BSD%203--Clause-informational.svg)](https://github.com/GKNSB/Lepus/blob/master/LICENSE)
 [![GitHub Python](https://img.shields.io/badge/Python-%3E=%203.6-informational.svg)](https://www.python.org/)
-[![GitHub Version](https://img.shields.io/badge/Version-3.3.2-green.svg)](https://github.com/GKNSB/Lepus)
+[![GitHub Version](https://img.shields.io/badge/Version-3.3.1-green.svg)](https://github.com/GKNSB/Lepus)
 
 ## Lepus
 **Sub-domain finder**
@@ -158,15 +158,15 @@ This module also supports slack notifications on newly identified potential take
 
 |Package|Version|
 |---|---|
-|beautifulsoup4|4.8.1|
+|beautifulsoup4|4.9.0|
 |dnspython|1.16.0|
 |ipwhois|1.1.0|
-|requests|2.22.0|
-|shodan|1.19.0|
-|slackclient|2.2.0|
-|sqlalchemy|1.3.9|
+|requests|2.23.0|
+|shodan|1.23.0|
+|slackclient|2.5.0|
+|sqlalchemy|1.3.16|
 |termcolor|1.1.0|
-|tqdm|4.36.1|
+|tqdm|4.46.0|
 
 ### Installation
 
