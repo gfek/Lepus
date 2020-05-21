@@ -986,9 +986,9 @@ def init(db, domain, old_takeovers, threads):
 			text += """Subdomain: {0}\nProvider: {1}\nSignature: {2}\n\n""".format(notification[0], notification[1], notification[2])
 			counter += 1
 
-			if counter % 25 == 0:
-				slackNotification(SLACK_LEGACY_TOKEN, SLACK_CHANNEL, "```{0}```".format(text[:-1]))
+			if counter % 20 == 0:
+				slackNotification(SLACK_LEGACY_TOKEN, SLACK_CHANNEL, "```\n{0}```".format(text[:-1]))
 				text = ""
 
 		if text != "":
-			slackNotification(SLACK_LEGACY_TOKEN, SLACK_CHANNEL, "```{0}```".format(text[:-1]))
+			slackNotification(SLACK_LEGACY_TOKEN, SLACK_CHANNEL, "```\n{0}```".format(text[:-1]))
