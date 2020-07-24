@@ -30,10 +30,10 @@ The utility is collecting data from the following services:
 |[CertSpotter](https://sslmate.com/certspotter/)|No|
 |[CRT](https://crt.sh/)|No|
 |[DNSTrails](https://securitytrails.com/dns-trails/)|Yes|
-|[Entrust Certificates](https://www.entrust.com/ct-search/)|No|
 |[Google Transparency](https://transparencyreport.google.com/)|No|
 |[HackerTarget](https://hackertarget.com/)|No|
 |[PassiveTotal](https://www.riskiq.com/products/passivetotal/)|Yes|
+|[Project Crobat](https://sonar.omnisint.io/)|No|
 |[Project Sonar](https://www.rapid7.com/research/project-sonar/)|No|
 |[Riddler](https://riddler.io/)|Yes|
 |[Shodan](https://www.shodan.io/)|Yes|
