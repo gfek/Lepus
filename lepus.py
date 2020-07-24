@@ -9,7 +9,6 @@ import collectors.Censys
 import collectors.CertSpotter
 import collectors.CRT
 import collectors.DNSTrails
-import collectors.EntrustCertificates
 import collectors.GoogleTransparency
 import collectors.HackerTarget
 import collectors.PassiveTotal
@@ -86,7 +85,6 @@ if __name__ == "__main__":
 			collector_subdomains += collectors.CertSpotter.init(args.domain)
 			collector_subdomains += collectors.CRT.init(args.domain)
 			collector_subdomains += collectors.DNSTrails.init(args.domain)
-			collector_subdomains += collectors.EntrustCertificates.init(args.domain)
 			collector_subdomains += collectors.GoogleTransparency.init(args.domain)
 			collector_subdomains += collectors.HackerTarget.init(args.domain)
 			collector_subdomains += collectors.PassiveTotal.init(args.domain)
