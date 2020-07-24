@@ -36,7 +36,7 @@ def init(domain, ranges):
 
 					else:
 						data = json.loads(response.text)
-						
+
 						for d in data:
 							if domain in d:
 								Crobat.append(d)
