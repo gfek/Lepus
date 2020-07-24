@@ -1,3 +1,16 @@
+# Version 3.3.2
+
+### --- New Features
+1. Added Project Crobat collector
+
+### --- Bug Fixes
+1. Fixed a bug on the CRT collector
+
+### --- Misc
+1. Updated requirements.txt
+2. Updated Spyse collector
+3. Removed broken Entrust Certificates collector
+
 # Version 3.3.1
 
 ### --- New Features
