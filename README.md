@@ -158,15 +158,15 @@ This module also supports slack notifications on newly identified potential take
 
 |Package|Version|
 |---|---|
-|beautifulsoup4|4.9.0|
-|dnspython|1.16.0|
+|beautifulsoup4|4.9.1|
+|dnspython|2.0.0|
 |ipwhois|1.1.0|
-|requests|2.23.0|
+|requests|2.24.0|
 |shodan|1.23.0|
-|slackclient|2.5.0|
-|sqlalchemy|1.3.16|
+|slackclient|2.7.3|
+|sqlalchemy|1.3.18|
 |termcolor|1.1.0|
-|tqdm|4.46.0|
+|tqdm|4.48.0|
 
 ### Installation
 
