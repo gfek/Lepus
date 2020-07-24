@@ -13,6 +13,7 @@ import collectors.EntrustCertificates
 import collectors.GoogleTransparency
 import collectors.HackerTarget
 import collectors.PassiveTotal
+import collectors.ProjectCrobat
 import collectors.ProjectSonar
 import collectors.Riddler
 import collectors.Shodan
@@ -89,6 +90,7 @@ if __name__ == "__main__":
 			collector_subdomains += collectors.GoogleTransparency.init(args.domain)
 			collector_subdomains += collectors.HackerTarget.init(args.domain)
 			collector_subdomains += collectors.PassiveTotal.init(args.domain)
+			collector_subdomains += collectors.ProjectCrobat.init(args.domain, args.ranges)
 			collector_subdomains += collectors.ProjectSonar.init(args.domain)
 			collector_subdomains += collectors.Riddler.init(args.domain)
 			collector_subdomains += collectors.Shodan.init(args.domain)
