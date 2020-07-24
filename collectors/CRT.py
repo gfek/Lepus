@@ -18,8 +18,16 @@ def init(domain):
 			data = json.loads(response.text)
 
 			for d in data:
-				if not d["name_value"].startswith("*"):
-					CRT.append(d["name_value"])
+				if "\n" in d["name_value"]:
+					values = d["name_value"].split("\n")
+
+					for value in values:
+						if not value.startswith("*"):
+							CRT.append(value)
+
+				else:
+					if not d["name_value"].startswith("*"):
+						CRT.append(d["name_value"])
 
 			CRT = set(CRT)
 
