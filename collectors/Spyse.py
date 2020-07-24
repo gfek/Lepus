@@ -7,7 +7,7 @@ from configparser import RawConfigParser
 def init(domain):
 	SP = []
 
-	print(colored("[*]-Searching Spyse API...", "yellow"))
+	print(colored("[*]-Searching Spyse...", "yellow"))
 
 	parser = RawConfigParser()
 	parser.read("config.ini")
@@ -17,29 +17,58 @@ def init(domain):
 		print("  \__", colored("No Spyse API token configured", "red"))
 		return []
 
-	headers = {"user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:52.0) Gecko/20100101 Firefox/52.0"}
-	url = "https://api.spyse.com/v1/subdomains?api_token={0}&domain={1}&page=".format(SPYSE_API_TOKEN, domain)
+	headers = {
+		"user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:52.0) Gecko/20100101 Firefox/52.0",
+		"Authorization": "Bearer {0}".format(SPYSE_API_TOKEN),
+		"accept": "application/json"
+	}
+
+	limit = 100
+	offset = 0
+	url = "https://api.spyse.com/v3/data/domain/subdomain?limit={0}&offset={1}&domain={2}".format(limit, offset, domain)
 
 	try:
-		page = 1
+		response = requests.get(url, headers=headers)
 
-		while(True):
-			response = requests.get(url + str(page), headers=headers, verify=False)
+		if response.status_code == 200:
 			response_json = loads(response.text)
 
-			if "records" not in response.text or len(response_json["records"]) == 0:
-				break
+			for item in response_json["data"]["items"]:
+				SP.append(item["name"])
 
-			else:
-				for record in response_json["records"]:
-					SP.append(record["domain"])
+			total_count = response_json["data"]["total_count"]
 
-				page += 1
+			if total_count > limit:
+				offset += limit
 
-		SP = set(SP)
+				while offset < total_count:
+					url = "https://api.spyse.com/v3/data/domain/subdomain?limit={0}&offset={1}&domain={2}".format(limit, offset, domain)
 
-		print("  \__ {0}: {1}".format(colored("Subdomains found", "cyan"), colored(len(SP), "yellow")))
-		return SP
+					response = requests.get(url, headers=headers)
+
+					if response.status_code == 200:
+						response_json = loads(response.text)
+
+						for item in response_json["data"]["items"]:
+							SP.append(item["name"])
+
+						offset += limit
+
+					elif response.status_code == 402:
+						break;
+
+			SP = set(SP)
+
+			print("  \__ {0}: {1}".format(colored("Subdomains found", "cyan"), colored(len(SP), "yellow")))
+			return SP
+
+		elif response.status_code == 401:
+			print("  \__", colored("Authentication error!", "red"))
+			return []
+
+		elif response.status_code == 402:
+			print("  \__", colored("Request quota exceeded!", "red"))
+			return []
 
 	except requests.exceptions.RequestException as err:
 		print("  \__", colored(err, "red"))
