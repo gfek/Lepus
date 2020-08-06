@@ -309,6 +309,10 @@ def exportFindings(db, domain, old_resolved):
 		for row in db.query(Unresolved.subdomain).filter(Unresolved.domain == domain).order_by(Unresolved.subdomain):
 			unresolved.write("{0}.{1}\n".format(row.subdomain, domain))
 
+	with open("{0}/{1}".format(path, "wildcards.csv"), "w") as wildcards:
+		for row in db.query(Wildcard).filter(Wildcard.domain == domain).order_by(Wildcard.subdomain):
+                        wildcards.write("{0}.{1}|{2}\n".format(row.subdomain, domain, row.address))
+
 	with open("{0}/{1}".format(path, "asn.csv"), "w") as asn:
 		for row in db.query(ASN).filter(ASN.domain == domain).order_by(ASN.id):
 			asn.write("{0}|{1}|{2}\n".format(row.id, row.prefix, row.description))
