@@ -2,6 +2,7 @@
 
 ### --- New Features
 1. Added Project Crobat collector
+2. Added export of wildcards
 
 ### --- Bug Fixes
 1. Fixed a bug on the CRT collector
