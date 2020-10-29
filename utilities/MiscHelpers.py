@@ -74,9 +74,6 @@ def loadOldFindings(db, domain):
 
 
 def purgeOldFindings(db, domain):
-	db.query(Record).filter(Record.domain == domain).delete()
-	db.commit()
-
 	db.query(Wildcard).filter(Wildcard.domain == domain).delete()
 	db.commit()
 
