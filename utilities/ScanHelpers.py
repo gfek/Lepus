@@ -42,6 +42,10 @@ def retrieveDNSRecords(db, domain):
 	resolver.lifetime = 1
 	types = ["A", "MX", "NS", "AAAA", "SOA", "TXT"]
 	timestamp = int(time())
+	
+	db.query(Record).filter(Record.domain == domain).delete()
+	db.commit()
+	db.execute("VACUUM;")
 
 	print(colored("[*]-Retrieving DNS Records...", "yellow"))
 
