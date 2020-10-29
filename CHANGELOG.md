@@ -6,6 +6,7 @@
 
 ### --- Bug Fixes
 1. Fixed a bug on the CRT collector
+2. Fixed a bug that was unintentionally purging the retrieved DNS records of the target domain
 
 ### --- Misc
 1. Updated requirements.txt
