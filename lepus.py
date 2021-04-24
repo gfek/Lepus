@@ -99,7 +99,7 @@ if __name__ == "__main__":
 			collector_hosts += collectors.Censys.init(args.domain)
 			collector_hosts += collectors.CertSpotter.init(args.domain)
 			collector_hosts += collectors.CRT.init(args.domain)
-			collector_hosts += collectors.DNSDB.init(args.domain)
+			#collector_hosts += collectors.DNSDB.init(args.domain)
 			collector_hosts += collectors.DNSTrails.init(args.domain)
 			collector_hosts += collectors.EntrustCertificates.init(args.domain)
 			collector_hosts += collectors.FindSubdomains.init(args.domain)
