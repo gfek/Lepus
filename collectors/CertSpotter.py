@@ -17,7 +17,7 @@ def init(domain):
 
 	base_url = "https://api.certspotter.com"
 	next_link = "/v1/issuances?domain={0}&include_subdomains=true&expand=dns_names".format(domain)
-	headers = {"user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:52.0) Gecko/20100101 Firefox/52.0"}
+	headers = {"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:88.0) Gecko/20100101 Firefox/88.0"}
 
 	while next_link:
 		try:

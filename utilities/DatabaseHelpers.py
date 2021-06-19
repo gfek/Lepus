@@ -1,3 +1,4 @@
+import os
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, String, Integer, Boolean, create_engine
@@ -82,7 +83,10 @@ class Takeover(Base):
 
 
 def init():
-	engine = create_engine("sqlite:///findings.sqlite")
+	if os.path.exists("findings.sqlite"):
+		os.rename("findings.sqlite", "lepusdb.sqlite")
+
+	engine = create_engine("sqlite:///lepusdb.sqlite")
 	Base.metadata.create_all(engine)
 	Base.metadata.bind = engine
 	DBSession = sessionmaker(bind=engine)

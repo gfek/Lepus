@@ -22,7 +22,7 @@ def init(domain):
 	else:
 		auth = {"email": RIDDLER_USERNAME, "password": RIDDLER_PASSWORD}
 		auth_url = "https://riddler.io/auth/login"
-		headers = {"user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:52.0) Gecko/20100101 Firefox/52.0", "content-type": "application/json"}
+		headers = {"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:88.0) Gecko/20100101 Firefox/88.0", "content-type": "application/json"}
 
 		try:
 			auth_response = requests.post(auth_url, json=auth, headers=headers)
@@ -32,7 +32,7 @@ def init(domain):
 				auth_token = auth_response_json["response"]["user"]["authentication_token"]
 				search = {"query": "pld:{0}".format(quote(domain)), "output": "host"}
 				search_url = "https://riddler.io/api/search"
-				headers = {"user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:52.0) Gecko/20100101 Firefox/52.0", "content-type": "application/json", "authentication-token": auth_token}
+				headers = {"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:88.0) Gecko/20100101 Firefox/88.0", "content-type": "application/json", "authentication-token": auth_token}
 
 				search_response = requests.post(search_url, json=search, headers=headers)
 

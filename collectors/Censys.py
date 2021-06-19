@@ -35,8 +35,14 @@ def init(domain):
 			for page in range(2, int(numberOfPages[0]) + 1):
 				payload = {"query": domain, "page": page}
 				res = requests.post(API_URL + "/search/certificates", json=payload, auth=(UID, SECRET))
-				tempC = re.findall("CN=([\w\.\-\d]+)\." + domain, str(res.content))
-				C = C + tempC
+
+				if res.status_code != 200:
+					print("  \__", colored("Search result limit reached. See https://www.censys.io/account for search results limit details.", "red"))
+					break
+
+				else:
+					tempC = re.findall("CN=([\w\.\-\d]+)\." + domain, str(res.content))
+					C = C + tempC
 
 			C = set(C)
 

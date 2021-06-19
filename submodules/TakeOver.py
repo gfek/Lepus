@@ -18,7 +18,7 @@ from utilities.MiscHelpers import chunkify, slackNotification
 
 simplefilter("ignore")
 
-headers = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:52.0) Gecko/20100101 Firefox/52.0", "Content-Type": "application/json"}
+headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:88.0) Gecko/20100101 Firefox/88.0", "Content-Type": "application/json"}
 signatures = {
 	"Amazon AWS/S3": ["NoSuchBucket"],
 	"Bitbucket": ["Repository not found"],
@@ -68,7 +68,11 @@ signatures = {
 	"Kajabi": ["No such app", "not found"],
 	"Airee": ["https://xn--80aqc2a.xn--p1ai/"],
 	"Hatena": ["404 Blog is not found"],
-	"Launchrock": ["you may have taken a wrong turn somewhere"]
+	"Launchrock": ["you may have taken a wrong turn somewhere"],
+	"Kayako": ["That's not an active Kayako account"],
+	"Ning": ["Please double-check the address you've just entered", "is free to take"],
+	"Moosend": ["One account fits everything:"]
+
 }
 
 
@@ -641,6 +645,36 @@ def apigee(domain, ARecords, CNAME):
 	return outcome
 
 
+def kayako(domain, ARecords, CNAME):
+	outcome = []
+
+	if findSignatures(domain, signatures["Kayako"], 1):
+		outcome = ["Kayako", domain, CNAME]
+
+	return outcome
+
+
+def ning(domain, ARecords, CNAME):
+	outcome = []
+
+	if findSignatures(domain, signatures["Ning"], 1) and findSignatures(CNAME, signatures["Ning"], 1):
+		outcome = ["Ning", domain, CNAME]
+
+	return outcome
+
+
+def moosend(domain, ARecords, CNAME):
+	outcome = []
+
+	if "m-pages.com" in CNAME:
+		outcome = ["Moosend Landing Page", domain, CNAME]
+
+	elif not findSignatures(domain, signatures["Moosend"], 1):
+		outcome = ["Moosend", domain, CNAME]
+
+	return outcome
+
+
 def identify(domain, ARecords, CNAMERecords):
 	outcome = []
 
@@ -703,6 +737,17 @@ def identify(domain, ARecords, CNAMERecords):
 
 		elif "cargocollective.com" in CNAME:
 			outcome = cargoCollective(domain, ARecords, CNAME)
+
+		elif "kayako.com" in CNAME:
+			outcome = kayako(domain, ARecords, CNAME)
+
+		elif "ning.com" in CNAME:
+			for entry in ARecords:
+				if str(entry) == "208.82.16.68":
+					outcome = ning(domain, ARecords, CNAME)
+
+		elif "moosend.com" in CNAME or "m-pages.com" in CNAME:
+			outcome = moosend(domain, ARecords, CNAME)
 
 		elif "herokuapp.com" in CNAME:
 			outcome = heroku(domain, ARecords, CNAME)

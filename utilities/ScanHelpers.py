@@ -151,7 +151,8 @@ def identifyWildcards(db, findings, domain, threads):
 
 				except KeyboardInterrupt:
 					completed.close()
-					print(colored("\n[*]-Received keyboard interrupt! Shutting down...\n", "red"))
+					print(colored("\n[*]-Received keyboard interrupt! Shutting down...", "red"))
+					utilities.MiscHelpers.exportFindings(db, domain, [], True)
 					executor.shutdown(wait=False)
 					exit(-1)
 
@@ -314,7 +315,8 @@ def massResolve(db, findings, domain, hideWildcards, threads):
 
 			except KeyboardInterrupt:
 				completed.close()
-				print(colored("\n[*]-Received keyboard interrupt! Shutting down...\n", "red"))
+				print(colored("\n[*]-Received keyboard interrupt! Shutting down...", "red"))
+				utilities.MiscHelpers.exportFindings(db, domain, [], True)
 				executor.shutdown(wait=False)
 				exit(-1)
 
@@ -442,7 +444,8 @@ def massReverseLookup(db, domain, IPs, threads):
 
 			except KeyboardInterrupt:
 				completed.close()
-				print(colored("\n[*]-Received keyboard interrupt! Shutting down...\n", "red"))
+				print(colored("\n[*]-Received keyboard interrupt! Shutting down...", "red"))
+				utilities.MiscHelpers.exportFindings(db, domain, [], True)
 				executor.shutdown(wait=False)
 				exit(-1)
 
@@ -592,7 +595,8 @@ def massConnectScan(db, domain, numberOfUniqueIPs, targets, threads, timestamp):
 
 			except KeyboardInterrupt:
 				completed.close()
-				print(colored("\n[*]-Received keyboard interrupt! Shutting down...\n", "red"))
+				print(colored("\n[*]-Received keyboard interrupt! Shutting down...", "red"))
+				utilities.MiscHelpers.exportFindings(db, domain, [], True)
 				executor.shutdown(wait=False)
 				exit(-1)
 
@@ -676,7 +680,8 @@ def massRDAP(db, domain, threads):
 
 			except KeyboardInterrupt:
 				completed.close()
-				print(colored("\n[*]-Received keyboard interrupt! Shutting down...\n", "red"))
+				print(colored("\n[*]-Received keyboard interrupt! Shutting down...", "red"))
+				utilities.MiscHelpers.exportFindings(db, domain, [], True)
 				executor.shutdown(wait=False)
 				exit(-1)
 

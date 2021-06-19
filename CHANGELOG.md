@@ -1,3 +1,28 @@
+# Version 3.4.0
+
+### --- New Features
+1. Added Markov submodule
+2. Added --flush flag to purge an entry from the database and exit
+3. Signature for kayako takeover
+4. Signature for ning takeover
+5. Signature for moosend takeover
+6. Added export functionality when ctrl+c is pressed up to the latest completed module - does not create diff.
+7. New Project Discovery Chaos collector
+8. New ZoomEye collector
+
+### --- Bug Fixes
+1. Fixed Censys collector so that it doesn't waste requests and it identifies search result limit
+2. Fixed logical bug in portscan that caused very long duration of execution
+3. Removed Entrust Certificates collector as it's no longer being used
+4. Better exception handling in some minor cases
+
+### --- Misc
+1. Changed database name from findings.sqlite to lepusdb.sqlite
+2. Minor cosmetic fixes in output
+3. Updated user-agent strings
+4. Changed README file
+5. Updated requirements.txt
+
 # Version 3.3.2
 
 ### --- New Features

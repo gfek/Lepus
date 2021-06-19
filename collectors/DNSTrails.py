@@ -17,7 +17,7 @@ def init(domain):
 		return []
 
 	else:
-		headers = {"user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:52.0) Gecko/20100101 Firefox/52.0", "content-type": "application/json", "APIKEY": DNSTrails_API_KEY}
+		headers = {"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:88.0) Gecko/20100101 Firefox/88.0", "content-type": "application/json", "APIKEY": DNSTrails_API_KEY}
 		url = "https://api.securitytrails.com/v1/domain/{}/subdomains".format(domain)
 
 		try:
