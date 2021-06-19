@@ -18,7 +18,7 @@ def init(domain):
 		return []
 
 	headers = {
-		"user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:52.0) Gecko/20100101 Firefox/52.0",
+		"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:88.0) Gecko/20100101 Firefox/88.0",
 		"Authorization": "Bearer {0}".format(SPYSE_API_TOKEN),
 		"accept": "application/json"
 	}
@@ -63,11 +63,11 @@ def init(domain):
 			return SP
 
 		elif response.status_code == 401:
-			print("  \__", colored("Authentication error!", "red"))
+			print("  \__", colored("Authentication error.", "red"))
 			return []
 
 		elif response.status_code == 402:
-			print("  \__", colored("Request quota exceeded!", "red"))
+			print("  \__", colored("Request quota exceeded.", "red"))
 			return []
 
 	except requests.exceptions.RequestException as err:

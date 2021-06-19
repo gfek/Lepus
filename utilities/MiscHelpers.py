@@ -196,35 +196,34 @@ def chunkify(original, numberOfItemsInChunk):
 
 def generateURLs(db, domain, portscan, timestamp):
 	for address, ports in portscan.items():
-		for row in db.query(Resolution).filter(Resolution.domain == domain):
+		for row in db.query(Resolution).filter(Resolution.domain == domain, Resolution.address == address):
 			if row.subdomain:
 				hostname = ".".join([row.subdomain, domain])
 
 			else:
 				hostname = domain
 
-			if address == row.address:
-				for port in ports:
-					if port[0] == 80:
-						url = "http://{0}/".format(hostname)
+			for port in ports:
+				if port[0] == 80:
+					url = "http://{0}/".format(hostname)
 
-					elif port[0] == 443:
-						url = "https://{0}/".format(hostname)
+				elif port[0] == 443:
+					url = "https://{0}/".format(hostname)
+
+				else:
+					if port[1]:
+						url = "https://{0}:{1}/".format(hostname, port[0])
 
 					else:
-						if port[1]:
-							url = "https://{0}:{1}/".format(hostname, port[0])
+						url = "http://{0}:{1}/".format(hostname, port[0])
 
-						else:
-							url = "http://{0}:{1}/".format(hostname, port[0])
+				db.add(URL(url=url, domain=domain, timestamp=timestamp))
 
-					db.add(URL(url=url, domain=domain, timestamp=timestamp))
+				try:
+					db.commit()
 
-					try:
-						db.commit()
-
-					except (IntegrityError, FlushError):
-						db.rollback()
+				except (IntegrityError, FlushError):
+					db.rollback()
 
 
 def slackNotification(token, channel, text):
@@ -232,8 +231,11 @@ def slackNotification(token, channel, text):
 	client.chat_postMessage(channel=channel, text=text, username="Lepus", icon_emoji=":rabbit2:")
 
 
-def exportFindings(db, domain, old_resolved):
-	print(colored("\n[*]-Exporting Findings...", "yellow"))
+def exportFindings(db, domain, old_resolved, interrupt):
+	if interrupt:
+		print(colored("\n[*]-Exporting what has been found so far...", "red"))
+	else:
+		print(colored("\n[*]-Exporting findings...", "yellow"))
 
 	old_hostnames = [items[0] for items in old_resolved]
 	path = "findings/{0}".format(domain)
@@ -308,7 +310,7 @@ def exportFindings(db, domain, old_resolved):
 
 	with open("{0}/{1}".format(path, "wildcards.csv"), "w") as wildcards:
 		for row in db.query(Wildcard).filter(Wildcard.domain == domain).order_by(Wildcard.subdomain):
-                        wildcards.write("{0}.{1}|{2}\n".format(row.subdomain, domain, row.address))
+			wildcards.write("{0}.{1}|{2}\n".format(row.subdomain, domain, row.address))
 
 	with open("{0}/{1}".format(path, "asn.csv"), "w") as asn:
 		for row in db.query(ASN).filter(ASN.domain == domain).order_by(ASN.id):

@@ -21,7 +21,7 @@ def init(domain):
 		auth = (PT_KEY, PT_SECRET)
 		url = "https://api.passivetotal.org/v2/enrichment/subdomains"
 		data = {"query": domain}
-		headers = {"user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:52.0) Gecko/20100101 Firefox/52.0"}
+		headers = {"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:88.0) Gecko/20100101 Firefox/88.0"}
 
 		try:
 			response = requests.get(url, auth=auth, json=data, headers=headers)

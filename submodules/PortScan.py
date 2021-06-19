@@ -48,7 +48,6 @@ def init(db, domain, port_scan, threads):
 	del targets
 	collect()
 
-
 	for row in db.query(OpenPort).filter(OpenPort.domain == domain, OpenPort.timestamp == timestamp).order_by(OpenPort.address, OpenPort.port):
 		if row.address in open_ports:
 			open_ports[row.address].append((row.port, row.isSSL))
