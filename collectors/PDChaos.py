@@ -7,7 +7,7 @@ from configparser import RawConfigParser
 def init(domain):
 	PDCH = []
 
-	print(colored("[*]-Searching Project Discovery Chaos API...", "yellow"))
+	print(colored("[*]-Searching Project Discovery Chaos...", "yellow"))
 
 	parser = RawConfigParser()
 	parser.read("config.ini")
