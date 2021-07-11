@@ -1,4 +1,5 @@
 import requests
+from json import loads
 from termcolor import colored
 from configparser import RawConfigParser
 
@@ -28,12 +29,10 @@ def init(domain):
 				return []
 
 			else:
-				payload = response.json()
+				payload = loads(response.text)
 
-			for k, v in list(payload.items()):
-				if v:
-					for dnsvalue in v:
-						DT.append(".".join([dnsvalue, domain]))
+			for item in payload["subdomains"]:
+				DT.append(".".join([item, domain]))
 
 			DT = set(DT)
 

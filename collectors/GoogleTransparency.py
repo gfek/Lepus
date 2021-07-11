@@ -5,8 +5,12 @@ from termcolor import colored
 
 def parseResponse(response, domain):
 	try:
-		token = response.split("\n]\n,[")[2].split("]\n")[0].split(",")[1].strip("\"")
-		hostnameRegex = "([\w\.\-]+\.%s)" % (domain.replace(".", "\."))
+		try:
+			token = findall("(\w+)\",[\w\"]+,\d+,\d+\]\]\]$", response)[0]
+		except Exception:
+			token = "null"
+
+		hostnameRegex = "([\w\d][\w\d\-\.]*\.{0})".format(domain.replace(".", "\."))
 		hosts = findall(hostnameRegex, response)
 
 		return token, [host.lstrip(".") for host in hosts]

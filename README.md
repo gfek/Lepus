@@ -44,6 +44,7 @@ The Collectors mode collects subdomains from the following services:
 |[CertSpotter](https://sslmate.com/certspotter/)|No|
 |[CRT](https://crt.sh/)|No|
 |[DNSTrails](https://securitytrails.com/dns-trails/)|Yes|
+|[FOFA](https://fofa.so/)|Yes|
 |[Google Transparency](https://transparencyreport.google.com/)|No|
 |[HackerTarget](https://hackertarget.com/)|No|
 |[PassiveTotal](https://www.riskiq.com/products/passivetotal/)|Yes|
@@ -54,6 +55,7 @@ The Collectors mode collects subdomains from the following services:
 |[Shodan](https://www.shodan.io/)|Yes|
 |[Spyse](https://api-doc.spyse.com/)|Yes|
 |[ThreatCrowd](https://www.threatcrowd.org/)|No|
+|[ThreatMiner](https://www.threatminer.org/)|No|
 |[VirusTotal](https://www.virustotal.com/)|Yes|
 |[Wayback Machine](https://archive.org/web/)|No|
 |[ZoomEye](https://www.zoomeye.org/)|Yes|
@@ -83,9 +85,13 @@ lepus.py --permutate -pw customsubdomains.txt yahoo.com
 ```
 
 ### ReverseDNS
-The ReverseDNS mode will gather all IP addresses that were resolved and perform a reverse DNS on each one in order to detect more subdomains. For example, if `www.example.com` resolves to `1.2.3.4`, lepus will perform a reverse DNS for `1.2.3.4` and gather any other subdomains belonging to `example.com`, e.g. `www2`,`internal` or `oldsite`. 
+The ReverseDNS mode will gather all IP addresses that were resolved and perform a reverse DNS on each one in order to detect more subdomains. For example, if `www.example.com` resolves to `1.2.3.4`, lepus will perform a reverse DNS for `1.2.3.4` and gather any other subdomains belonging to `example.com`, e.g. `www2`,`internal` or `oldsite`.
 
-To run the ReverseDNS mode use the `--reverse` argument. Additionally, lepus supports the `--ranges` (or `-r`) argument. You can use it to make reverse DNS resolutions against CIDRs that belong to the target domain. Hint: lepus will identify `ASNs` and `Networks` during enumeration, so you can use these ranges to identify more subdomains. An example run would be:
+To run the ReverseDNS module use the `--reverse` argument. Additionally, `--ripe` (or `-ripe`) can be used in order to instruct the module to query the RIPE database for potential network ranges. Moreover, lepus supports the `--ranges` (or `-r`) argument. You can use it to make reverse DNS resolutions against CIDRs that belong to the target domain.
+
+By default this module will take into account all previously identified IPs, then defined ranges, then ranges identified through the RIPE database. In case you only want to run the module against specific or RIPE identified ranges, and not against all already identified IPs, you can use the `--only-ranges` (`-or`) argument.
+
+An example run would be:
 
 ```
 lepus.py --reverse yahoo.com
@@ -94,13 +100,23 @@ lepus.py --reverse yahoo.com
 or
 
 ```
-lepus.py --reverse -r 172.216.0.0/16,183.177.80.0/23 yahoo.com
+lepus.py --reverse -ripe -r 172.216.0.0/16,183.177.80.0/23 yahoo.com
 ```
+
+or only against the defined or identified from RIPE
+
+```
+lepus.py --reverse -or -ripe -r 172.216.0.0/16,183.177.80.0/23 yahoo.com
+```
+
+Hint: lepus will identify `ASNs` and `Networks` during enumeration, so you can also use these ranges to identify more subdomains with a subsequent run.
 
 ### Markov
 With this module, Lepus will utilize Markov chains in order to train itself and then generate subdomain based on the already known ones. The bigger the general surface, the better the tool will be able to train itself and subsequently, the better the results will be.
 
-The module can be activated with the `--markovify` argument. Parameters also include the Markov state size, the maximum length of the generated candidate addition, and the quantity of generated candidates. Predefined values are 3, 5 and 5 respectively. Those arguments can be changed with `-ms` (`--markov-state`), `-ml` (`--markov-length`) and `-mq` (`--markov-quantity`) to meet your needs. Keep in mind that the larger these values are, the more time Lepus will need to generate the candidates. It has to be noted that different executions of this module might generate different candidates, so feel free to run it a few times consecutively.
+The module can be activated with the `--markovify` argument. Parameters also include the Markov state size, the maximum length of the generated candidate addition, and the quantity of generated candidates. Predefined values are 3, 5 and 5 respectively. Those arguments can be changed with `-ms` (`--markov-state`), `-ml` (`--markov-length`) and `-mq` (`--markov-quantity`) to meet your needs. Keep in mind that the larger these values are, the more time Lepus will need to generate the candidates.
+
+It has to be noted that different executions of this module might generate different candidates, so feel free to run it a few times consecutively. Keep in mind that the higher the `-ms`, `-ml` and `-mq` values, the more time will be needed for candidate generation.
 
 ```
 lepus.py --markovify yahoo.com
@@ -261,9 +277,13 @@ optional arguments:
                         lists/words.txt]
   --reverse             perform reverse dns lookups on resolved public IP
                         addresses
+  -ripe, --ripe         query ripe database for possible networks to be used
+                        for reverse lookups
   -r RANGES, --ranges RANGES
                         comma seperated ip ranges to perform reverse dns
                         lookups on
+  -or, --only-ranges    use only ranges provided with -r or -ripe and not all
+                        previously identifed IPs
   --portscan            scan resolved public IP addresses for open ports
   -p PORTS, --ports PORTS
                         set of ports to be used by the portscan module
@@ -278,14 +298,15 @@ optional arguments:
   -mq MARKOV_QUANTITY, --markov-quantity MARKOV_QUANTITY
                         max quantity of markov results per candidate length
                         [default is 5]
-  -f, --flush           purge all records of the specified domain from the database
+  -f, --flush           purge all records of the specified domain from the
+                        database
   -v, --version         show program's version number and exit
 ```
 
 ## Full command example
 The following, is an example run with all available active arguments:
 ```
-./lepus.py python.org --wordlist lists/subdomains.txt --permutate -pw ~/mypermsword.lst --reverse -r 10.11.12.0/24 --portscan -p huge --takeover --markovify -ms 3 -ml 10 -mq 10
+./lepus.py python.org --wordlist lists/subdomains.txt --permutate -pw ~/mypermsword.lst --reverse -ripe -r 10.11.12.0/24 --portscan -p huge --takeover --markovify -ms 3 -ml 10 -mq 10
 ```
 
 The following command flushes all database entries for a specific domain:

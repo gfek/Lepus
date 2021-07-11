@@ -1,5 +1,5 @@
-import json
 import requests
+from json import loads
 from termcolor import colored
 
 
@@ -14,8 +14,8 @@ def init(domain, ranges):
 	try:
 		response = requests.get(url, headers=headers)
 
-		if response.status_code == 200:
-			data = json.loads(response.text)
+		if response.status_code == 200 and response.text.strip() != "null":
+			data = loads(response.text)
 
 			for d in data:
 				Crobat.append(d)
@@ -26,7 +26,7 @@ def init(domain, ranges):
 				response = requests.get(rev_url, headers=headers)
 
 				if response.status_code == 200:
-					data = json.loads(response.text)
+					data = loads(response.text)
 
 					if "/" in r:
 						for ip in data:
@@ -35,7 +35,7 @@ def init(domain, ranges):
 									Crobat.append(item)
 
 					else:
-						data = json.loads(response.text)
+						data = loads(response.text)
 
 						for d in data:
 							if domain in d:

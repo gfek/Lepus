@@ -1,5 +1,5 @@
-import json
 import requests
+from json import loads
 from termcolor import colored
 
 
@@ -15,7 +15,7 @@ def init(domain):
 		response = requests.get("https://crt.sh/?", params=parameters, headers=headers)
 
 		if response.status_code == 200:
-			data = json.loads(response.text)
+			data = loads(response.text)
 
 			for d in data:
 				if "\n" in d["name_value"]:

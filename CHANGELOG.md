@@ -2,19 +2,27 @@
 
 ### --- New Features
 1. Added Markov submodule
-2. Added --flush flag to purge an entry from the database and exit
-3. Signature for kayako takeover
-4. Signature for ning takeover
-5. Signature for moosend takeover
-6. Added export functionality when ctrl+c is pressed up to the latest completed module - does not create diff.
-7. New Project Discovery Chaos collector
-8. New ZoomEye collector
+2. Added RIPE database lookup for CIDRs to be used in reverse lookup
+3. Added --flush flag to purge an entry from the database and exit
+4. Signature for kayako takeover
+5. Signature for ning takeover
+6. Signature for moosend takeover
+7. Added export functionality when ctrl+c is pressed up to the latest completed module - does not create diff.
+8. New Project Discovery Chaos collector
+9. New ZoomEye collector
+10. New ThreatMiner collector
+11. New FOFA collector
 
 ### --- Bug Fixes
-1. Fixed Censys collector so that it doesn't waste requests and it identifies search result limit
+1. Fixed bugs in Censys collector so that search result limit is identified and identification is better
 2. Fixed logical bug in portscan that caused very long duration of execution
 3. Removed Entrust Certificates collector as it's no longer being used
 4. Better exception handling in some minor cases
+5. Fixed a bug in CertSpotter collector's result identification
+6. Fixed a bug in DNSTrails collector's result identification
+7. Fixed a bug in GoogleTransparency collector's response parsing
+8. Fixed logic bugs in Shodan collector
+9. Fixed a bug in ProjectCrobat collector
 
 ### --- Misc
 1. Changed database name from findings.sqlite to lepusdb.sqlite

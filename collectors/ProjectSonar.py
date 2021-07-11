@@ -1,4 +1,3 @@
-import utilities.MiscHelpers
 import requests
 from json import loads
 from termcolor import colored
