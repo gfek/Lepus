@@ -1,5 +1,5 @@
-import json
 import requests
+from json import loads
 from termcolor import colored
 
 
@@ -12,7 +12,7 @@ def init(domain):
 		result = requests.get("https://www.threatcrowd.org/searchApi/v2/domain/report/", params={"domain": domain})
 
 		try:
-			RES = json.loads(result.text)
+			RES = loads(result.text)
 			resp_code = int(RES["response_code"])
 
 			if resp_code == 1:

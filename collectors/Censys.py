@@ -1,5 +1,5 @@
-import re
 import requests
+from re import findall
 from termcolor import colored
 from configparser import RawConfigParser
 
@@ -29,8 +29,8 @@ def init(domain):
 				print("  \__", colored("Rate limit exceeded. See https://www.censys.io/account for rate limit details.", "red"))
 				return C
 
-			C = re.findall("CN=([\w\.\-\d]+)\." + domain, str(res.content))
-			numberOfPages = re.findall("pages\":\s(\d+)?}", str(res.content))
+			C = findall("CN=([\w\d][\w\d\-\.]*\.{0})".format(domain.replace(".", "\.")), str(res.content))
+			numberOfPages = findall("pages\":\s(\d+)?}", str(res.content))
 
 			for page in range(2, int(numberOfPages[0]) + 1):
 				payload = {"query": domain, "page": page}
@@ -41,7 +41,7 @@ def init(domain):
 					break
 
 				else:
-					tempC = re.findall("CN=([\w\.\-\d]+)\." + domain, str(res.content))
+					tempC = findall("CN=([\w\d][\w\d\-\.]*\.{0})".format(domain.replace(".", "\.")), str(res.content))
 					C = C + tempC
 
 			C = set(C)

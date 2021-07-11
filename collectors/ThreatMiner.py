@@ -4,27 +4,31 @@ from termcolor import colored
 
 
 def init(domain):
-	Sonar = []
+	TM = []
 
-	print(colored("[*]-Searching Rapid7 Open Data...", "yellow"))
+	print(colored("[*]-Searching Threatminer...", "yellow"))
 
-	url = "http://dns.bufferover.run/dns?q=.{0}".format(domain)
+	parameters = {"q": "{0}".format(domain), "rt": "5"}
 	headers = {"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:88.0) Gecko/20100101 Firefox/88.0"}
 
 	try:
-		response = requests.get(url, headers=headers)
-		response_json = loads(response.text)
+		response = requests.get("https://api.threatminer.org/v2/domain.php", params=parameters, headers=headers)
 
-		if response_json["FDNS_A"]:
-			for record in response_json["FDNS_A"]:
-				Sonar += record.split(",")
+		if response.status_code == 200:
+			data = loads(response.text)
 
-		if response_json["RDNS"]:
-			for record in response_json["RDNS"]:
-				Sonar.append(record.split(",")[1])
+			if data["status_message"] == "Results found.":
+				for item in data["results"]:
+					TM.append(item)
 
-		print("  \__ {0}: {1}".format(colored("subdomains found", "cyan"), colored(len(Sonar), "yellow")))
-		return Sonar
+			TM = set(TM)
+
+			print("  \__ {0}: {1}".format(colored("Subdomains found", "cyan"), colored(len(TM), "yellow")))
+			return TM
+
+		else:
+			print("  \__", colored("Something went wrong!", "red"))
+			return []
 
 	except requests.exceptions.RequestException as err:
 		print("  \__", colored(err, "red"))

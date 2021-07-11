@@ -9,6 +9,7 @@ import collectors.Censys
 import collectors.CertSpotter
 import collectors.CRT
 import collectors.DNSTrails
+import collectors.FOFA
 import collectors.GoogleTransparency
 import collectors.HackerTarget
 import collectors.PassiveTotal
@@ -19,6 +20,7 @@ import collectors.Riddler
 import collectors.Shodan
 import collectors.Spyse
 import collectors.ThreatCrowd
+import collectors.ThreatMiner
 import collectors.VirusTotal
 import collectors.WaybackMachine
 import collectors.ZoomEye
@@ -54,7 +56,9 @@ if __name__ == "__main__":
 	parser.add_argument("--permutate", action="store_true", dest="permutate", help="perform permutations on resolved domains", default=False)
 	parser.add_argument("-pw", "--permutation-wordlist", dest="permutation_wordlist", help="wordlist to perform permutations with [default is lists/words.txt]", type=FileType("r"), default="lists/words.txt")
 	parser.add_argument("--reverse", action="store_true", dest="reverse", help="perform reverse dns lookups on resolved public IP addresses", default=False)
+	parser.add_argument("-ripe", "--ripe", action="store_true", dest="ripe", help="query ripe database for possible networks to be used for reverse lookups", default=False)
 	parser.add_argument("-r", "--ranges", action="store", dest="ranges", help="comma seperated ip ranges to perform reverse dns lookups on", type=str, default=None)
+	parser.add_argument("-or", "--only-ranges", action="store_true", dest="only_ranges", help="use only ranges provided with -r or -ripe and not all previously identifed IPs", default=False)
 	parser.add_argument("--portscan", action="store_true", dest="portscan", help="scan resolved public IP addresses for open ports", default=False)
 	parser.add_argument("-p", "--ports", action="store", dest="ports", help="set of ports to be used by the portscan module [default is medium]", type=str)
 	parser.add_argument("--takeover", action="store_true", dest="takeover", help="check identified hosts for potential subdomain take-overs", default=False)
@@ -70,19 +74,20 @@ if __name__ == "__main__":
 		exit(1)
 
 	printBanner()
-
-	print("{0} {1}\n".format(colored("\n[*]-Running against:", "yellow"), colored(args.domain, "cyan")))
-
 	db = utilities.DatabaseHelpers.init()
-	utilities.ScanHelpers.retrieveDNSRecords(db, args.domain)
-	old_resolved, old_unresolved, old_takeovers = utilities.MiscHelpers.loadOldFindings(db, args.domain)
-	utilities.MiscHelpers.purgeOldFindings(db, args.domain)
 
 	if args.doFlush:
+		utilities.MiscHelpers.purgeOldFindings(db, args.domain)
 		print("{0} {1} {2}".format(colored("\n[*]-Flushed", "yellow"), colored(args.domain, "cyan"), colored("from the database", "yellow")))
 		exit(0)
 
+	print("{0} {1}".format(colored("\n[*]-Running against:", "yellow"), colored(args.domain, "cyan")))
+
+	old_resolved, old_unresolved, old_takeovers = utilities.MiscHelpers.loadOldFindings(db, args.domain)
+	utilities.MiscHelpers.purgeOldFindings(db, args.domain)
+
 	try:
+		utilities.ScanHelpers.retrieveDNSRecords(db, args.domain)
 
 		if args.zoneTransfer:
 			zt_subdomains = utilities.ScanHelpers.zoneTransfer(db, args.domain)
@@ -100,6 +105,7 @@ if __name__ == "__main__":
 			collector_subdomains += collectors.CertSpotter.init(args.domain)
 			collector_subdomains += collectors.CRT.init(args.domain)
 			collector_subdomains += collectors.DNSTrails.init(args.domain)
+			collector_subdomains += collectors.FOFA.init(args.domain)
 			collector_subdomains += collectors.GoogleTransparency.init(args.domain)
 			collector_subdomains += collectors.HackerTarget.init(args.domain)
 			collector_subdomains += collectors.PassiveTotal.init(args.domain)
@@ -110,6 +116,7 @@ if __name__ == "__main__":
 			collector_subdomains += collectors.Shodan.init(args.domain)
 			collector_subdomains += collectors.Spyse.init(args.domain)
 			collector_subdomains += collectors.ThreatCrowd.init(args.domain)
+			collector_subdomains += collectors.ThreatMiner.init(args.domain)
 			collector_subdomains += collectors.VirusTotal.init(args.domain)
 			collector_subdomains += collectors.WaybackMachine.init(args.domain)
 			collector_subdomains += collectors.ZoomEye.init(args.domain)
@@ -139,7 +146,7 @@ if __name__ == "__main__":
 				submodules.Permutations.init(db, args.domain, args.permutation_wordlist, args.hideWildcards, args.threads)
 
 			if args.reverse:
-				submodules.ReverseLookups.init(db, args.domain, args.ranges, args.threads)
+				submodules.ReverseLookups.init(db, args.domain, args.ripe, args.ranges, args.only_ranges, args.threads)
 
 			if args.markovify:
 				submodules.Markov.init(db, args.domain, args.markov_state, args.markov_length, args.markov_quantity, args.hideWildcards, args.threads)

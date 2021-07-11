@@ -98,6 +98,9 @@ def purgeOldFindings(db, domain):
 	db.query(Takeover).filter(Takeover.domain == domain).delete()
 	db.commit()
 
+	db.query(Record).filter(Record.domain == domain).delete()
+	db.commit()
+
 	db.execute("VACUUM;")
 
 

@@ -1,5 +1,5 @@
-import re
 import requests
+from re import findall
 from json import loads
 from termcolor import colored
 from configparser import RawConfigParser
@@ -28,7 +28,7 @@ def init(domain):
 			response = requests.get(url, headers=headers)
 			
 			if response.status_code == 200 and loads(response.text)["available"] > 0:
-				subdomains = re.findall("[-\.\w\d]+\.{0}".format(domain.replace(".", "\.")), response.text)
+				subdomains = findall("[-\.\w\d]+\.{0}".format(domain.replace(".", "\.")), response.text)
 
 				if subdomains:
 					for subdomain in subdomains:
