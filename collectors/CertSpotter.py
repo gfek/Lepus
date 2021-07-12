@@ -5,7 +5,7 @@ from termcolor import colored
 
 def parseResponse(response, domain):
 	hostnameRegex = "([\w\d][\w\d\-\.]*\.{0})".format(domain.replace(".", "\."))
-	hosts = findall(hostnameRegex, str(response))
+	hosts = findall(hostnameRegex, response)
 
 	return [host.lstrip(".") for host in hosts]
 
@@ -30,7 +30,7 @@ def init(domain):
 			elif response.status_code == 429 and len(CS) > 0:
 				break
 
-			CS += parseResponse(response.content, domain)
+			CS += parseResponse(response.text, domain)
 
 			try:
 				next_link = response.headers["Link"].split(";")[0][1:-1]

@@ -87,7 +87,7 @@ lepus.py --permutate -pw customsubdomains.txt yahoo.com
 ### ReverseDNS
 The ReverseDNS mode will gather all IP addresses that were resolved and perform a reverse DNS on each one in order to detect more subdomains. For example, if `www.example.com` resolves to `1.2.3.4`, lepus will perform a reverse DNS for `1.2.3.4` and gather any other subdomains belonging to `example.com`, e.g. `www2`,`internal` or `oldsite`.
 
-To run the ReverseDNS module use the `--reverse` argument. Additionally, `--ripe` (or `-ripe`) can be used in order to instruct the module to query the RIPE database for potential network ranges. Moreover, lepus supports the `--ranges` (or `-r`) argument. You can use it to make reverse DNS resolutions against CIDRs that belong to the target domain.
+To run the ReverseDNS module use the `--reverse` argument. Additionally, `--ripe` (or `-ripe`) can be used in order to instruct the module to query the RIPE database using the second level domain for potential network ranges. Moreover, lepus supports the `--ranges` (or `-r`) argument. You can use it to make reverse DNS resolutions against CIDRs that belong to the target domain.
 
 By default this module will take into account all previously identified IPs, then defined ranges, then ranges identified through the RIPE database. In case you only want to run the module against specific or RIPE identified ranges, and not against all already identified IPs, you can use the `--only-ranges` (`-or`) argument.
 
@@ -277,8 +277,8 @@ optional arguments:
                         lists/words.txt]
   --reverse             perform reverse dns lookups on resolved public IP
                         addresses
-  -ripe, --ripe         query ripe database for possible networks to be used
-                        for reverse lookups
+  -ripe, --ripe         query ripe database with the 2nd level domain 
+                        for networks to be used for reverse lookups
   -r RANGES, --ranges RANGES
                         comma seperated ip ranges to perform reverse dns
                         lookups on
