@@ -1,5 +1,6 @@
 import requests
 from re import findall
+from json import loads
 from termcolor import colored
 from configparser import RawConfigParser
 
@@ -37,8 +38,12 @@ def init(domain):
 				res = requests.post(API_URL + "/search/certificates", json=payload, auth=(UID, SECRET))
 
 				if res.status_code != 200:
-					print("  \__", colored("Search result limit reached. See https://www.censys.io/account for search results limit details.", "red"))
-					break
+					if loads(res.text)["error_type"] == "max_results":
+						print("  \__", colored("Search result limit reached. See https://www.censys.io/account for search results limit details.", "red"))
+						break
+					
+					else:
+						print("  \__ {0} {1} {2}".format(colored("An error occured on page", "red"), colored("{0}:".format(page), "red"), colored(loads(res.text)["error_type"], "red")))
 
 				else:
 					tempC = findall("CN=([\w\d][\w\d\-\.]*\.{0})".format(domain.replace(".", "\.")), str(res.content))
