@@ -4,8 +4,8 @@ from termcolor import colored
 
 
 def parseResponse(response, domain):
-	hostnameRegex = "([\w\.\-]+\.%s)" % (domain.replace(".", "\."))
-	hosts = findall(hostnameRegex, str(response))
+	hostnameRegex = "([\w\d][\w\d\-\.]*\.{0})".format(domain.replace(".", "\."))
+	hosts = findall(hostnameRegex, response)
 
 	return [host.lstrip(".") for host in hosts]
 
@@ -17,17 +17,20 @@ def init(domain):
 
 	base_url = "https://api.certspotter.com"
 	next_link = "/v1/issuances?domain={0}&include_subdomains=true&expand=dns_names".format(domain)
-	headers = {"user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:52.0) Gecko/20100101 Firefox/52.0"}
+	headers = {"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:88.0) Gecko/20100101 Firefox/88.0"}
 
 	while next_link:
 		try:
 			response = requests.get(base_url + next_link, headers=headers)
 
-			if response.status_code == 429:
+			if response.status_code == 429 and len(CS) == 0:
 				print("  \__", colored("Search rate limit exceeded.", "red"))
 				return []
 
-			CS += parseResponse(response.content, domain)
+			elif response.status_code == 429 and len(CS) > 0:
+				break
+
+			CS += parseResponse(response.text, domain)
 
 			try:
 				next_link = response.headers["Link"].split(";")[0][1:-1]
@@ -57,5 +60,5 @@ def init(domain):
 
 	CS = set(CS)
 
-	print("  \__ {0}: {1}".format(colored("Unique subdomains found", "cyan"), colored(len(CS), "yellow")))
+	print("  \__ {0}: {1}".format(colored("Subdomains found", "cyan"), colored(len(CS), "yellow")))
 	return CS

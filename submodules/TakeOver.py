@@ -1,79 +1,102 @@
-import re
-import sys
-from os.path import join
+from time import time
 from tqdm import tqdm
-from json import dumps
+from gc import collect
+from re import findall
+from sys import stderr
 from requests import get
 from termcolor import colored
 from dns.name import EmptyLabel
 from warnings import simplefilter
 from dns.exception import DNSException
+from configparser import RawConfigParser
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm.exc import FlushError
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dns.resolver import Resolver, NXDOMAIN, NoAnswer, NoNameservers, Timeout
-import utilities.MiscHelpers
+from utilities.DatabaseHelpers import Resolution, Unresolved, Takeover
+from utilities.MiscHelpers import chunkify, slackNotification
 
 simplefilter("ignore")
 
-headers = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:52.0) Gecko/20100101 Firefox/52.0", "Content-Type": "application/json"}
+headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:88.0) Gecko/20100101 Firefox/88.0", "Content-Type": "application/json"}
 signatures = {
-	"Amazon AWS/S3": "NoSuchBucket",
-	"Bitbucket": "Repository not found",
-	"Campaign Monitor": "Double check the URL or <a href=\"mailto:help@createsend.com",
-	"Cargo Collective": "<title>404 &mdash; File not found</title>",
-	"Feedpress": "The feed has not been found.",
-	"Ghost.io": "The thing you were looking for is no longer here, or never was",
-	"Github": "There isn't a GitHub Pages site here.",
-	"Helpjuice": "There's nothing here, yet.",
-	"Helpjuice 2": "We could not find what you're looking for.",
-	"Helpscout": "No settings were found for this company",
-	"Heroku": "<title>No such app</title>",
-	"JetBrains": "is not a registered InCloud YouTrack",
-	"Readme.io": "Project doesnt exist... yet!",
-	"Surge.sh": "project not found",
-	"Tumblr": "Whatever you were looking for doesn't currently exist at this address.",
-	"Tilda": "Domain has been assigned.",
-	"Tilda 2": "Please renew your subscription",
-	"UserVoice": "Perhaps you meant to visit",
-	"UserVoice 2": "This UserVoice subdomain is currently available!",
-	"Wordpress": "Do you want to register",
-	"Strikingly": "But if you're looking to build your own website",
-	"Uptime Robot": "page not found",
-	"Pantheon": "The gods are wise",
-	"Teamwork": "Oops - We didn't find your site.",
-	"Intercom": "This page is reserved for artistic dogs",
-	"Webflow": "The page you are looking for doesn't exist or has been moved",
-	"Wishpond": "https://www.wishpond.com/404?campaign=true",
-	"Aftership": "Oops.</h2><p class=\"text-muted text-tight\">The page you're looking for doesn't exist.",
-	"Aha!": "There is no portal here ... sending you back to Aha!",
-	"Brightcove": "<p class=\"bc-gallery-error-code\">Error Code: 404</p>",
-	"Bigcartel": "<h1>Oops! We couldn&#8217;t find that page.</h1>",
-	"Acquia": "Sorry, we could not find any content for this web address",
-	"Simplebooklet": ">Sorry, we can't find this <a",
-	"Getresponse": "With GetResponse Landing Pages, lead generation has never been easier",
-	"Vend": "Looks like you've traveled too far into cyberspace",
-	"Tictail": "to target URL: <a href=\"https://tictail.com"
+	"Amazon AWS/S3": ["NoSuchBucket"],
+	"Bitbucket": ["Repository not found"],
+	"Campaign Monitor": ["Double check the URL or <a href=\"mailto:help@createsend.com"],
+	"Cargo Collective": ["<title>404 &mdash; File not found</title>"],
+	"Feedpress": ["The feed has not been found."],
+	"Ghost.io": ["The thing you were looking for is no longer here, or never was"],
+	"Github": ["There isn't a GitHub Pages site here."],
+	"Helpjuice": ["There's nothing here, yet.", "We could not find what you're looking for."],
+	"Helpscout": ["No settings were found for this company"],
+	"Heroku": ["<title>No such app</title>"],
+	"JetBrains": ["is not a registered InCloud YouTrack"],
+	"Readme.io": ["Project doesnt exist... yet!"],
+	"Surge.sh": ["project not found"],
+	"Tumblr": ["Whatever you were looking for doesn't currently exist at this address."],
+	"Tilda": ["Domain has been assigned."],
+	"Tilda 2": ["Please renew your subscription"],
+	"UserVoice": ["Perhaps you meant to visit", "This UserVoice subdomain is currently available!"],
+	"Wordpress": ["Do you want to register"],
+	"Strikingly": ["But if you're looking to build your own website"],
+	"Uptime Robot": ["page not found"],
+	"Pantheon": ["The gods are wise"],
+	"Teamwork": ["Oops - We didn't find your site."],
+	"Intercom": ["This page is reserved for artistic dogs"],
+	"Webflow": ["The page you are looking for doesn't exist or has been moved"],
+	"Wishpond": ["https://www.wishpond.com/404?campaign=true"],
+	"Aftership": ["Oops.</h2><p class=\"text-muted text-tight\">The page you're looking for doesn't exist."],
+	"Aha!": ["There is no portal here ... sending you back to Aha!"],
+	"Brightcove": ["<p class=\"bc-gallery-error-code\">Error Code: 404</p>"],
+	"Bigcartel": ["<h1>Oops! We couldn&#8217;t find that page.</h1>"],
+	"Acquia": ["Sorry, we could not find any content for this web address"],
+	"Simplebooklet": [">Sorry, we can't find this <a"],
+	"Getresponse": ["With GetResponse Landing Pages, lead generation has never been easier"],
+	"Vend": ["Looks like you've traveled too far into cyberspace"],
+	"Tictail": ["to target URL: <a href=\"https://tictail.com"],
+	"Fly.io": ["not found:"],
+	"Desk": ["Sorry, we couldn't find that page."],
+	"Zendesk": ["Help Center Closed"],
+	"Statuspage": ["Statuspage | Hosted Status Pages for Your Company"],
+	"Thinkific": ["You may have mistyped the address or the page may have moved."],
+	"Tave": ["You're at a page that doesn't exist."],
+	"Activecampaign": ["LIGHTTPD - fly light."],
+	"Pingdom": ["Sorry, couldn&rsquo;t find the status page"],
+	"Surveygizmo": ["609-6480"],
+	"Mashery": ["Unrecognized domain <strong>"],
+	"Instapage": ["Looks Like You're Lost"],
+	"Kajabi": ["No such app", "not found"],
+	"Airee": ["https://xn--80aqc2a.xn--p1ai/"],
+	"Hatena": ["404 Blog is not found"],
+	"Launchrock": ["you may have taken a wrong turn somewhere"],
+	"Kayako": ["That's not an active Kayako account"],
+	"Ning": ["Please double-check the address you've just entered", "is free to take"],
+	"Moosend": ["One account fits everything:"]
+
 }
 
 
-def findSignatures(domainToTry, signature, neededMatches):
+def findSignatures(domainToTry, signatures, neededMatches):
 	numberOfMatches = 0
 
 	try:
-		if signature in str(get("http://" + domainToTry, headers=headers, verify=False).content, "utf-8"):
-			numberOfMatches += 1
+		for signature in signatures:
+			if signature in str(get("http://" + domainToTry, headers=headers, verify=False).content, "utf-8"):
+				numberOfMatches += 1
 
-			if neededMatches <= numberOfMatches:
-				return True
+				if neededMatches <= numberOfMatches:
+					return True
 
 	except Exception:
 		pass
 
 	try:
-		if signature in str(get("https://" + domainToTry, headers=headers, verify=False).content, "utf-8"):
-			numberOfMatches += 1
+		for signature in signatures:
+			if signature in str(get("https://" + domainToTry, headers=headers, verify=False).content, "utf-8"):
+				numberOfMatches += 1
 
-			if neededMatches <= numberOfMatches:
-				return True
+				if neededMatches <= numberOfMatches:
+					return True
 
 	except Exception:
 		pass
@@ -102,7 +125,7 @@ def amazonS3(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(domain, signatures["Amazon AWS/S3"], 2):
-		outcome = ["Amazon AWS/S3 Takeover", domain, CNAME]
+		outcome = ["Amazon AWS/S3", domain, CNAME]
 
 	return outcome
 
@@ -111,7 +134,7 @@ def bitbucket(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(CNAME, signatures["Bitbucket"], 1):
-		outcome = ["Bitbucket Takeover", domain, CNAME]
+		outcome = ["Bitbucket", domain, CNAME]
 
 	return outcome
 
@@ -120,7 +143,142 @@ def campaignMonitor(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(CNAME, signatures["Campaign Monitor"], 1):
-		outcome = ["Campaign Monitor Takeover", domain, CNAME]
+		outcome = ["Campaign Monitor", domain, CNAME]
+
+	return outcome
+
+
+def desk(domain, ARecords, CNAME):
+	outcome = []
+
+	if findSignatures(domain, signatures["Desk"], 1):
+		outcome = ["Desk", domain, CNAME]
+
+	return outcome
+
+
+def zendesk(domain, ARecords, CNAME):
+	outcome = []
+
+	if findSignatures(domain, signatures["Zendesk"], 1):
+		outcome = ["Zendesk", domain, CNAME]
+
+	return outcome
+
+
+def statuspage(domain, ARecords, CNAME):
+	outcome = []
+
+	if findSignatures(domain, signatures["Statuspage"], 1):
+		outcome = ["Statuspage", domain, CNAME]
+
+	return outcome
+
+
+def thinkific(domain, ARecords, CNAME):
+	outcome = []
+
+	if findSignatures(domain, signatures["Thinkific"], 1):
+		outcome = ["Thinkific", domain, CNAME]
+
+	return outcome
+
+
+def tave(domain, ARecords, CNAME):
+	outcome = []
+
+	if findSignatures(domain, signatures["Tave"], 1):
+		outcome = ["Tave", domain, CNAME]
+
+	return outcome
+
+
+def activecampaign(domain, ARecords, CNAME):
+	outcome = []
+
+	if findSignatures(domain, signatures["Activecampaign"], 1):
+		outcome = ["Activecampaign", domain, CNAME]
+
+	return outcome
+
+
+def pingdom(domain, ARecords, CNAME):
+	outcome = []
+
+	if findSignatures(domain, signatures["Pingdom"], 1):
+		outcome = ["Pingdom", domain, CNAME]
+
+	return outcome
+
+
+def surveygizmo(domain, ARecords, CNAME):
+	outcome = []
+
+	if findSignatures(domain, signatures["Surveygizmo"], 2):
+		outcome = ["Surveygizmo", domain, CNAME]
+
+	return outcome
+
+
+def mashery(domain, ARecords, CNAME):
+	outcome = []
+
+	if findSignatures(domain, signatures["Mashery"], 1):
+		outcome = ["Mashery", domain, CNAME]
+
+	return outcome
+
+
+def instapage(domain, ARecords, CNAME):
+	outcome = []
+
+	if findSignatures(domain, signatures["Instapage"], 1):
+		outcome = ["Instapage", domain, CNAME]
+
+	return outcome
+
+
+def kajabi(domain, ARecords, CNAME):
+	outcome = []
+
+	if findSignatures(domain, signatures["Kajabi"], 2):
+		outcome = ["Kajabi", domain, CNAME]
+
+	return outcome
+
+
+def airee(domain, ARecords, CNAME):
+	outcome = []
+
+	if findSignatures(domain, signatures["Airee"], 1):
+		outcome = ["Airee", domain, CNAME]
+
+	return outcome
+
+
+def hatena(domain, ARecords, CNAME):
+	outcome = []
+
+	if findSignatures(domain, signatures["Hatena"], 2):
+		outcome = ["Hatena", domain, CNAME]
+
+	return outcome
+
+
+def launchrock(domain, ARecords, CNAME):
+	outcome = []
+
+	if findSignatures(domain, signatures["Launchrock"], 1):
+		outcome = ["Launchrock", domain, CNAME]
+
+	return outcome
+
+
+def flyio(domain, ARecords, CNAME):
+	outcome = []
+
+	if findSignatures(CNAME, signatures["Fly.io"], 1):
+		outcome = ["Fly.io", domain, CNAME]
 
 	return outcome
 
@@ -129,7 +287,7 @@ def cargoCollective(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(CNAME, signatures["Cargo Collective"], 1):
-		outcome = ["Cargo Collective Takeover", domain, CNAME]
+		outcome = ["Cargo Collective", domain, CNAME]
 
 	return outcome
 
@@ -150,7 +308,7 @@ def feedpress(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(domain, signatures["Feedpress"], 2):
-		outcome = ["Feedpress Takeover", domain, CNAME]
+		outcome = ["Feedpress", domain, CNAME]
 
 	return outcome
 
@@ -159,7 +317,7 @@ def ghost(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(domain, signatures["Ghost.io"], 1):
-		outcome = ["Ghost.io Takeover", domain, CNAME]
+		outcome = ["Ghost.io", domain, CNAME]
 
 	return outcome
 
@@ -168,7 +326,7 @@ def github(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(domain, signatures["Github"], 1):
-		outcome = ["Github Takeover", domain, CNAME]
+		outcome = ["Github", domain, CNAME]
 
 	return outcome
 
@@ -176,8 +334,8 @@ def github(domain, ARecords, CNAME):
 def helpjuice(domain, ARecords, CNAME):
 	outcome = []
 
-	if findSignatures(CNAME, signatures["Helpjuice"], 1) or findSignatures(CNAME, signatures["Helpjuice 2"], 1):
-		outcome = ["Helpjuice Takeover", domain, CNAME]
+	if findSignatures(CNAME, signatures["Helpjuice"], 1):
+		outcome = ["Helpjuice", domain, CNAME]
 
 	return outcome
 
@@ -186,7 +344,7 @@ def helpscout(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(domain, signatures["Helpscout"], 1):
-		outcome = ["Helpscout Takeover", domain, CNAME]
+		outcome = ["Helpscout", domain, CNAME]
 
 	return outcome
 
@@ -195,7 +353,7 @@ def heroku(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(CNAME, signatures["Heroku"], 2):
-		outcome = ["Heroku Takeover", domain, CNAME]
+		outcome = ["Heroku", domain, CNAME]
 
 	return outcome
 
@@ -204,7 +362,7 @@ def jetbrains(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(domain, signatures["JetBrains"], 1):
-		outcome = ["JetBrains Takeover", domain, CNAME]
+		outcome = ["JetBrains", domain, CNAME]
 
 	return outcome
 
@@ -213,7 +371,7 @@ def azure(domain, ARecords, CNAME):
 	outcome = []
 
 	if findNX(CNAME):
-		outcome = ["Azure Takeover", domain, CNAME]
+		outcome = ["Azure", domain, CNAME]
 
 	return outcome
 
@@ -228,7 +386,7 @@ def readme(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(domain, signatures["Readme.io"], 1):
-		outcome = ["Readme.io Takeover", domain, CNAME]
+		outcome = ["Readme.io", domain, CNAME]
 
 	return outcome
 
@@ -243,7 +401,7 @@ def surge(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(domain, signatures["Surge.sh"], 1):
-		outcome = ["Surge.sh Takeover", domain, CNAME]
+		outcome = ["Surge.sh", domain, CNAME]
 
 	return outcome
 
@@ -252,7 +410,7 @@ def tumblr(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(domain, signatures["Tumblr"], 1):
-		outcome = ["Tumblr Takeover", domain, CNAME]
+		outcome = ["Tumblr", domain, CNAME]
 
 	return outcome
 
@@ -261,7 +419,7 @@ def tilda(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(domain, signatures["Tilda"], 1) or findSignatures(domain, signatures["Tilda 2"], 1):
-		outcome = ["Tilda Takeover", domain, CNAME]
+		outcome = ["Tilda", domain, CNAME]
 
 	return outcome
 
@@ -269,8 +427,8 @@ def tilda(domain, ARecords, CNAME):
 def uservoice(domain, ARecords, CNAME):
 	outcome = []
 
-	if findSignatures(domain, signatures["UserVoice"], 1) or findSignatures(domain, signatures["UserVoice 2"], 1):
-		outcome = ["UserVoice Takeover", domain, CNAME]
+	if findSignatures(domain, signatures["UserVoice"], 1):
+		outcome = ["UserVoice", domain, CNAME]
 
 	return outcome
 
@@ -279,7 +437,7 @@ def wordpress(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(domain, signatures["Wordpress"], 1):
-		outcome = ["Wordpress Takeover", domain, CNAME]
+		outcome = ["Wordpress", domain, CNAME]
 
 	return outcome
 
@@ -288,8 +446,8 @@ def smugmug(domain, ARecords, CNAME):
 	outcome = []
 
 	try:
-		if get("http://" + domain, headers=headers, verify=False).status_code == 404:
-			outcome = ["Smugmug Takeover", domain, CNAME]
+		if get("http://" + domain, headers=headers).status_code == 404:
+			outcome = ["Smugmug", domain, CNAME]
 			return outcome
 
 	except Exception:
@@ -297,7 +455,7 @@ def smugmug(domain, ARecords, CNAME):
 
 	try:
 		if get("https://" + domain, headers=headers, verify=False).status_code == 404:
-			outcome = ["Smugmug Takeover", domain, CNAME]
+			outcome = ["Smugmug", domain, CNAME]
 			return outcome
 
 	except Exception:
@@ -311,7 +469,7 @@ def smugmug(domain, ARecords, CNAME):
 		resolver.query(CNAME)
 
 	except NXDOMAIN:
-		outcome = ["Smugmug Takeover", domain, CNAME]
+		outcome = ["Smugmug", domain, CNAME]
 
 	return outcome
 
@@ -320,7 +478,7 @@ def strikingly(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(domain, signatures["Strikingly"], 1):
-		outcome = ["Strikingly Takeover", domain, CNAME]
+		outcome = ["Strikingly", domain, CNAME]
 
 	return outcome
 
@@ -329,7 +487,7 @@ def uptimerobot(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(domain, signatures["Uptime Robot"], 1):
-		outcome = ["Uptime Robot Takeover", domain, CNAME]
+		outcome = ["Uptime Robot", domain, CNAME]
 
 	return outcome
 
@@ -338,7 +496,7 @@ def pantheon(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(domain, signatures["Pantheon"], 1):
-		outcome = ["Pantheon Takeover", domain, CNAME]
+		outcome = ["Pantheon", domain, CNAME]
 
 	return outcome
 
@@ -347,7 +505,7 @@ def teamwork(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(domain, signatures["Teamwork"], 1):
-		outcome = ["Teamwork Takeover", domain, CNAME]
+		outcome = ["Teamwork", domain, CNAME]
 
 	return outcome
 
@@ -356,7 +514,7 @@ def intercom(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(domain, signatures["Intercom"], 1):
-		outcome = ["Intercom Takeover", domain, CNAME]
+		outcome = ["Intercom", domain, CNAME]
 
 	return outcome
 
@@ -365,7 +523,7 @@ def webflow(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(domain, signatures["Webflow"], 1):
-		outcome = ["Webflow Takeover", domain, CNAME]
+		outcome = ["Webflow", domain, CNAME]
 
 	return outcome
 
@@ -374,7 +532,7 @@ def wishpond(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(domain, signatures["Wishpond"], 1):
-		outcome = ["Wishpond Takeover", domain, CNAME]
+		outcome = ["Wishpond", domain, CNAME]
 
 	return outcome
 
@@ -383,7 +541,7 @@ def aftership(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(domain, signatures["Aftership"], 1):
-		outcome = ["Aftership Takeover", domain, CNAME]
+		outcome = ["Aftership", domain, CNAME]
 
 	return outcome
 
@@ -392,7 +550,7 @@ def aha(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(domain, signatures["Aha!"], 1):
-		outcome = ["Aha! Takeover", domain, CNAME]
+		outcome = ["Aha!", domain, CNAME]
 
 	return outcome
 
@@ -401,12 +559,12 @@ def tictail(domain, ARecords, CNAME):
 	outcome = []
 
 	try:
-		if signatures["Tictail"] in str(get("http://" + domain, headers=headers, verify=False).history[0].content, "utf-8"):
-			outcome = ["Tictail Takeover", domain, CNAME]
+		if signatures["Tictail"] in str(get("http://" + domain, headers=headers).history[0].content, "utf-8"):
+			outcome = ["Tictail", domain, CNAME]
 			return outcome
 
 		if signatures["Tictail"] in str(get("https://" + domain, headers=headers, verify=False).history[0].content, "utf-8"):
-			outcome = ["Tictail Takeover", domain, CNAME]
+			outcome = ["Tictail", domain, CNAME]
 			return outcome
 
 	except Exception:
@@ -419,7 +577,7 @@ def brightcove(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(domain, signatures["Brightcove"], 1):
-		outcome = ["Brightcove Takeover", domain, CNAME]
+		outcome = ["Brightcove", domain, CNAME]
 
 	return outcome
 
@@ -428,7 +586,7 @@ def bigcartel(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(domain, signatures["Bigcartel"], 1):
-		outcome = ["Bigcartel Takeover", domain, CNAME]
+		outcome = ["Bigcartel", domain, CNAME]
 
 	return outcome
 
@@ -437,7 +595,7 @@ def acquia(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(domain, signatures["Acquia"], 1):
-		outcome = ["Acquia Takeover", domain, CNAME]
+		outcome = ["Acquia", domain, CNAME]
 
 	return outcome
 
@@ -446,7 +604,7 @@ def simplebooklet(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(domain, signatures["Simplebooklet"], 1):
-		outcome = ["Simplebooklet Takeover", domain, CNAME]
+		outcome = ["Simplebooklet", domain, CNAME]
 
 	return outcome
 
@@ -455,7 +613,7 @@ def getresponse(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(domain, signatures["Getresponse"], 1):
-		outcome = ["Getresponse Takeover", domain, CNAME]
+		outcome = ["Getresponse", domain, CNAME]
 
 	return outcome
 
@@ -464,7 +622,7 @@ def vend(domain, ARecords, CNAME):
 	outcome = []
 
 	if findSignatures(domain, signatures["Vend"], 1):
-		outcome = ["Vend Takeover", domain, CNAME]
+		outcome = ["Vend", domain, CNAME]
 
 	return outcome
 
@@ -473,7 +631,7 @@ def maxcdn(domain, ARecords, CNAME):
 	outcome = []
 
 	if findNX(CNAME):
-		outcome = ["Maxcdn Takeover", domain, CNAME]
+		outcome = ["Maxcdn", domain, CNAME]
 
 	return outcome
 
@@ -482,7 +640,37 @@ def apigee(domain, ARecords, CNAME):
 	outcome = []
 
 	if findNX(CNAME):
-		outcome = ["Apigee Takeover", domain, CNAME]
+		outcome = ["Apigee", domain, CNAME]
+
+	return outcome
+
+
+def kayako(domain, ARecords, CNAME):
+	outcome = []
+
+	if findSignatures(domain, signatures["Kayako"], 1):
+		outcome = ["Kayako", domain, CNAME]
+
+	return outcome
+
+
+def ning(domain, ARecords, CNAME):
+	outcome = []
+
+	if findSignatures(domain, signatures["Ning"], 1) and findSignatures(CNAME, signatures["Ning"], 1):
+		outcome = ["Ning", domain, CNAME]
+
+	return outcome
+
+
+def moosend(domain, ARecords, CNAME):
+	outcome = []
+
+	if "m-pages.com" in CNAME:
+		outcome = ["Moosend Landing Page", domain, CNAME]
+
+	elif not findSignatures(domain, signatures["Moosend"], 1):
+		outcome = ["Moosend", domain, CNAME]
 
 	return outcome
 
@@ -493,17 +681,73 @@ def identify(domain, ARecords, CNAMERecords):
 	for entry in CNAMERecords:
 		CNAME = str(entry)[:-1]
 
-		if (re.findall(".*s3.*.amazonaws\.com", CNAME)):
+		if (findall(".*s3.*.amazonaws\.com", CNAME)):
 			outcome = amazonS3(domain, ARecords, CNAME)
 
 		elif "bitbucket.io" in CNAME:
 			outcome = bitbucket(domain, ARecords, CNAME)
+
+		elif ".desk.com" in CNAME:
+			outcome = desk(domain, ARecords, CNAME)
+
+		elif ".zendesk.com" in CNAME:
+			outcome = zendesk(domain, ARecords, CNAME)
+
+		elif "statuspage.io" in CNAME:
+			outcome = statuspage(domain, ARecords, CNAME)
+
+		elif "thinkific.com" in CNAME:
+			outcome = thinkific(domain, ARecords, CNAME)
+
+		elif "clientaccess.tave.com" in CNAME:
+			outcome = tave(domain, ARecords, CNAME)
+
+		elif "activehosted.com" in CNAME:
+			outcome = activecampaign(domain, ARecords, CNAME)
+
+		elif "stats.pingdom.com" in CNAME:
+			outcome = pingdom(domain, ARecords, CNAME)
+
+		elif "privatedomain.sgizmo.com" in CNAME or "privatedomain.surveygizmo.eu" in CNAME or "privatedomain.sgizmoca.com" in CNAME:
+			outcome = surveygizmo(domain, ARecords, CNAME)
+
+		elif "mashery.com" in CNAME:
+			outcome = mashery(domain, ARecords, CNAME)
+
+		elif "pageserve.co" in CNAME or "secure.pageserve.co" in CNAME:
+			outcome = instapage(domain, ARecords, CNAME)
+
+		elif "endpoint.mykajabi.com" in CNAME or "ssl.kajabi.com" in CNAME:
+			outcome = kajabi(domain, ARecords, CNAME)
+
+		elif "cdn.airee.ru" in CNAME:
+			outcome = airee(domain, ARecords, CNAME)
+
+		elif "hatenablog.com" in CNAME or "hatenadiary.com" in CNAME:
+			outcome = hatena(domain, ARecords, CNAME)
+
+		elif "launchrock.com" in CNAME:
+			outcome = launchrock(domain, ARecords, CNAME)
+
+		elif "edgeapp.net" in CNAME:
+			outcome = flyio(domain, ARecords, CNAME)
 
 		elif "createsend.com" in CNAME:
 			outcome = campaignMonitor(domain, ARecords, CNAME)
 
 		elif "cargocollective.com" in CNAME:
 			outcome = cargoCollective(domain, ARecords, CNAME)
+
+		elif "kayako.com" in CNAME:
+			outcome = kayako(domain, ARecords, CNAME)
+
+		elif "ning.com" in CNAME:
+			for entry in ARecords:
+				if str(entry) == "208.82.16.68":
+					outcome = ning(domain, ARecords, CNAME)
+
+		elif "moosend.com" in CNAME or "m-pages.com" in CNAME:
+			outcome = moosend(domain, ARecords, CNAME)
 
 		elif "herokuapp.com" in CNAME:
 			outcome = heroku(domain, ARecords, CNAME)
@@ -526,7 +770,7 @@ def identify(domain, ARecords, CNAMERecords):
 		elif "myjetbrains.com" in CNAME:
 			outcome = jetbrains(domain, ARecords, CNAME)
 
-		elif "readme.io" in CNAME:
+		elif "readme.io" in CNAME or "ssl.readmessl.com" in CNAME:
 			outcome = readme(domain, ARecords, CNAME)
 
 		elif "surge.sh" in CNAME:
@@ -599,9 +843,11 @@ def identify(domain, ARecords, CNAMERecords):
 			outcome = wordpress(domain, ARecords, CNAME)
 
 		elif any(azureSub in CNAME for azureSub in [
-			"azure-api.net", "azurecontainer.io", "azurecr.io", "azuredatalakestore.net", "azureedge.net", "azurehdinsight.net",
-			"azurewebsites.net", "blob.core.windows.net", "cloudapp.azure.com", "cloudapp.net", "database.windows.net",
-			"redis.cache.windows.net", "search.windows.net", "servicebus.windows.net", "trafficmanager.net", "visualstudio.com"]):
+			"azure-api.net", "azurecontainer.io", "azurecr.io", "azuredatalakeanalytics.net", "azuredatalakestore.net", "azureedge.net",
+			"azurehdinsight.net", "azurefd.net", "azurehealthcareapis.com", "azureiotcentral.com", "azurewebsites.net", "batch.azure.com",
+			"blob.core.windows.net", "cloudapp.azure.com", "cloudapp.net", "core.windows.net", "database.windows.net", "p.azurewebsites.net",
+			"redis.cache.windows.net", "search.windows.net", "service.signalr.net", "servicebus.windows.net", "trafficmanager.net",
+			"visualstudio.com"]):
 			outcome = azure(domain, ARecords, CNAME)
 
 	for entry in ARecords:
@@ -620,33 +866,36 @@ def identify(domain, ARecords, CNAMERecords):
 		elif str(entry) == "34.193.69.252" or str(entry) == "34.193.204.92" or str(entry) == "23.235.33.229" or str(entry) == "104.156.81.229":
 			outcome = webflow(domain, ARecords, str(entry))
 
+		elif str(entry) == "54.243.190.28" or str(entry) == "54.243.190.39" or str(entry) == "54.243.190.47" or str(entry) == "54.243.190.54":
+			outcome = launchrock(domain, ARecords, str(entry))
+
 		elif "23.185.0." in str(entry) or "23.253." in str(entry):
 			outcome = pantheon(domain, ARecords, str(entry))
 
-		elif str(entry) in ["192.30.252.153", "192.30.252.154"]:
+		elif str(entry) == "192.30.252.153" or str(entry) == "192.30.252.154":
 			outcome = github(domain, ARecords, str(entry))
 
 	return outcome
 
 
 def takeOver(domain):
-	CNAME = []
 	A = []
+	CNAME = []
 	results = []
 	resolver = Resolver()
 	resolver.timeout = 1
 	resolver.lifetime = 1
-	rrtypes = ["A", "CNAME"]
+	types = ["A", "CNAME"]
 
-	for r in rrtypes:
+	for type in types:
 		try:
-			answers = resolver.query(domain, r)
+			answers = resolver.query(domain, type)
 
 			for answer in answers:
-				if r == "A":
+				if type == "A":
 					A.append(answer.address)
 
-				if r == "CNAME":
+				if type == "CNAME":
 					CNAME.append(answer.target)
 
 		except (NXDOMAIN, NoAnswer, EmptyLabel, NoNameservers, Timeout, DNSException):
@@ -661,14 +910,17 @@ def takeOver(domain):
 
 def massTakeOver(targets, threads):
 	takeovers = []
+	numberOfChunks = 1
 	leaveFlag = False
 
 	if len(targets) <= 100000:
 		print("{0} {1} {2}".format(colored("\n[*]-Scanning", "yellow"), colored(len(targets), "cyan"), colored("domains for potential takeover...", "yellow")))
+
 	else:
 		print("{0} {1} {2}".format(colored("\n[*]-Scanning", "yellow"), colored(len(targets), "cyan"), colored("domains for potential takeover, in chunks of 100,000...", "yellow")))
+		numberOfChunks = len(targets) // 100000 + 1
 
-	targetChunks = list(utilities.MiscHelpers.chunks(list(targets), 100000))
+	targetChunks = chunkify(targets, 100000)
 	iteration = 1
 
 	for targetChunk in targetChunks:
@@ -678,10 +930,14 @@ def massTakeOver(targets, threads):
 			try:
 				completed = as_completed(tasks)
 
-				if iteration == len(targetChunks):
+				if iteration == numberOfChunks:
 					leaveFlag = True
 
-				completed = tqdm(completed, total=len(targetChunk), desc="  \__ {0}".format(colored("Progress", "cyan")), dynamic_ncols=True, leave=leaveFlag)
+				if numberOfChunks == 1:
+					completed = tqdm(completed, total=len(targetChunk), desc="  \__ {0}".format(colored("Progress", "cyan")), dynamic_ncols=True, leave=leaveFlag)
+
+				else:
+					completed = tqdm(completed, total=len(targetChunk), desc="  \__ {0}".format(colored("Progress {0}/{1}".format(iteration, numberOfChunks), "cyan")), dynamic_ncols=True, leave=leaveFlag)
 
 				for task in completed:
 					result = task.result()
@@ -695,52 +951,89 @@ def massTakeOver(targets, threads):
 				executor.shutdown(wait=False)
 				exit(-1)
 
-		if iteration < len(targetChunks):
-			sys.stderr.write("\033[F")
+		if iteration < numberOfChunks:
+			stderr.write("\033[F")
 
 		iteration += 1
 
 	return takeovers
 
 
-def init(domain, resolved, collector_hosts, threads, out_to_json):
-	resolved_hosts = []
+def init(db, domain, old_takeovers, threads):
+	targets = set()
+	notify = False
+	takeovers = []
+	notifications = []
+	timestamp = int(time())
 
-	for host in resolved:
-		resolved_hosts.append(host)
+	parser = RawConfigParser()
+	parser.read("config.ini")
+	SLACK_LEGACY_TOKEN = parser.get("Slack", "SLACK_LEGACY_TOKEN")
+	SLACK_CHANNEL = parser.get("Slack", "SLACK_CHANNEL")
 
-	toTakeOver = utilities.MiscHelpers.uniqueList(resolved_hosts + collector_hosts)
+	if SLACK_LEGACY_TOKEN and SLACK_CHANNEL:
+		notify = True
 
-	results = massTakeOver(toTakeOver, threads)
-	results_json = {}
+	for row in db.query(Resolution).filter(Resolution.domain == domain):
+		if row.subdomain:
+			targets.add(".".join([row.subdomain, domain]))
+
+		else:
+			targets.add(domain)
+
+	for row in db.query(Unresolved).filter(Unresolved.domain == domain):
+		if row.subdomain:
+			targets.add(".".join([row.subdomain, domain]))
+
+		else:
+			targets.add(domain)
+
+	targets = list(targets)
+	results = massTakeOver(targets, threads)
+
+	del targets
+	collect()
 
 	for result in results:
 		if result:
-			results_json[result[1]] = [result[0], result[2]]
+			db.add(Takeover(subdomain=".".join(result[1].split(".")[:-1 * len(domain.split("."))]), domain=domain, provider=result[0], signature=result[2], timestamp=timestamp))
 
-	print("    \__ {0} {1}".format(colored("Takeover vulnerabilities that were identified:", "yellow"), colored(len(results_json), "cyan")))
+			try:
+				db.commit()
 
-	for key, values in list(results_json.items()):
-		print("      \__", colored(key, "cyan"), ":", ", ".join(colored(str(value), "yellow") for value in values))
+			except (IntegrityError, FlushError):
+				db.rollback()
 
-	if out_to_json:
-		try:
-			with open(join("results", domain, "takeovers.json"), "w") as takeover_file:
-				takeover_file.write("{0}\n".format(dumps(results_json)))
+	del results
+	collect()
 
-		except OSError:
-			pass
+	for row in db.query(Takeover).filter(Takeover.domain == domain, Takeover.timestamp == timestamp).order_by(Takeover.subdomain):
+		if row.subdomain:
+			takeovers.append((".".join([row.subdomain, domain]), row.provider, row.signature))
 
-		except IOError:
-			pass
+		else:
+			takeovers.append((domain, row.provider, row.signature))
 
-	try:
-		with open(join("results", domain, "takeovers.csv"), "w") as takeover_file:
-			for key, values in list(results_json.items()):
-				takeover_file.write("{0}|{1}\n".format(key, "|".join(str(value) for value in values)))
+	print("    \__ {0} {1}".format(colored("New takeover vulnerabilities that were identified:", "yellow"), colored(len(takeovers), "cyan")))
 
-	except OSError as ex:
-		print(ex)
+	for takeover in takeovers:
+		print("      \__ {0}: {1}, {2}".format(colored(takeover[0], "cyan"), colored(takeover[1], "yellow"), colored(takeover[2], "yellow")))
 
-	except IOError as ex:
-		print(ex)
+		if notify:
+			if takeover[0] not in old_takeovers:
+				notifications.append([takeover[0], takeover[1], takeover[2]])
+	
+	if notify:
+		text = ""
+		counter = 0			
+		
+		for notification in notifications:
+			text += """Subdomain: {0}\nProvider: {1}\nSignature: {2}\n\n""".format(notification[0], notification[1], notification[2])
+			counter += 1
+
+			if counter % 20 == 0:
+				slackNotification(SLACK_LEGACY_TOKEN, SLACK_CHANNEL, "```\n{0}```".format(text[:-1]))
+				text = ""
+
+		if text != "":
+			slackNotification(SLACK_LEGACY_TOKEN, SLACK_CHANNEL, "```\n{0}```".format(text[:-1]))

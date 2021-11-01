@@ -1,5 +1,5 @@
-import json
 import requests
+from json import loads
 from termcolor import colored
 
 
@@ -9,21 +9,29 @@ def init(domain):
 	print(colored("[*]-Searching CRT...", "yellow"))
 
 	parameters = {"q": "%.{0}".format(domain), "output": "json"}
-	headers = {"user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:52.0) Gecko/20100101 Firefox/52.0", "content-type": "application/json"}
+	headers = {"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:88.0) Gecko/20100101 Firefox/88.0", "content-type": "application/json"}
 
 	try:
 		response = requests.get("https://crt.sh/?", params=parameters, headers=headers)
 
 		if response.status_code == 200:
-			data = json.loads(response.text)
+			data = loads(response.text)
 
 			for d in data:
-				if not d["name_value"].startswith("*"):
-					CRT.append(d["name_value"])
+				if "\n" in d["name_value"]:
+					values = d["name_value"].split("\n")
+
+					for value in values:
+						if not value.startswith("*"):
+							CRT.append(value)
+
+				else:
+					if not d["name_value"].startswith("*"):
+						CRT.append(d["name_value"])
 
 			CRT = set(CRT)
 
-			print("  \__ {0}: {1}".format(colored("Unique subdomains found", "cyan"), colored(len(CRT), "yellow")))
+			print("  \__ {0}: {1}".format(colored("Subdomains found", "cyan"), colored(len(CRT), "yellow")))
 			return CRT
 
 		else:

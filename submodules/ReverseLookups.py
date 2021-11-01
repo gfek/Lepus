@@ -1,54 +1,32 @@
-from json import dumps
-from os.path import join
+import submodules.RIPE 
 from termcolor import colored
-from ipaddress import ip_network
-import utilities.MiscHelpers
-import utilities.ScanHelpers
+from ipaddress import ip_address, ip_network
+from utilities.DatabaseHelpers import Resolution
+from utilities.ScanHelpers import massReverseLookup
 
+def init(db, domain, ripe, ranges, only_ranges, threads):
+	IPs = set()
 
-def init(domain, ranges, resolved_public, IPs, threads, out_to_json):
 	if ranges:
-		IPs = []
-
 		for cidr in ranges.split(","):
 			for ip in ip_network(str(cidr.strip())):
-				IPs.append(str(ip))
+				IPs.add(str(ip))
 
-	results = utilities.ScanHelpers.massReverseLookup(IPs, threads)
-	filtered = utilities.MiscHelpers.filterDomain(domain, [result[0] for result in results])
-	diff = []
+	if ripe:
+		ripeCidrs = submodules.RIPE.init(domain)
 
-	for result in results:
-		if result[0] in filtered:
-			if result[0] not in resolved_public:
-				resolved_public[result[0]] = result[1]
-				diff.append(result)
+		for cidr in ripeCidrs:
+			for ip in ip_network(str(cidr.strip())):
+				IPs.add(str(ip))
 
-	print("    \__ {0} {1}".format(colored("Additional hostnames that were identified:", "yellow"), colored(len(diff), "cyan")))
+	if not only_ranges:
+		for row in db.query(Resolution).filter(Resolution.domain == domain):
+			if "." in row.address:
+				if ip_address(row.address).is_global:
+					IPs.add(row.address)
 
-	for hostname, address in diff:
-		print("      \__ {0} ({1})".format(colored(hostname, "cyan"), colored(address, "yellow")))
+			else:
+				IPs.add(row.address)
 
-	if out_to_json:
-		try:
-			with open(join("results", domain, "resolved_public.json"), "w") as resolved_public_file:
-				resolved_public_file.write("{0}\n".format(dumps(resolved_public)))
-
-		except OSError:
-			pass
-
-		except IOError:
-			pass
-
-	try:
-		with open(join("results", domain, "resolved_public.csv"), "w") as resolved_public_file:
-			for hostname, address in list(resolved_public.items()):
-				resolved_public_file.write("{0}|{1}\n".format(hostname, address))
-
-	except OSError:
-		pass
-
-	except IOError:
-		pass
-
-	return resolved_public
+	IPs = list(IPs)
+	massReverseLookup(db, domain, IPs, threads)

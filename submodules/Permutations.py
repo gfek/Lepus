@@ -1,118 +1,127 @@
-from time import time
+from re import findall
+from gc import collect
 from termcolor import colored
+from utilities.DatabaseHelpers import Resolution, Unresolved
+from utilities.ScanHelpers import identifyWildcards, massResolve
 import utilities.MiscHelpers
 
 
 def permuteDash(subdomain, wordlist):
-	results = []
-
 	for word in wordlist:
-		results.append("-".join([word, subdomain]))
-		results.append("-".join([subdomain, word]))
+		yield "-".join([word, subdomain])
+		yield "-".join([subdomain, word])
 
 	if "." in subdomain:
 		subParts = subdomain.split(".")
 
 		for part in subParts:
 			for word in wordlist:
-				results.append(subdomain.replace(part, "-".join([word, part])))
-				results.append(subdomain.replace(part, "-".join([part, word])))
-
-	return results
+				yield subdomain.replace(part, "-".join([word, part]))
+				yield subdomain.replace(part, "-".join([part, word]))
 
 
 def permuteDot(subdomain, wordlist):
-	results = []
-
 	for word in wordlist:
-		results.append(".".join([word, subdomain]))
-		results.append(".".join([subdomain, word]))
+		yield ".".join([word, subdomain])
+		yield ".".join([subdomain, word])
 
 	if "." in subdomain:
 		subParts = subdomain.split(".")
 
 		for part in subParts:
 			for word in wordlist:
-				results.append(subdomain.replace(part, ".".join([word, part])))
-
-	return results
+				yield subdomain.replace(part, ".".join([word, part]))
 
 
 def permuteWords(subdomain, wordlist):
-	results = []
-
 	for word in wordlist:
-		results.append("".join([word, subdomain]))
-		results.append("".join([subdomain, word]))
+		yield "".join([word, subdomain])
+		yield "".join([subdomain, word])
 
 	if "." in subdomain:
 		subParts = subdomain.split(".")
 
 		for part in subParts:
 			for word in wordlist:
-				results.append(subdomain.replace(part, "".join([word, part])))
-				results.append(subdomain.replace(part, "".join([part, word])))
-
-	return results
+				yield subdomain.replace(part, "".join([word, part]))
+				yield subdomain.replace(part, "".join([part, word]))
 
 
 def permuteNumbers(subdomain):
-	results = []
-
 	for number in range(10):
-		results.append("-".join([subdomain, str(number)]))
-		results.append("".join([subdomain, str(number)]))
+		yield "-".join([subdomain, str(number)])
+		yield "".join([subdomain, str(number)])
 
 	if "." in subdomain:
 		subParts = subdomain.split(".")
 
 		for part in subParts:
 			for number in range(10):
-				results.append(subdomain.replace(part, "-".join([part, str(number)])))
-				results.append(subdomain.replace(part, "".join([part, str(number)])))
-
-	return results
+				yield subdomain.replace(part, "-".join([part, str(number)]))
+				yield subdomain.replace(part, "".join([part, str(number)]))
 
 
-def init(domain, resolved, collector_hosts, wildcards, wordlist):
-	resolved_hosts = []
+def permuteIterations(subdomain):
+	instancesOfNumbers = findall("\d+", subdomain)	
+	for instance in instancesOfNumbers:
+		instancelength = len(instance)
+		
+		if instancelength == 1:				
+			for newinstance in range(0,10):
+				yield subdomain.replace(instance, str(newinstance))		
+		
+		elif instancelength == 2:				
+			for newinstance in range(0,100):
+				yield subdomain.replace(instance, str(newinstance))
+		
+		elif instancelength == 3:				
+			for newinstance in range(0,1000):
+				yield subdomain.replace(instance, str(newinstance))
 
-	for host in resolved:
-		resolved_hosts.append(host)
 
-	subdomains = utilities.MiscHelpers.uniqueList(resolved_hosts + collector_hosts)
-	print("{0} {1} {2}".format(colored("\n[*]-Performing permutations on", "yellow"), colored(len(subdomains), "cyan"), colored("hostnames...", "yellow")))
+def init(db, domain, wordlist, hideWildcards, threads):
+	base = set()
 
-	permutations = []
+	for row in db.query(Resolution).filter(Resolution.domain == domain, Resolution.isWildcard == False):
+		if row.subdomain:
+			base.add(row.subdomain)
+
+	for row in db.query(Unresolved).filter(Unresolved.domain == domain):
+		if row.subdomain:
+			base.add(row.subdomain)
+
+	if len(base) <= 100:
+		print("{0} {1} {2}".format(colored("\n[*]-Performing permutations on", "yellow"), colored(len(base), "cyan"), colored("hostnames...", "yellow")))
+	
+	else:
+		print("{0} {1} {2}".format(colored("\n[*]-Performing permutations on", "yellow"), colored(len(base), "cyan"), colored("hostnames in chunks of 100...", "yellow")))
+	
+	numberOfChunks = len(base) // 100 + 1
+
+	baseChunks = utilities.MiscHelpers.chunkify(list(base), 100)
+	iteration = 1
+
 	words = [line.strip() for line in wordlist.readlines()]
 	wordlist.close()
 
-	for subdomain in subdomains:
-		is_wildcard = False
+	for chunk in baseChunks:
+		generators = []
+		permutations = set()
 
-		for hostnames in list(wildcards.values()):
-			for hostname in hostnames:
-				if hostname in subdomain:
-					is_wildcard = True
+		for subdomain in chunk:
+			generators.append(permuteDash(subdomain, words))
+			generators.append(permuteDot(subdomain, words))
+			generators.append(permuteWords(subdomain, words))
+			generators.append(permuteNumbers(subdomain))
+			generators.append(permuteIterations(subdomain))
 
-		if is_wildcard:
-			pass
+		for generator in generators:
+			for subdomain in generator:
+				permutations.add((subdomain, "Permutations"))
 
-		else:
-			subdomain = subdomain.split(domain)[0][:-1]
-			permutations += permuteDash(subdomain, words)
-			permutations += permuteDot(subdomain, words)
-			permutations += permuteWords(subdomain, words)
-			permutations += permuteNumbers(subdomain)
+		permutations = list(permutations)
+		print("{0} {1} {2} {3}".format(colored("\n[*]-Generated", "yellow"), colored(len(permutations), "cyan"), colored("permutated subdomains for chunk", "yellow"), colored(str(iteration) + "/" + str(numberOfChunks), "cyan")))
+		iteration += 1
 
-	permutations = list(set(permutations))
-
-	for i in range(len(permutations)):
-		permutations[i] = ".".join([permutations[i], domain])
-
-	for hostnames in list(wildcards.values()):
-		for hostname in hostnames:
-			permutations.append(".".join([str(int(time())), hostname]))
-
-	print("  \__ {0}: {1}".format(colored("Generated subdomains", "cyan"), colored(len(permutations), "yellow")))
-	return permutations
+		identifyWildcards(db, permutations, domain, threads)
+		massResolve(db, permutations, domain, hideWildcards, threads)

@@ -1,5 +1,6 @@
-import re
 import requests
+from re import findall
+from json import loads
 from termcolor import colored
 from configparser import RawConfigParser
 
@@ -29,18 +30,28 @@ def init(domain):
 				print("  \__", colored("Rate limit exceeded. See https://www.censys.io/account for rate limit details.", "red"))
 				return C
 
-			C = re.findall("CN=([\w\.\-\d]+)\." + domain, str(res.content))
-			numberOfPages = re.findall("pages\":\s(\d+)?}", str(res.content))
+			C = findall("CN=([\w\d][\w\d\-\.]*\.{0})".format(domain.replace(".", "\.")), str(res.content))
+			numberOfPages = findall("pages\":\s(\d+)?}", str(res.content))
 
 			for page in range(2, int(numberOfPages[0]) + 1):
 				payload = {"query": domain, "page": page}
 				res = requests.post(API_URL + "/search/certificates", json=payload, auth=(UID, SECRET))
-				tempC = re.findall("CN=([\w\.\-\d]+)\." + domain, str(res.content))
-				C = C + tempC
+
+				if res.status_code != 200:
+					if loads(res.text)["error_type"] == "max_results":
+						print("  \__", colored("Search result limit reached. See https://www.censys.io/account for search results limit details.", "red"))
+						break
+					
+					else:
+						print("  \__ {0} {1} {2}".format(colored("An error occured on page", "red"), colored("{0}:".format(page), "red"), colored(loads(res.text)["error_type"], "red")))
+
+				else:
+					tempC = findall("CN=([\w\d][\w\d\-\.]*\.{0})".format(domain.replace(".", "\.")), str(res.content))
+					C = C + tempC
 
 			C = set(C)
 
-			print("  \__ {0}: {1}".format(colored("Unique subdomains found", "cyan"), colored(len(C), "yellow")))
+			print("  \__ {0}: {1}".format(colored("Subdomains found", "cyan"), colored(len(C), "yellow")))
 			return C
 
 		except KeyError as errk:
