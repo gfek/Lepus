@@ -1,3 +1,4 @@
 *.pyc
-config.ini
-results/
+findings.sqlite
+lepusdb.sqlite
+findings/

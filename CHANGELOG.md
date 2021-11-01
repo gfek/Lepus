@@ -1,3 +1,124 @@
+# Version 3.4.0
+
+### --- New Features
+1. Added Markov submodule
+2. Added RIPE database lookup for CIDRs to be used in reverse lookup
+3. Added --flush flag to purge an entry from the database and exit
+4. Signature for kayako takeover
+5. Signature for ning takeover
+6. Signature for moosend takeover
+7. Added export functionality when ctrl+c is pressed up to the latest completed module - does not create diff.
+8. New Project Discovery Chaos collector
+9. New ZoomEye collector
+10. New ThreatMiner collector
+11. New FOFA collector
+
+### --- Bug Fixes
+1. Fixed bugs in Censys collector so that search result limit is identified and identification is better
+2. Fixed logical bug in portscan that caused very long duration of execution
+3. Removed Entrust Certificates collector as it's no longer being used
+4. Better exception handling in some minor cases
+5. Fixed a bug in CertSpotter collector's result identification
+6. Fixed a bug in DNSTrails collector's result identification
+7. Fixed a bug in GoogleTransparency collector's response parsing
+8. Fixed logic bugs in Shodan collector
+9. Fixed a bug in ProjectCrobat collector
+
+### --- Misc
+1. Changed database name from findings.sqlite to lepusdb.sqlite
+2. Minor cosmetic fixes in output
+3. Updated user-agent strings
+4. Changed README file
+5. Updated requirements.txt
+
+# Version 3.3.2
+
+### --- New Features
+1. Added Project Crobat collector
+2. Added export of wildcards
+
+### --- Bug Fixes
+1. Fixed a bug on the CRT collector
+2. Fixed a bug that was unintentionally purging the retrieved DNS records of the target domain
+
+### --- Misc
+1. Updated requirements.txt
+2. Updated Spyse collector
+3. Removed broken Entrust Certificates collector
+
+# Version 3.3.1
+
+### --- New Features
+1. Added history on diff log
+
+### --- Bug Fixes
+1. Fixed a bug on the Slack messaging mechanism
+
+### --- Misc
+1. Updated requirements.txt
+
+# Version 3.3.0
+
+### --- New Features
+1. Added various new signatures for takeover identification
+2. Added the ability to have more than one signature per service 
+3. Added new permutation function for numeric iteration
+
+### --- Bug Fixes
+1. Fixed the Spyse collector so that it's working due to changes in the API
+
+### --- Misc
+1. Changed handling of permutations so now they happen in chunks
+2. Changed handling of wildcard identification to use chunks
+3. Memory handling is a lot better
+4. Updated README.md
+
+# Version 3.2.2
+
+### --- New Features
+1. Display location information on networks identified by the RDAP submodule
+2. Diff between runs against the same domain
+
+### --- Misc
+1. Various enhancements on export functionality
+2. Updated README.md
+3. Updated requirements.txt
+
+# Version 3.2.1
+
+### --- New Features
+1. Slack notifications on new potential takeovers
+2. Export of findings
+
+### --- Bug Fixes
+1. Fixed a logic bug on the handling of old findings
+
+### --- Misc
+1. Database improvements
+2. Removed DNSDB collector
+3. Updated README.md
+4. Updated requirements.txt
+
+# Version 3.2.0
+
+### --- New Features
+1. SQLite integration
+2. IPv6 support
+3. Memory management improvements
+4. Spyse API collector
+
+### --- Bug Fixes
+1. Fixed an issue on the wildcard identification logic
+2. Fixed a logic bug on the CertSpotter collector
+
+### --- Misc
+1. Updated README.md
+2. Updated requirements.txt
+3. Updated .gitignore
+4. Added new takeover signatures
+5. Added various records to the words.txt list used for permutations
+6. Removed FindSubdomains collector
+
 # Version 3.1.0
 
 ### --- New Features
@@ -15,7 +136,7 @@
 6. Fix a bug during wildcard identification that didn't allow for threads to finish properly
 
 ### --- Misc
-1. Updated readme for Portscan and Takeover
+1. Updated README.md for Portscan and Takeover
 2. Updated requirements.txt to account for new cloudflare bypass
 3. Portscan module - slight change due to my OCDs
 4. Updated wordlists

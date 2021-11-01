@@ -1,4 +1,6 @@
 import shodan
+from re import findall
+from json import dumps
 from termcolor import colored
 from configparser import RawConfigParser
 
@@ -19,11 +21,12 @@ def init(domain):
 
 	else:
 		try:
-			results = api.search("hostname:.{0}".format(domain))
-
 			try:
-				for res in results["matches"]:
-					SD.append("".join(res["hostnames"]))
+				for res in api.search_cursor("hostname:.{0}".format(domain)):
+					SD.extend([hostname for hostname in res["hostnames"] if ".{0}".format(domain) in hostname])
+
+				for res in api.search_cursor("ssl:.{0}".format(domain)):
+					SD.extend(findall("([\w\d][\w\d\-\.]*\.{0})".format(domain.replace(".", "\.")), dumps(res)))
 
 			except KeyError as errk:
 				print("  \__", colored(errk, "red"))
@@ -31,7 +34,7 @@ def init(domain):
 
 			SD = set(SD)
 
-			print("  \__ {0}: {1}".format(colored("Unique subdomains found", "cyan"), colored(len(SD), "yellow")))
+			print("  \__ {0}: {1}".format(colored("Subdomains found", "cyan"), colored(len(SD), "yellow")))
 			return SD
 
 		except shodan.exception.APIError as err:

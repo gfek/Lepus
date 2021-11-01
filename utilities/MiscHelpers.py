@@ -1,9 +1,11 @@
-from json import dumps
-from time import time, ctime
+from slack import WebClient
+from datetime import datetime
 from termcolor import colored
-from ipaddress import ip_network
-from os.path import exists, isfile, join
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm.exc import FlushError
+from ipaddress import ip_address, ip_network
 from os import makedirs, listdir, stat, remove
+from utilities.DatabaseHelpers import Record, Wildcard, Resolution, Unresolved, ASN, Network, OpenPort, URL, Takeover
 
 
 def checkArgumentValidity(parser, args):
@@ -51,161 +53,127 @@ def checkArgumentValidity(parser, args):
 	return True
 
 
-def deleteEmptyFiles(directory):
-	try:
-		filenames = [filename for filename in listdir(join("results", directory)) if isfile(join("results", directory, filename))]
-
-		for filename in filenames:
-			if stat(join("results", directory, filename)).st_size == 0:
-				remove(join("results", directory, filename))
-
-	except OSError:
-		pass
-
-
-def diffLastRun(domain, wildcards, resolved_public, old_resolved_public, last_run, current_run):
-	diff = {}
-
-	for host, ip in list(resolved_public.items()):
-		if host not in old_resolved_public:
-			diff[host] = ip
-
-	if diff:
-		print("{0} {1}:".format(colored("\n[*]-Differences since", "yellow"), colored(ctime(int(last_run)), "cyan")))
-
-		for host, ip in list(diff.items()):
-			if ip in wildcards:
-				actual_wildcard = False
-
-				for value in wildcards[ip]:
-					if value in host:
-						actual_wildcard = True
-
-				if actual_wildcard:
-					print("  \__ {0} ({1})".format(colored(host, "cyan"), colored(ip, "red")))
-
-				else:
-					print("  \__ {0} ({1})".format(colored(host, "cyan"), colored(ip, "yellow")))
-
-			else:
-				print("  \__ {0} ({1})".format(colored(host, "cyan"), colored(ip, "yellow")))
-
-		try:
-			if exists(join("results", domain, "diff.log")):
-				initialDiff = False
-
-			else:
-				initialDiff = True
-
-			with open(join("results", domain, "diff.log"), "a") as diff_file:
-				if initialDiff:
-					diff_file.write("# ---------- {0} ---------- #\n".format(ctime(int(current_run))))
-
-				else:
-					diff_file.write("\n# ---------- {0} ---------- #\n".format(ctime(int(current_run))))
-
-				diff_file.write("[!] Differences since {0}\n".format(ctime(int(last_run))))
-
-				for host, ip in list(diff.items()):
-					diff_file.write("  \__ {0} ({1})\n".format(host, ip))
-
-		except OSError:
-			pass
-
-		except IOError:
-			pass
-
-
-def createWorkspace(directory):
-	dir_path = join("results", directory)
-
-	if not exists(dir_path):
-		makedirs(dir_path)
-
-		return True
-
-	else:
-		return False
-
-
-def saveCollectorResults(domain, subdomains):
-	if subdomains:
-		try:
-			with open(join("results", domain, "passive_findings.txt"), "w") as collector_file:
-				for subdomain in subdomains:
-					collector_file.write("{0}\n".format(subdomain))
-
-		except OSError:
-			pass
-
-		except IOError:
-			pass
-
-
-def loadOldFindings(directory):
-	filenames = [filename for filename in listdir(join("results", directory)) if isfile(join("results", directory, filename))]
-	OF = []
-	ORP = []
-	collector_results = []
+def loadOldFindings(db, domain):
+	old_resolved = set()
+	old_unresolved = set()
+	old_takeovers = set()
 
 	print(colored("\n[*]-Loading Old Findings...", "yellow"))
 
-	for filename in filenames:
-		if "resolved" in filename:
-			try:
-				with open(join("results", directory, filename), "r") as old_file:
-					lines = old_file.readlines()
+	for row in db.query(Resolution).filter(Resolution.domain == domain):
+		old_resolved.add((row.subdomain, row.source))
 
-					for line in lines:
-						OF.append(line.split("|")[0])
+	for row in db.query(Unresolved).filter(Unresolved.domain == domain):
+		old_unresolved.add(row.subdomain)
 
-						if "public" in filename:
-							ORP.append(line.split("|")[0])
+	for row in db.query(Takeover).filter(Takeover.domain == domain):
+		old_takeovers.add(".".join([row.subdomain, domain]))
 
-			except OSError:
-				pass
+	print("  \__ {0}: {1}".format(colored("Subdomains loaded", "cyan"), colored(len(old_resolved) + len(old_unresolved), "yellow")))
+	return old_resolved, old_unresolved, old_takeovers
 
-			except IOError:
-				pass
 
-		if filename == ".timestamp":
-			with open(join("results", directory, filename), "r") as timestamp_file:
-				last_run = timestamp_file.read()
+def purgeOldFindings(db, domain):
+	db.query(Wildcard).filter(Wildcard.domain == domain).delete()
+	db.commit()
 
-		if filename == "passive_findings.txt":
-			with open(join("results", directory, filename), "r") as collector_file:
-				collector_results += [line.strip() for line in collector_file.readlines()]
+	db.query(Resolution).filter(Resolution.domain == domain).delete()
+	db.commit()
 
-	print("  \__ {0}: {1}".format(colored("Unique subdomains loaded", "cyan"), colored(len(OF), "yellow")))
-	return OF, ORP, last_run, collector_results
+	db.query(Unresolved).filter(Unresolved.domain == domain).delete()
+	db.commit()
+
+	db.query(ASN).filter(ASN.domain == domain).delete()
+	db.commit()
+
+	db.query(Network).filter(Network.domain == domain).delete()
+	db.commit()
+
+	db.query(OpenPort).filter(OpenPort.domain == domain).delete()
+	db.commit()
+
+	db.query(URL).filter(URL.domain == domain).delete()
+	db.commit()
+
+	db.query(Takeover).filter(Takeover.domain == domain).delete()
+	db.commit()
+
+	db.query(Record).filter(Record.domain == domain).delete()
+	db.commit()
+
+	db.execute("VACUUM;")
 
 
 def loadWordlist(domain, wordlist):
 	print(colored("\n[*]-Loading Wordlist...", "yellow"))
 
-	WL = set([".".join([subdomain.strip().lower(), domain]) for subdomain in wordlist.readlines()])
+	WL = set([subdomain.strip().lower()for subdomain in wordlist.readlines()])
 	wordlist.close()
 
-	print("  \__ {0}: {1}".format(colored("Unique subdomains loaded", "cyan"), colored(len(WL), "yellow")))
-	return list(WL)
+	print("  \__ {0}: {1}".format(colored("Subdomains loaded", "cyan"), colored(len(WL), "yellow")))
+	return WL
 
 
-def uniqueSubdomainLevels(hosts):
+def cleanupFindings(domain, old_resolved, old_unresolved, zt, collectors, wordlist):
+	unique_subdomains = set()
+	findings = [("", "Collectors")]
+
+	if zt:
+		for subdomain in zt:
+			subdomain = subdomain.lower()
+
+			if subdomain not in unique_subdomains:
+				unique_subdomains.add(subdomain)
+				findings.append((subdomain, "Zone Transfer"))
+
+	if collectors:
+		collectors = filterDomain(domain, collectors)
+
+		for subdomain in collectors:
+			subdomain = subdomain.lower()
+
+			if subdomain not in unique_subdomains:
+				unique_subdomains.add(subdomain)
+				findings.append((subdomain, "Collectors"))
+
+	if wordlist:
+		for subdomain in wordlist:
+			subdomain = subdomain.lower()
+
+			if subdomain not in unique_subdomains:
+				unique_subdomains.add(subdomain)
+				findings.append((subdomain, "Wordlist"))
+
+	if old_resolved:
+		for item in old_resolved:
+			subdomain = item[0].lower()
+
+			if subdomain not in unique_subdomains:
+				unique_subdomains.add(subdomain)
+				findings.append((subdomain, item[1]))
+
+	if old_unresolved:
+		for subdomain in old_unresolved:
+			subdomain = subdomain.lower()
+
+			if subdomain not in unique_subdomains:
+				unique_subdomains.add(subdomain)
+				findings.append((subdomain, "Collectors"))
+
+	return findings
+
+
+def uniqueSubdomainLevels(subdomains):
 	unique_subs = set()
-
-	for host in hosts:
-		unique_subs.add(".".join(sub for sub in host.split(".")[1:]))
-
-	return list(unique_subs)
-
-
-def uniqueList(subdomains):
-	uniqe_subdomains = set()
+	unique_subs.add("")
 
 	for subdomain in subdomains:
-		uniqe_subdomains.add(subdomain.lower())
+		subdomain_parts = subdomain[0].split(".")
 
-	return list(uniqe_subdomains)
+		for i in range(len(subdomain_parts) - 1):
+			unique_subs.add(".".join(sub for sub in subdomain[0].split(".")[i + 1:]))
+
+	return list(unique_subs)
 
 
 def filterDomain(domain, subdomains):
@@ -216,32 +184,159 @@ def filterDomain(domain, subdomains):
 		subdomain_parts = subdomain.split(".")
 
 		if domain_parts == subdomain_parts[-1 * len(domain_parts):]:
-			filtered.append(subdomain)
+			filtered_subdomain = ".".join(subdomain_parts[:-1 * len(domain_parts)])
+
+			if filtered_subdomain:
+				filtered.append(filtered_subdomain)
 
 	return filtered
 
 
-def chunks(list, numberInChunk):
-	for i in range(0, len(list), numberInChunk):
-		yield list[i:i + numberInChunk]
+def chunkify(original, numberOfItemsInChunk):
+	for i in range(0, len(original), numberOfItemsInChunk):
+		yield original[i:i + numberOfItemsInChunk]
 
 
-def urlize(target, domains):
-	hosts = [hostname for hostname, address in list(domains.items()) if address == target[0]]
-	urls = []
-
-	for host in hosts:
-		if target[1] == 80:
-			urls.append("http://{0}/".format(host))
-
-		elif target[1] == 443:
-			urls.append("https://{0}/".format(host))
-
-		else:
-			if target[2]:
-				urls.append("https://{0}:{1}/".format(host, target[1]))
+def generateURLs(db, domain, portscan, timestamp):
+	for address, ports in portscan.items():
+		for row in db.query(Resolution).filter(Resolution.domain == domain, Resolution.address == address):
+			if row.subdomain:
+				hostname = ".".join([row.subdomain, domain])
 
 			else:
-				urls.append("http://{0}:{1}/".format(host, target[1]))
+				hostname = domain
 
-	return urls
+			for port in ports:
+				if port[0] == 80:
+					url = "http://{0}/".format(hostname)
+
+				elif port[0] == 443:
+					url = "https://{0}/".format(hostname)
+
+				else:
+					if port[1]:
+						url = "https://{0}:{1}/".format(hostname, port[0])
+
+					else:
+						url = "http://{0}:{1}/".format(hostname, port[0])
+
+				db.add(URL(url=url, domain=domain, timestamp=timestamp))
+
+				try:
+					db.commit()
+
+				except (IntegrityError, FlushError):
+					db.rollback()
+
+
+def slackNotification(token, channel, text):
+	client = WebClient(token=token)
+	client.chat_postMessage(channel=channel, text=text, username="Lepus", icon_emoji=":rabbit2:")
+
+
+def exportFindings(db, domain, old_resolved, interrupt):
+	if interrupt:
+		print(colored("\n[*]-Exporting what has been found so far...", "red"))
+	else:
+		print(colored("\n[*]-Exporting findings...", "yellow"))
+
+	old_hostnames = [items[0] for items in old_resolved]
+	path = "findings/{0}".format(domain)
+	makedirs(path, exist_ok=True)
+
+	with open("{0}/{1}".format(path, "records.csv"), "w") as records:
+		for row in db.query(Record).filter(Record.domain == domain).order_by(Record.type):
+			records.write("{0}|{1}\n".format(row.type, row.value))
+
+	with open("{0}/{1}".format(path, "resolved_public.csv"), "w") as resolved_public:
+		with open("{0}/{1}".format(path, "resolved_private.csv"), "w") as resolved_private:
+			with open("{0}/{1}".format(path, "resolved_ipv6.csv"), "w") as resolved_ipv6:
+				with open("{0}/{1}".format(path, "diff.log"), "a") as diff:
+					new = True
+
+					for row1 in db.query(Resolution.subdomain).filter(Resolution.domain == domain).order_by(Resolution.subdomain).distinct():
+						diff_list = []
+						public = []
+						private = []
+						ipv6 = []
+
+						for row2 in db.query(Resolution.address).filter(Resolution.domain == domain, Resolution.subdomain == row1.subdomain).order_by(Resolution.address):
+							if old_hostnames:
+								if row1.subdomain not in old_hostnames:
+									diff_list.append(row2.address)
+
+							if ":" in row2.address:
+								ipv6.append(row2.address)
+
+							else:
+								if ip_address(row2.address).is_private:
+									private.append(row2.address)
+
+								elif ip_address(row2.address).is_global:
+									public.append(row2.address)
+
+						if diff_list:
+							if new:
+								diff.write("\n[!] {0}\n".format(datetime.now()))
+								new = False
+
+							if row1.subdomain == "":
+								diff.write("  \__ {0}: {1}\n".format(domain, ", ".join(diff_list)))
+
+							else:
+								diff.write("  \__ {0}.{1}: {2}\n".format(row1.subdomain, domain, ", ".join(diff_list)))
+
+						if ipv6:
+							if row1.subdomain == "":
+								resolved_ipv6.write("{0}|{1}\n".format(domain, ",".join(ipv6)))
+
+							else:
+								resolved_ipv6.write("{0}.{1}|{2}\n".format(row1.subdomain, domain, ",".join(ipv6)))
+
+						if private:
+							if row1.subdomain == "":
+								resolved_private.write("{0}|{1}\n".format(domain, ",".join(private)))
+
+							else:
+								resolved_private.write("{0}.{1}|{2}\n".format(row1.subdomain, domain, ",".join(private)))
+
+						if public:
+							if row1.subdomain == "":
+								resolved_public.write("{0}|{1}\n".format(domain, ",".join(public)))
+
+							else:
+								resolved_public.write("{0}.{1}|{2}\n".format(row1.subdomain, domain, ",".join(public)))
+
+	with open("{0}/{1}".format(path, "unresolved.csv"), "w") as unresolved:
+		for row in db.query(Unresolved.subdomain).filter(Unresolved.domain == domain).order_by(Unresolved.subdomain):
+			unresolved.write("{0}.{1}\n".format(row.subdomain, domain))
+
+	with open("{0}/{1}".format(path, "wildcards.csv"), "w") as wildcards:
+		for row in db.query(Wildcard).filter(Wildcard.domain == domain).order_by(Wildcard.subdomain):
+			wildcards.write("{0}.{1}|{2}\n".format(row.subdomain, domain, row.address))
+
+	with open("{0}/{1}".format(path, "asn.csv"), "w") as asn:
+		for row in db.query(ASN).filter(ASN.domain == domain).order_by(ASN.id):
+			asn.write("{0}|{1}|{2}\n".format(row.id, row.prefix, row.description))
+
+	with open("{0}/{1}".format(path, "networks.csv"), "w") as networks:
+		for row in db.query(Network).filter(Network.domain == domain).order_by(Network.cidr):
+			networks.write("{0}|{1}|{2}\n".format(row.cidr, row.identifier, row.country))
+
+	with open("{0}/{1}".format(path, "open_ports.csv"), "w") as open_ports:
+		for row1 in db.query(OpenPort.address).order_by(OpenPort.address).distinct():
+			open_ports.write("{0}|{1}\n".format(row1.address, ",".join([str(row2.port) for row2 in db.query(OpenPort.port).filter(OpenPort.domain == domain, OpenPort.address == row1.address).order_by(OpenPort.port)])))
+
+	with open("{0}/{1}".format(path, "urls.csv"), "w") as urls:
+		for row in db.query(URL.url).filter(URL.domain == domain):
+			urls.write("{0}\n".format(row.url))
+
+	with open("{0}/{1}".format(path, "takeovers.csv"), "w") as takeovers:
+		for row in db.query(Takeover).filter(Takeover.domain == domain).order_by(Takeover.subdomain):
+			takeovers.write("{0}.{1}|{2}|{3}\n".format(row.subdomain, domain, row.provider, row.signature))
+
+	for exported_file in listdir(path):
+		if stat("{0}/{1}".format(path, exported_file)).st_size == 0:
+			remove("{0}/{1}".format(path, exported_file))
+
+	print("  \__ {0}!\n".format(colored("Done", "cyan")))

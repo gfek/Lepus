@@ -1,4 +1,3 @@
-import utilities.MiscHelpers
 import requests
 from json import loads
 from termcolor import colored
@@ -10,7 +9,7 @@ def init(domain):
 	print(colored("[*]-Searching Rapid7 Open Data...", "yellow"))
 
 	url = "http://dns.bufferover.run/dns?q=.{0}".format(domain)
-	headers = {"user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:52.0) Gecko/20100101 Firefox/52.0"}
+	headers = {"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:88.0) Gecko/20100101 Firefox/88.0"}
 
 	try:
 		response = requests.get(url, headers=headers)
@@ -24,9 +23,7 @@ def init(domain):
 			for record in response_json["RDNS"]:
 				Sonar.append(record.split(",")[1])
 
-		Sonar = utilities.MiscHelpers.filterDomain(domain, utilities.MiscHelpers.uniqueList(Sonar))
-
-		print("  \__ {0}: {1}".format(colored("Unique subdomains found", "cyan"), colored(len(Sonar), "yellow")))
+		print("  \__ {0}: {1}".format(colored("subdomains found", "cyan"), colored(len(Sonar), "yellow")))
 		return Sonar
 
 	except requests.exceptions.RequestException as err:

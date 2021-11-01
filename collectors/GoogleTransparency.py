@@ -5,8 +5,12 @@ from termcolor import colored
 
 def parseResponse(response, domain):
 	try:
-		token = response.split("\n]\n,[")[2].split("]\n")[0].split(",")[1].strip("\"")
-		hostnameRegex = "([\w\.\-]+\.%s)" % (domain.replace(".", "\."))
+		try:
+			token = findall("(\w+)\",[\w\"]+,\d+,\d+\]\]\]$", response)[0]
+		except Exception:
+			token = "null"
+
+		hostnameRegex = "([\w\d][\w\d\-\.]*\.{0})".format(domain.replace(".", "\."))
 		hosts = findall(hostnameRegex, response)
 
 		return token, [host.lstrip(".") for host in hosts]
@@ -21,7 +25,7 @@ def init(domain):
 	print(colored("[*]-Searching Google Transparency...", "yellow"))
 
 	baseURL = "https://www.google.com/transparencyreport/api/v3/httpsreport/ct/certsearch"
-	headers = {"user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:52.0) Gecko/20100101 Firefox/52.0", "referrer": "https://transparencyreport.google.com/https/certificates"}
+	headers = {"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:88.0) Gecko/20100101 Firefox/88.0", "referrer": "https://transparencyreport.google.com/https/certificates"}
 	token = ""
 
 	try:
@@ -43,7 +47,7 @@ def init(domain):
 
 		GTR = set(GTR)
 
-		print("  \__ {0}: {1}".format(colored("Unique subdomains found", "cyan"), colored(len(GTR), "yellow")))
+		print("  \__ {0}: {1}".format(colored("Subdomains found", "cyan"), colored(len(GTR), "yellow")))
 		return GTR
 
 	except requests.exceptions.RequestException as err:
