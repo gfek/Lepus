@@ -45,8 +45,11 @@ def init(domain):
 					parameters = {"email": FOFA_EMAIL, "key": FOFA_KEY, "qbase64": encodedDomain, "page": page, "size": size, "full": "true", "fields": "host,title,domain,header,banner,cert"}
 					response = requests.get("https://fofa.so/api/v1/search/all", params=parameters, headers=headers)
 
-				FOFA.extend([item.lower() for item in findall("([\w\d][\w\d\-\.]*\.{0})".format(domain.replace(".", "\.")), response.text)])
-				page += 1
+				if loads(response.text)["error"] is False:
+					FOFA.extend([item.lower() for item in findall("([\w\d][\w\d\-\.]*\.{0})".format(domain.replace(".", "\.")), response.text)])
+					page += 1
+				else:
+					break
 
 			FOFA = set(FOFA)
 
