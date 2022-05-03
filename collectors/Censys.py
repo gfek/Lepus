@@ -12,7 +12,7 @@ def init(domain):
 
 	parser = RawConfigParser()
 	parser.read("config.ini")
-	API_URL = "https://www.censys.io/api/v1"
+	API_URL = "https://search.censys.io/api/v1"
 	UID = parser.get("Censys", "CENSYS_UID")
 	SECRET = parser.get("Censys", "CENSYS_SECRET")
 
