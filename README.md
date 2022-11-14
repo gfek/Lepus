@@ -283,7 +283,7 @@ optional arguments:
                         comma seperated ip ranges to perform reverse dns
                         lookups on
   -or, --only-ranges    use only ranges provided with -r or -ripe and not all
-                        previously identifed IPs
+                        previously identified IPs
   --portscan            scan resolved public IP addresses for open ports
   -p PORTS, --ports PORTS
                         set of ports to be used by the portscan module
