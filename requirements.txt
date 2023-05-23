@@ -1,7 +1,7 @@
 beautifulsoup4==4.9.3
 dnspython==2.0.0
 ipwhois==1.2.0
-requests==2.25.1
+requests==2.31.0
 shodan==1.25.0
 slackclient==2.9.3
 SQLAlchemy==1.4.18
