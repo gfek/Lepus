@@ -4,7 +4,6 @@ from json import loads
 from termcolor import colored
 from configparser import RawConfigParser
 
-
 def init(domain):
 	C = []
 
@@ -12,7 +11,7 @@ def init(domain):
 
 	parser = RawConfigParser()
 	parser.read("config.ini")
-	API_URL = "https://search.censys.io/api/v1"
+	API_URL = "https://search.censys.io/api/v2"
 	UID = parser.get("Censys", "CENSYS_UID")
 	SECRET = parser.get("Censys", "CENSYS_SECRET")
 
@@ -21,34 +20,31 @@ def init(domain):
 		return []
 
 	else:
-		payload = {"query": domain}
-
 		try:
-			res = requests.post(API_URL + "/search/certificates", json=payload, auth=(UID, SECRET))
+			res = requests.get(API_URL + "/certificates/search?per_page=99&q={0}".format(domain), auth=(UID, SECRET))
+			newres = res.content.decode()
 
 			if res.status_code == 429:
 				print("  \__", colored("Rate limit exceeded. See https://www.censys.io/account for rate limit details.", "red"))
 				return C
-
-			C = findall("CN=([\w\d][\w\d\-\.]*\.{0})".format(domain.replace(".", "\.")), str(res.content))
-			numberOfPages = findall("pages\":\s(\d+)?}", str(res.content))
-
-			for page in range(2, int(numberOfPages[0]) + 1):
-				payload = {"query": domain, "page": page}
-				res = requests.post(API_URL + "/search/certificates", json=payload, auth=(UID, SECRET))
-
-				if res.status_code != 200:
-					if loads(res.text)["error_type"] == "max_results":
-						print("  \__", colored("Search result limit reached. See https://www.censys.io/account for search results limit details.", "red"))
-						break
-					
-					else:
-						print("  \__ {0} {1} {2}".format(colored("An error occured on page", "red"), colored("{0}:".format(page), "red"), colored(loads(res.text)["error_type"], "red")))
-
-				else:
-					tempC = findall("CN=([\w\d][\w\d\-\.]*\.{0})".format(domain.replace(".", "\.")), str(res.content))
+			if res.status_code == 403:
+				print("  \__", colored(newres, "red"))
+				return C				
+			
+			C = findall("CN=([\w\d][\w\d\-\.]*\.{0})".format(domain.replace(".", "\.")), newres)	
+			nextPage = findall("next\":\s\"((?:[A-Za-z0-9+]{4})*(?:[A-Za-z0-9+]{2}==|[A-Za-z0-9+]{3}=)?)\"", newres)
+			if nextPage:
+				while nextPage[0]:
+					res = requests.get(API_URL + "/certificates/search?per_page=99&q={0}&cursor={1}".format(domain,nextPage[0]), auth=(UID, SECRET))
+					if res.status_code == 429:
+						print("  \__", colored("Rate limit exceeded. See https://www.censys.io/account for rate limit details.", "red"))
+					if res.status_code == 403:
+						print("  \__", colored(newres, "red"))						
+					newres = res.content.decode()
+					tempC = findall("CN=([\w\d][\w\d\-\.]*\.{0})".format(domain.replace(".", "\.")), newres)
+					nextPage = findall("next\":\s\"((?:[A-Za-z0-9+]{4})*(?:[A-Za-z0-9+]{2}==|[A-Za-z0-9+]{3}=)?)\"", newres)
 					C = C + tempC
-
+		
 			C = set(C)
 
 			print("  \__ {0}: {1}".format(colored("Subdomains found", "cyan"), colored(len(C), "yellow")))
