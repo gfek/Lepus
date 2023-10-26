@@ -51,6 +51,7 @@ The Collectors mode collects subdomains from the following services:
 |[Project Discovery Chaos](https://chaos.projectdiscovery.io/)|Yes|
 |[Project Crobat](https://sonar.omnisint.io/)|No|
 |[Project Sonar](https://www.rapid7.com/research/project-sonar/)|No|
+|[RedHunt Labs](https://redhuntlabs.com/)|Yes|
 |[Riddler](https://riddler.io/)|Yes|
 |[Shodan](https://www.shodan.io/)|Yes|
 |[Spyse](https://api-doc.spyse.com/)|Yes|
