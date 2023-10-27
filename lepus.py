@@ -16,6 +16,7 @@ import collectors.PassiveTotal
 import collectors.PDChaos
 import collectors.ProjectCrobat
 import collectors.ProjectSonar
+import collectors.RedHuntLabs
 import collectors.Riddler
 import collectors.Shodan
 import collectors.Spyse
