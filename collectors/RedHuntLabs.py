@@ -22,7 +22,7 @@ def init(domain):
 		
 		while 1:
 			try:
-				response = requests.get('https://reconapi.redhuntlabs.com/community/v1/domains/subdomains?domain={}&page_size=10&page={}', headers=headers)
+				response = requests.get('https://reconapi.redhuntlabs.com/community/v1/domains/subdomains?domain={domain}&page_size=10&page={page}', headers=headers)
 
 				if response.status_code == 200:
 					response_data = response.json()
