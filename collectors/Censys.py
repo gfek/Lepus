@@ -3,13 +3,12 @@ from re import findall
 from json import loads
 from termcolor import colored
 from configparser import RawConfigParser
-
+import os
 
 def init(domain):
 	C = []
 
 	print(colored("[*]-Searching Censys...", "yellow"))
-
 	parser = RawConfigParser()
 	parser.read("config.ini")
 	API_URL = "https://search.censys.io/api/v1"

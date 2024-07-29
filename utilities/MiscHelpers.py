@@ -73,35 +73,38 @@ def loadOldFindings(db, domain):
 	return old_resolved, old_unresolved, old_takeovers
 
 
+from sqlalchemy import text
+
 def purgeOldFindings(db, domain):
-	db.query(Wildcard).filter(Wildcard.domain == domain).delete()
-	db.commit()
+    db.query(Wildcard).filter(Wildcard.domain == domain).delete()
+    db.commit()
 
-	db.query(Resolution).filter(Resolution.domain == domain).delete()
-	db.commit()
+    db.query(Resolution).filter(Resolution.domain == domain).delete()
+    db.commit()
 
-	db.query(Unresolved).filter(Unresolved.domain == domain).delete()
-	db.commit()
+    db.query(Unresolved).filter(Unresolved.domain == domain).delete()
+    db.commit()
 
-	db.query(ASN).filter(ASN.domain == domain).delete()
-	db.commit()
+    db.query(ASN).filter(ASN.domain == domain).delete()
+    db.commit()
 
-	db.query(Network).filter(Network.domain == domain).delete()
-	db.commit()
+    db.query(Network).filter(Network.domain == domain).delete()
+    db.commit()
 
-	db.query(OpenPort).filter(OpenPort.domain == domain).delete()
-	db.commit()
+    db.query(OpenPort).filter(OpenPort.domain == domain).delete()
+    db.commit()
 
-	db.query(URL).filter(URL.domain == domain).delete()
-	db.commit()
+    db.query(URL).filter(URL.domain == domain).delete()
+    db.commit()
 
-	db.query(Takeover).filter(Takeover.domain == domain).delete()
-	db.commit()
+    db.query(Takeover).filter(Takeover.domain == domain).delete()
+    db.commit()
 
-	db.query(Record).filter(Record.domain == domain).delete()
-	db.commit()
+    db.query(Record).filter(Record.domain == domain).delete()
+    db.commit()
 
-	db.execute("VACUUM;")
+    # Используем text для выполнения SQL-запроса
+    db.execute(text("VACUUM;"))
 
 
 def loadWordlist(domain, wordlist):

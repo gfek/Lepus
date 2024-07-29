@@ -32,9 +32,14 @@ import submodules.Markov
 import utilities.DatabaseHelpers
 import utilities.MiscHelpers
 import utilities.ScanHelpers
+import sys
+import os
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__)+'/collectors')))
 
 simplefilter("ignore")
-version = "3.4.0"
+version = "4.0.0"
 
 
 def printBanner():
@@ -54,7 +59,7 @@ if __name__ == "__main__":
 	parser.add_argument("-nc", "--no-collectors", action="store_true", dest="noCollectors", help="skip passive subdomain enumeration", default=False)
 	parser.add_argument("-zt", "--zone-transfer", action="store_true", dest="zoneTransfer", help="attempt to zone transfer from identified name servers", default=False)
 	parser.add_argument("--permutate", action="store_true", dest="permutate", help="perform permutations on resolved domains", default=False)
-	parser.add_argument("-pw", "--permutation-wordlist", dest="permutation_wordlist", help="wordlist to perform permutations with [default is lists/words.txt]", type=FileType("r"), default="lists/words.txt")
+	parser.add_argument("-pw", "--permutation-wordlist", dest="permutation_wordlist", help="wordlist to perform permutations with [default is lists/words.txt]", type=FileType("r"))#, default="lists/words.txt")
 	parser.add_argument("--reverse", action="store_true", dest="reverse", help="perform reverse dns lookups on resolved public IP addresses", default=False)
 	parser.add_argument("-ripe", "--ripe", action="store_true", dest="ripe", help="query ripe database with the 2nd level domain for networks to be used for reverse lookups", default=False)
 	parser.add_argument("-r", "--ranges", action="store", dest="ranges", help="comma seperated ip ranges to perform reverse dns lookups on", type=str, default=None)
@@ -68,6 +73,8 @@ if __name__ == "__main__":
 	parser.add_argument("-mq", "--markov-quantity", action="store", dest="markov_quantity", help="max quantity of markov results per candidate length [default is 5]", type=int, default=5)
 	parser.add_argument("-f", "--flush", action="store_true", dest="doFlush", help="purge all records of the specified domain from the database", default=False)
 	parser.add_argument("-v", "--version", action="version", version="Lepus v{0}".format(version))
+	parser.add_argument("-o", "--output", dest="output", help = "file for output subdomains", type=str, default='')
+	parser.add_argument("-ol", "--outlive", dest="out_live", help="file for output live subdomains", type=str, default = '')
 	args = parser.parse_args()
 
 	if not utilities.MiscHelpers.checkArgumentValidity(parser, args):
@@ -136,8 +143,14 @@ if __name__ == "__main__":
 		collect()
 
 		if findings:
+			print('\n'.join([i[0] for i in findings if i[0]]))
+
+			if args.output:
+				with open(args.output, 'w+') as fout:
+					fout.writelines('\n'.join([i[0] for i in findings if i[0]]))
+			
 			utilities.ScanHelpers.identifyWildcards(db, findings, args.domain, args.threads)
-			utilities.ScanHelpers.massResolve(db, findings, args.domain, args.hideWildcards, args.threads)
+			utilities.ScanHelpers.massResolve(db, findings, args.domain, args.hideWildcards, args.threads, args.out_live)
 
 			del findings
 			collect()
