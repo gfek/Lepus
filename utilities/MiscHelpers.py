@@ -6,6 +6,8 @@ from sqlalchemy.orm.exc import FlushError
 from ipaddress import ip_address, ip_network
 from os import makedirs, listdir, stat, remove
 from utilities.DatabaseHelpers import Record, Wildcard, Resolution, Unresolved, ASN, Network, OpenPort, URL, Takeover
+from collections import defaultdict
+from sqlalchemy import exists
 
 
 def checkArgumentValidity(parser, args):
@@ -127,8 +129,6 @@ def cleanupFindings(domain, old_resolved, old_unresolved, zt, collectors, wordli
 				findings.append((subdomain, "Zone Transfer"))
 
 	if collectors:
-		collectors = filterDomain(domain, collectors)
-
 		for subdomain in collectors:
 			subdomain = subdomain.lower()
 
@@ -196,38 +196,53 @@ def chunkify(original, numberOfItemsInChunk):
 	for i in range(0, len(original), numberOfItemsInChunk):
 		yield original[i:i + numberOfItemsInChunk]
 
-
 def generateURLs(db, domain, portscan, timestamp):
-	for address, ports in portscan.items():
-		for row in db.query(Resolution).filter(Resolution.domain == domain, Resolution.address == address):
-			if row.subdomain:
-				hostname = ".".join([row.subdomain, domain])
+    print(colored(f"\n[*] Starting URL generation for {len(portscan)} addresses...", "yellow"))
 
-			else:
-				hostname = domain
+    from collections import defaultdict
+    res_by_address = defaultdict(list)
+    for row in db.query(Resolution).filter(Resolution.domain == domain).all():
+        res_by_address[row.address].append(row)
 
-			for port in ports:
-				if port[0] == 80:
-					url = "http://{0}/".format(hostname)
+    counter = 0
+    commit_batch = 1000
 
-				elif port[0] == 443:
-					url = "https://{0}/".format(hostname)
+    for address, ports in portscan.items():
+        if address not in res_by_address:
+            continue
 
-				else:
-					if port[1]:
-						url = "https://{0}:{1}/".format(hostname, port[0])
+        for row in res_by_address[address]:
+            hostname = f"{row.subdomain}.{domain}" if row.subdomain else domain
 
-					else:
-						url = "http://{0}:{1}/".format(hostname, port[0])
+            for port in ports:
+                if port[0] == 80:
+                    url = f"http://{hostname}/"
+                elif port[0] == 443:
+                    url = f"https://{hostname}/"
+                else:
+                    scheme = "https" if port[1] else "http"
+                    url = f"{scheme}://{hostname}:{port[0]}/"
 
-				db.add(URL(url=url, domain=domain, timestamp=timestamp))
+                # Check if URL exists
+                if not db.query(exists().where(URL.url == url)).scalar():
+                    db.add(URL(url=url, domain=domain, timestamp=timestamp))
+                    counter += 1
 
-				try:
-					db.commit()
+                    if counter % commit_batch == 0:
+                        try:
+                            db.commit()
+                            print(colored(f"[+] Committed {commit_batch} URLs (Total: {counter})", "cyan"))
+                        except (IntegrityError, FlushError) as e:
+                            db.rollback()
+                            print(colored(f"[!] Commit error: {e}", "red"))
 
-				except (IntegrityError, FlushError):
-					db.rollback()
-
+    # Final commit
+    try:
+        db.commit()
+        print(colored(f"[✓] Final commit of remaining {counter % commit_batch} URLs. Total: {counter}", "green"))
+    except (IntegrityError, FlushError) as e:
+        db.rollback()
+        print(colored(f"[!] Final commit error: {e}", "red"))
 
 def slackNotification(token, channel, text):
 	client = WebClient(token=token)

@@ -4,61 +4,30 @@ from configparser import RawConfigParser
 
 
 def init(domain):
-	PT = []
+    PT = []
 
-	print(colored("[*]-Searching PassiveTotal...", "yellow"))
+    print(colored("[*]-Searching PassiveTotal...", "yellow"))
 
-	parser = RawConfigParser()
-	parser.read("config.ini")
-	PT_KEY = parser.get("PassiveTotal", "PT_KEY")
-	PT_SECRET = parser.get("PassiveTotal", "PT_SECRET")
+    parser = RawConfigParser()
+    parser.read("config.ini")
+    PT_KEY = parser.get("PassiveTotal", "PT_KEY")
+    PT_SECRET = parser.get("PassiveTotal", "PT_SECRET")
 
-	if PT_KEY == "" or PT_SECRET == "":
-		print("  \__", colored("No PassiveTotal API credentials configured", "red"))
-		return []
+    if not PT_KEY or not PT_SECRET:
+        print("  \__", colored("No PassiveTotal API credentials configured", "red"))
+        return []
 
-	else:
-		auth = (PT_KEY, PT_SECRET)
-		url = "https://api.passivetotal.org/v2/enrichment/subdomains"
-		data = {"query": domain}
-		headers = {"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:88.0) Gecko/20100101 Firefox/88.0"}
+    auth = (PT_KEY, PT_SECRET)
+    url = f"https://api.passivetotal.org/v2/enrichment/subdomains?query={domain}"
 
-		try:
-			response = requests.get(url, auth=auth, json=data, headers=headers)
+    try:
+        response = requests.get(url, auth=auth)
+        if response.status_code == 200:
+            PT = response.json().get('subdomains', [])
+            print(f"  \__ {colored('Subdomains found', 'green')}: {len(PT)}")
+        else:
+            print(f"  \__ {colored('Error', 'red')}: {response.status_code}")
+    except Exception as e:
+        print(f"  \__ {colored('PassiveTotal API Error', 'red')}: {e}")
 
-			if response.status_code == 402:
-				print("  \__", colored("Quota exceeded.", "red"))
-				return []
-
-			try:
-				for subdomain in response.json()["subdomains"]:
-					PT.append("%s.%s" % (subdomain, domain))
-
-				PT = set(PT)
-
-				print("  \__ {0}: {1}".format(colored("Subdomains found", "cyan"), colored(len(PT), "yellow")))
-				return PT
-
-			except KeyError as errk:
-				print("  \__", colored(errk, "red"))
-				return []
-
-		except requests.exceptions.RequestException as err:
-			print("  \__", colored(err, "red"))
-			return []
-
-		except requests.exceptions.HTTPError as errh:
-			print("  \__", colored(errh, "red"))
-			return []
-
-		except requests.exceptions.ConnectionError as errc:
-			print("  \__", colored(errc, "red"))
-			return []
-
-		except requests.exceptions.Timeout as errt:
-			print("  \__", colored(errt, "red"))
-			return []
-
-		except Exception:
-			print("  \__", colored("Something went wrong!", "red"))
-			return []
+    return PT

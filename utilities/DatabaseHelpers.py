@@ -82,6 +82,30 @@ class Takeover(Base):
 	timestamp = Column(Integer, nullable=False)
 
 
+class Technology(Base):
+	__tablename__ = "technologies"
+	subdomain = Column(String(100), primary_key=True)
+	domain = Column(String(100), primary_key=True)
+	technology = Column(String(100), primary_key=True)
+	timestamp = Column(Integer, nullable=False)
+
+
+class SensitiveFile(Base):
+	__tablename__ = "sensitive_files"
+	subdomain = Column(String(100), primary_key=True)
+	domain = Column(String(100), primary_key=True)
+	url = Column(String(200), primary_key=True)
+	timestamp = Column(Integer, nullable=False)
+
+
+class Vulnerability(Base):
+	__tablename__ = "vulnerabilities"
+	subdomain = Column(String(100), primary_key=True)
+	domain = Column(String(100), primary_key=True)
+	url = Column(String(200), primary_key=True)
+	timestamp = Column(Integer, nullable=False)
+
+
 def init():
 	if os.path.exists("findings.sqlite"):
 		os.rename("findings.sqlite", "lepusdb.sqlite")
@@ -93,3 +117,91 @@ def init():
 	session = DBSession()
 
 	return session
+
+def getResolvedSubdomains(db, domain):
+    subdomains = []
+    for r in db.query(Resolution).filter(Resolution.domain == domain, Resolution.isWildcard == False).all():
+        if r.subdomain and not r.subdomain.isspace():
+            subdomains.append(r.subdomain)
+    return subdomains
+
+def getAllFindings(db, domain):
+    findings = {
+        "resolved_subdomains": [],
+        "unresolved_subdomains": [],
+        "open_ports": [],
+        "asns": [],
+        "networks": [],
+        "takeovers": [],
+        "technologies": [],
+        "sensitive_files": [],
+        "vulnerabilities": [],
+        "urls": []
+    }
+
+    for r in db.query(Resolution).filter(Resolution.domain == domain).all():
+        findings["resolved_subdomains"].append({
+            "subdomain": r.subdomain,
+            "address": r.address,
+            "isWildcard": r.isWildcard,
+            "source": r.source
+        })
+
+    for u in db.query(Unresolved).filter(Unresolved.domain == domain).all():
+        findings["unresolved_subdomains"].append({
+            "subdomain": u.subdomain
+        })
+
+    for op in db.query(OpenPort).filter(OpenPort.domain == domain).all():
+        findings["open_ports"].append({
+            "subdomain": op.domain,
+            "address": op.address,
+            "port": op.port,
+            "isSSL": op.isSSL
+        })
+
+    for a in db.query(ASN).filter(ASN.domain == domain).all():
+        findings["asns"].append({
+            "id": a.id,
+            "prefix": a.prefix,
+            "description": a.description
+        })
+
+    for n in db.query(Network).filter(Network.domain == domain).all():
+        findings["networks"].append({
+            "cidr": n.cidr,
+            "identifier": n.identifier,
+            "country": n.country
+        })
+
+    for t in db.query(Takeover).filter(Takeover.domain == domain).all():
+        findings["takeovers"].append({
+            "subdomain": t.subdomain,
+            "provider": t.provider,
+            "signature": t.signature
+        })
+
+    for tech in db.query(Technology).filter(Technology.domain == domain).all():
+        findings["technologies"].append({
+            "subdomain": tech.subdomain,
+            "technology": tech.technology
+        })
+
+    for sf in db.query(SensitiveFile).filter(SensitiveFile.domain == domain).all():
+        findings["sensitive_files"].append({
+            "subdomain": sf.subdomain,
+            "url": sf.url
+        })
+
+    for vuln in db.query(Vulnerability).filter(Vulnerability.domain == domain).all():
+        findings["vulnerabilities"].append({
+            "subdomain": vuln.subdomain,
+            "url": vuln.url
+        })
+
+    for u in db.query(URL).filter(URL.domain == domain).all():
+        findings["urls"].append({
+            "url": u.url
+        })
+
+    return findings
