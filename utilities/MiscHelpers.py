@@ -121,7 +121,7 @@ def cleanupFindings(domain, old_resolved, old_unresolved, zt, collectors, wordli
 	findings = [("", "Collectors")]
 
 	if zt:
-		for subdomain in zt:
+		for subdomain in set(zt):
 			subdomain = subdomain.lower()
 
 			if subdomain not in unique_subdomains:
@@ -129,7 +129,9 @@ def cleanupFindings(domain, old_resolved, old_unresolved, zt, collectors, wordli
 				findings.append((subdomain, "Zone Transfer"))
 
 	if collectors:
-		for subdomain in collectors:
+		collectors = filterDomain(domain, collectors)
+
+		for subdomain in set(collectors):
 			subdomain = subdomain.lower()
 
 			if subdomain not in unique_subdomains:

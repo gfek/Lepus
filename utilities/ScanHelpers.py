@@ -15,26 +15,45 @@ from ssl import create_default_context, CERT_NONE
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from socket import getaddrinfo, gethostbyaddr, socket, AF_INET, AF_INET6, SOCK_STREAM
 from utilities.DatabaseHelpers import Record, Wildcard, Resolution, Unresolved, ASN, Network, OpenPort
+import os
+import subprocess
 import utilities.MiscHelpers
 
 
 def zoneTransfer(db, domain):
-    print(colored("\n[*]-Attempting to zone transfer from the identified nameservers...", "yellow"))
+    print(colored("\n[*]-Attempting to zone transfer from identified nameservers...", "yellow"))
+    nameservers = [row.value for row in db.query(Record).filter(Record.domain == domain, Record.type == "NS")]
 
-    for row in db.query(Record).filter(Record.domain == domain, Record.type == "NS"):
+    if not nameservers:
+        print(colored("  \__ No nameservers found to attempt zone transfer.", "red"))
+        return None
+
+    for ns in nameservers:
+        print(colored(f"  \__ Trying nameserver: {ns}", "cyan"))
         try:
-            zone = from_xfr(xfr(row.value, domain))
-            subdomains = set([str(key) for key in zone.nodes.keys()])
+            # Try standard AXFR
+            zone = from_xfr(xfr(ns, domain, timeout=5))
+            if zone:
+                subdomains = set([str(key) for key in zone.nodes.keys()])
+                print(colored(f"    \__ Success! Retrieved {len(subdomains)} subdomains via AXFR.", "green"))
+                return subdomains
+        except Exception as e:
+            error_message = str(e).split('\n')[0] # Get a concise error
+            print(colored(f"    \__ AXFR failed: {error_message}", "red"))
 
-            print("  \__ {0}: {1}".format(colored("Subdomains retrieved", "cyan"), colored(len(subdomains), "yellow")))
-            return subdomains
+        try:
+            # If AXFR fails, try IXFR
+            zone = from_xfr(xfr(ns, domain, timeout=5))
+            if zone:
+                subdomains = set([str(key) for key in zone.nodes.keys()])
+                print(colored(f"    \__ Success! Retrieved {len(subdomains)} subdomains via IXFR.", "green"))
+                return subdomains
+        except Exception as e:
+            error_message = str(e).split('\n')[0]
+            print(colored(f"    \__ IXFR failed: {error_message}", "red"))
 
-        except Exception:
-            continue
-
-    print("  \__", colored("Failed to zone transfer.", "red"))
+    print(colored("\n[*]-Zone transfer attempts complete on all nameservers.", "yellow"))
     return None
-
 
 def retrieveDNSRecords(db, domain):
     resolver = Resolver()
@@ -96,7 +115,7 @@ def checkWildcard(timestamp, subdomain, domain):
 def identifyWildcards(db, findings, domain, threads):
     if len(findings) <= 10000:
         print(colored("\n[*]-Generating samples for wildcard identification...", "yellow"))
-    
+
     else:
         print(colored("\n[*]-Generating samples for wildcard identification in chunks of 10,000...", "yellow"))
 
@@ -156,10 +175,10 @@ def identifyWildcards(db, findings, domain, threads):
                 stderr.write("\033[F")
 
             iteration += 1
-        
+
         if findingsChunkIterator < numberOfFindingsChunks:
             stdout.write("\033[F\033[F")
-        
+
         findingsChunkIterator += 1
 
     if wildcards:

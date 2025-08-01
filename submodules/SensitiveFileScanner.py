@@ -5,6 +5,7 @@ import asyncio
 import utilities.DatabaseHelpers
 import os
 import csv
+from bs4 import BeautifulSoup
 
 # List of sensitive file paths to check for
 SENSITIVE_PATHS = [
@@ -59,36 +60,80 @@ SENSITIVE_PATHS = [
     "/actuator/sessions", "/actuator/shutdown", "/actuator/threaddump", "/solr/admin/info/system"
 ]
 
-async def check_url(session, sem, subdomain, path, pbar, found_files_queue):
+async def get_homepage_details(session, subdomain):
+    """Fetches the content and title of the subdomain's homepage to detect soft 404s."""
+    try:
+        for protocol in ["https", "http"]:
+            url = f"{protocol}://{subdomain}/"
+            response = await session.get(url, timeout=5, follow_redirects=True)
+            if response.status_code == 200:
+                content = response.text
+                soup = BeautifulSoup(content, 'html.parser')
+                title = soup.title.string if soup.title else None
+                return content, title
+    except (httpx.RequestError, Exception):
+        return None, None
+    return None, None
+
+async def check_url(session, sem, subdomain, path, pbar, found_files_queue, homepage_content, homepage_title):
     async with sem:
         url = f"https://{subdomain}{path if path.startswith('/') else '/' + path}"
         try:
             response = await session.get(url, timeout=10, follow_redirects=True)
-            if response.status_code == 200:
-                tqdm.write(colored(f"  \__ Found sensitive file: {url}", "green"))
-                await found_files_queue.put(url)
-        except httpx.RequestError:
-            pass  # Ignore connection errors, timeouts, etc.
+            status = response.status_code
+
+            if status == 200:
+                is_soft_404 = False
+                if homepage_content and len(response.text) == len(homepage_content):
+                    is_soft_404 = True
+                
+                if not is_soft_404 and homepage_title:
+                    soup = BeautifulSoup(response.text, 'html.parser')
+                    if soup.title and soup.title.string == homepage_title:
+                        is_soft_404 = True
+
+                if not is_soft_404:
+                    tqdm.write(colored(f"[200 OK] Found sensitive file: {url}", "green"))
+                    await found_files_queue.put(url)
+            
+            
+
+        except (httpx.RequestError, Exception):
+            pass
         finally:
             pbar.update(1)
 
+async def pre_screen_subdomain(session, sem, subdomain, live_subdomains_queue):
+    async with sem:
+        for protocol in ["https", "http"]:
+            url = f"{protocol}://{subdomain}"
+            try:
+                response = await session.head(url, timeout=5, follow_redirects=True)
+                if response.status_code < 500:
+                    await live_subdomains_queue.put(subdomain)
+                    return 
+            except httpx.RequestError:
+                continue 
+
 async def main_scanner(domain, subdomains, pbar):
-    sem = asyncio.Semaphore(100)  # Limit to 100 concurrent requests
+    sem = asyncio.Semaphore(100)
     found_files_queue = asyncio.Queue()
     async with httpx.AsyncClient(verify=False) as session:
         tasks = []
         for subdomain in subdomains:
             if not subdomain or subdomain.isspace():
-                tqdm.write(colored(f"  \__ Skipping invalid subdomain: {subdomain}", "red"))
                 continue
+            
+            homepage_content, homepage_title = await get_homepage_details(session, subdomain)
+
             for path in SENSITIVE_PATHS:
-                tasks.append(check_url(session, sem, subdomain, path, pbar, found_files_queue))
+                tasks.append(check_url(session, sem, subdomain, path, pbar, found_files_queue, homepage_content, homepage_title))
         await asyncio.gather(*tasks)
-    
+
     found_files = []
     while not found_files_queue.empty():
         found_files.append(await found_files_queue.get())
-    
+
     return found_files
 
 async def init(db, domain):
@@ -105,9 +150,28 @@ async def init(db, domain):
         print(colored("  \__ No resolved subdomains found to scan.", "yellow"))
         return
 
-    total_requests = len(resolved_subdomains) * len(SENSITIVE_PATHS)
+    print(colored("[*]-Pre-screening subdomains for live web servers...", "yellow"))
+    live_subdomains_queue = asyncio.Queue()
+    sem = asyncio.Semaphore(100)
+    async with httpx.AsyncClient(verify=False) as session:
+        tasks = [pre_screen_subdomain(session, sem, sub, live_subdomains_queue) for sub in resolved_subdomains]
+        with tqdm(total=len(tasks), desc="Pre-screening hosts", unit="host") as pbar:
+            for f in asyncio.as_completed(tasks):
+                await f
+                pbar.update()
+
+    live_subdomains = []
+    while not live_subdomains_queue.empty():
+        live_subdomains.append(await live_subdomains_queue.get())
+
+    if not live_subdomains:
+        print(colored("  \__ No live web servers found to scan.", "red"))
+        return
+
+    print(colored(f"\n[*]-Found {len(live_subdomains)} live subdomains. Starting sensitive file scan...", "yellow"))
+    total_requests = len(live_subdomains) * len(SENSITIVE_PATHS)
     with tqdm(total=total_requests, desc="Scanning for sensitive files", unit="req") as pbar:
-        found_files = await main_scanner(domain, resolved_subdomains, pbar)
+        found_files = await main_scanner(domain, live_subdomains, pbar)
 
     if found_files:
         findings_dir = os.path.join("findings", domain)
@@ -119,7 +183,8 @@ async def init(db, domain):
             writer.writerow(["url"])
             for url in found_files:
                 writer.writerow([url])
-        
+
+        print(colored(f"\n[+] Scan complete. Found {len(found_files)} potential sensitive files.", "green"))
         print(colored(f"  \__ Results saved to {csv_path}", "blue"))
     else:
-        print(colored("  \__ No sensitive files found.", "red"))
+        print(colored("\n[-] Scan complete. No sensitive files found.", "red"))
