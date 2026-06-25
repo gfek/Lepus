@@ -1,5 +1,5 @@
 import os
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, String, Integer, Boolean, create_engine
 
@@ -106,17 +106,34 @@ class Vulnerability(Base):
     timestamp = Column(Integer, nullable=False)
 
 
+class ScanSnapshot(Base):
+    __tablename__ = "scan_snapshots"
+    domain = Column(String(100), primary_key=True)
+    scan_timestamp = Column(Integer, primary_key=True)
+    resolved_count = Column(Integer, default=0)
+    unresolved_count = Column(Integer, default=0)
+    open_port_count = Column(Integer, default=0)
+    takeover_count = Column(Integer, default=0)
+
+
+engine = None
+Session = None
+
+
 def init():
+    global engine, Session
     if os.path.exists("findings.sqlite"):
         os.rename("findings.sqlite", "lepusdb.sqlite")
 
-    engine = create_engine("sqlite:///lepusdb.sqlite")
+    engine = create_engine("sqlite:///lepusdb.sqlite", pool_pre_ping=True)
     Base.metadata.create_all(engine)
     Base.metadata.bind = engine
-    DBSession = sessionmaker(bind=engine)
-    session = DBSession()
+    Session = scoped_session(sessionmaker(bind=engine))
+    return Session()
 
-    return session
+
+def get_session():
+    return Session()
 
 
 def getResolvedSubdomains(db, domain):
@@ -164,12 +181,7 @@ def getAllFindings(db, domain):
 
     for op in db.query(OpenPort).filter(OpenPort.domain == domain).all():
         findings["open_ports"].append(
-            {
-                "subdomain": op.domain,
-                "address": op.address,
-                "port": op.port,
-                "isSSL": op.isSSL,
-            }
+            {"address": op.address, "port": op.port, "isSSL": op.isSSL}
         )
 
     for a in db.query(ASN).filter(ASN.domain == domain).all():

@@ -1,7 +1,7 @@
 from time import time
 from tqdm import tqdm
 from gc import collect
-from sys import stderr,stdout
+from sys import stderr, stdout
 from dns.query import xfr
 from ipwhois import IPWhois
 from dns.zone import from_xfr
@@ -14,7 +14,7 @@ from sqlalchemy.orm.exc import FlushError
 from ssl import create_default_context, CERT_NONE
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from socket import getaddrinfo, gethostbyaddr, socket, AF_INET, AF_INET6, SOCK_STREAM
-from utilities.DatabaseHelpers import Record, Wildcard, Resolution, Unresolved, ASN, Network, OpenPort
+from utilities.DatabaseHelpers import Record, Wildcard, Resolution, Unresolved, ASN, Network, OpenPort, get_session
 import os
 import subprocess
 import utilities.MiscHelpers
@@ -31,70 +31,59 @@ def zoneTransfer(db, domain):
     for ns in nameservers:
         print(colored(f"  \__ Trying nameserver: {ns}", "cyan"))
         try:
-            # Try standard AXFR
             zone = from_xfr(xfr(ns, domain, timeout=5))
             if zone:
-                subdomains = set([str(key) for key in zone.nodes.keys()])
+                subdomains = {str(key) for key in zone.nodes.keys()}
                 print(colored(f"    \__ Success! Retrieved {len(subdomains)} subdomains via AXFR.", "green"))
                 return subdomains
         except Exception as e:
-            error_message = str(e).split('\n')[0] # Get a concise error
-            print(colored(f"    \__ AXFR failed: {error_message}", "red"))
-
-        try:
-            # If AXFR fails, try IXFR
-            zone = from_xfr(xfr(ns, domain, timeout=5))
-            if zone:
-                subdomains = set([str(key) for key in zone.nodes.keys()])
-                print(colored(f"    \__ Success! Retrieved {len(subdomains)} subdomains via IXFR.", "green"))
-                return subdomains
-        except Exception as e:
-            error_message = str(e).split('\n')[0]
-            print(colored(f"    \__ IXFR failed: {error_message}", "red"))
+            print(colored(f"    \__ AXFR failed: {str(e).split(chr(10))[0]}", "red"))
 
     print(colored("\n[*]-Zone transfer attempts complete on all nameservers.", "yellow"))
     return None
 
+
+def resolve_dns_type(resolver, domain, type_name):
+    try:
+        answers = resolver.resolve(domain, type_name)
+        return type_name, answers
+    except Exception:
+        return type_name, None
+
+
 def retrieveDNSRecords(db, domain):
     resolver = Resolver()
-    resolver.timeout = 1
-    resolver.lifetime = 1
+    resolver.timeout = 2
+    resolver.lifetime = 2
     types = ["A", "MX", "NS", "AAAA", "SOA", "TXT"]
     timestamp = int(time())
 
     print(colored("\n[*]-Retrieving DNS Records...", "yellow"))
 
-    for type in types:
-        try:
-            answers = resolver.query(domain, type)
+    with ThreadPoolExecutor(max_workers=len(types)) as executor:
+        futures = {executor.submit(resolve_dns_type, resolver, domain, t): t for t in types}
 
-            for answer in answers:
-                if type == "A":
-                    db.add(Record(domain=domain, type=type, value=answer.address, timestamp=timestamp))
-
-                if type == "MX":
-                    db.add(Record(domain=domain, type=type, value=answer.exchange.to_text()[:-1], timestamp=timestamp))
-
-                if type == "NS":
-                    db.add(Record(domain=domain, type=type, value=answer.target.to_text()[:-1], timestamp=timestamp))
-
-                if type == "AAAA":
-                    db.add(Record(domain=domain, type=type, value=answer.address, timestamp=timestamp))
-
-                if type == "SOA":
-                    db.add(Record(domain=domain, type=type, value=answer.mname.to_text()[:-1], timestamp=timestamp))
-
-                if type == "TXT":
-                    db.add(Record(domain=domain, type=type, value=str(answer), timestamp=timestamp))
+        for future in as_completed(futures):
+            type_name, answers = future.result()
+            if answers:
+                for answer in answers:
+                    if type_name == "A":
+                        db.add(Record(domain=domain, type=type_name, value=answer.address, timestamp=timestamp))
+                    elif type_name == "MX":
+                        db.add(Record(domain=domain, type=type_name, value=answer.exchange.to_text()[:-1], timestamp=timestamp))
+                    elif type_name == "NS":
+                        db.add(Record(domain=domain, type=type_name, value=answer.target.to_text()[:-1], timestamp=timestamp))
+                    elif type_name == "AAAA":
+                        db.add(Record(domain=domain, type=type_name, value=answer.address, timestamp=timestamp))
+                    elif type_name == "SOA":
+                        db.add(Record(domain=domain, type=type_name, value=answer.mname.to_text()[:-1], timestamp=timestamp))
+                    elif type_name == "TXT":
+                        db.add(Record(domain=domain, type=type_name, value=str(answer), timestamp=timestamp))
 
                 try:
                     db.commit()
-
                 except (IntegrityError, FlushError):
                     db.rollback()
-
-        except Exception as e:
-            pass
 
     for row in db.query(Record).filter(Record.domain == domain).order_by(Record.type):
         print("  \__ {0}: {1}".format(colored(row.type, "cyan"), colored(row.value, "yellow")))
@@ -104,10 +93,8 @@ def checkWildcard(timestamp, subdomain, domain):
     try:
         if subdomain:
             return (subdomain, [item[4][0] for item in getaddrinfo(".".join([timestamp, subdomain, domain]), None)])
-
         else:
             return (subdomain, [item[4][0] for item in getaddrinfo(".".join([timestamp, domain]), None)])
-
     except Exception:
         return (subdomain, None)
 
@@ -115,7 +102,6 @@ def checkWildcard(timestamp, subdomain, domain):
 def identifyWildcards(db, findings, domain, threads):
     if len(findings) <= 10000:
         print(colored("\n[*]-Generating samples for wildcard identification...", "yellow"))
-
     else:
         print(colored("\n[*]-Generating samples for wildcard identification in chunks of 10,000...", "yellow"))
 
@@ -153,13 +139,11 @@ def identifyWildcards(db, findings, domain, threads):
 
                     if numberOfChunks == 1:
                         completed = tqdm(completed, total=len(subLevelChunk), desc="    \__ {0}".format(colored("Progress", "cyan")), dynamic_ncols=True, leave=leaveFlag)
-
                     else:
                         completed = tqdm(completed, total=len(subLevelChunk), desc="    \__ {0}".format(colored("Progress {0}/{1}".format(iteration, numberOfChunks), "cyan")), dynamic_ncols=True, leave=leaveFlag)
 
                     for task in completed:
                         result = task.result()
-
                         if result[1] is not None:
                             for address in result[1]:
                                 wildcards.add((".".join([result[0], domain]), address))
@@ -188,7 +172,6 @@ def identifyWildcards(db, findings, domain, threads):
         for reversed_hostname, ip in sorted_wildcards:
             if reversed_hostname == reversed(domain):
                 hostname = domain
-
             else:
                 hostname = ".".join(reversed(reversed_hostname.split(".")))
 
@@ -202,7 +185,6 @@ def identifyWildcards(db, findings, domain, threads):
 
                 if new_wildcard:
                     optimized_wildcards[ip].append(hostname)
-
             else:
                 optimized_wildcards[ip] = [hostname]
 
@@ -215,13 +197,11 @@ def identifyWildcards(db, findings, domain, threads):
             for hostname in hostnames:
                 if hostname == domain:
                     db.add(Wildcard(subdomain="", domain=domain, address=address, timestamp=timestamp))
-
                 else:
                     db.add(Wildcard(subdomain=".".join(hostname.split(".")[:-1 * len(domain.split("."))]), domain=domain, address=address, timestamp=timestamp))
 
                 try:
                     db.commit()
-
                 except (IntegrityError, FlushError):
                     db.rollback()
 
@@ -231,13 +211,11 @@ def identifyWildcards(db, findings, domain, threads):
         for row in db.query(Wildcard).filter(Wildcard.domain == domain, Wildcard.timestamp == timestamp).order_by(Wildcard.subdomain):
             if row.subdomain:
                 hostname = ".".join([row.subdomain, domain])
-
             else:
                 hostname = domain
 
             if hostname in new_wildcards:
                 new_wildcards[hostname].append(row.address)
-
             else:
                 new_wildcards[hostname] = []
                 new_wildcards[hostname].append(row.address)
@@ -252,10 +230,8 @@ def resolve(finding, domain):
     try:
         if finding[0]:
             return (finding[0], [item[4][0] for item in getaddrinfo(".".join([finding[0], domain]), None)], finding[1])
-
         else:
             return (finding[0], [item[4][0] for item in getaddrinfo(domain, None)], finding[1])
-
     except Exception:
         return (finding[0], None, finding[1])
 
@@ -272,20 +248,17 @@ def massResolve(db, findings, domain, hideWildcards, threads):
     for row in db.query(Wildcard).filter(Wildcard.domain == domain):
         if row.subdomain:
             hostname = ".".join([row.subdomain, domain])
-
         else:
             hostname = domain
 
         if hostname in wildcards:
             wildcards[hostname].append(row.address)
-
         else:
             wildcards[hostname] = []
             wildcards[hostname].append(row.address)
 
     if len(findings) <= 100000:
         print("{0} {1} {2}".format(colored("\n[*]-Attempting to resolve", "yellow"), colored(len(findings), "cyan"), colored("hostnames...", "yellow")))
-
     else:
         print("{0} {1} {2}".format(colored("\n[*]-Attempting to resolve", "yellow"), colored(len(findings), "cyan"), colored("hostnames, in chunks of 100,000...", "yellow")))
         numberOfChunks = len(findings) // 100000 + 1
@@ -305,26 +278,21 @@ def massResolve(db, findings, domain, hideWildcards, threads):
 
                 if numberOfChunks == 1:
                     completed = tqdm(completed, total=len(findingsChunk), desc="  \__ {0}".format(colored("Progress", "cyan")), dynamic_ncols=True, leave=leaveFlag)
-
                 else:
                     completed = tqdm(completed, total=len(findingsChunk), desc="  \__ {0}".format(colored("Progress {0}/{1}".format(iteration, numberOfChunks), "cyan")), dynamic_ncols=True, leave=leaveFlag)
 
                 for task in completed:
                     try:
                         result = task.result()
-
                         if result[1] is not None:
                             for address in result[1]:
                                 if result[0]:
                                     resolved.add((".".join([result[0], domain]), address, result[2]))
-
                                 else:
                                     resolved.add((domain, address, result[2]))
-
                         else:
                             if result[2] == "Collectors":
                                 unresolved.add((result[0], domain))
-
                     except Exception:
                         continue
 
@@ -337,12 +305,13 @@ def massResolve(db, findings, domain, hideWildcards, threads):
 
         iteration += 1
 
-    count = 0  # track how many added
+    count = 0
+    batch_size = 500
     for hostname, address, source in resolved:
         isWildcard = False
 
         for wildcard, addresses in wildcards.items():
-            if wildcard in hostname and address in addresses:
+            if address in addresses and (hostname == wildcard or hostname.endswith("." + wildcard)):
                 isWildcard = True
 
         if (not isWildcard) or (isWildcard and source == "Collectors"):
@@ -357,28 +326,24 @@ def massResolve(db, findings, domain, hideWildcards, threads):
                     isWildcard=isWildcard, source=source, timestamp=timestamp))
 
             count += 1
-            if count % 1000 == 0:
+            if count % batch_size == 0:
                 try:
                     db.commit()
-                    print(colored(f"[*] Committed {count} resolved entries...", "green"), flush=True)
-
                 except (IntegrityError, FlushError):
                     db.rollback()
 
     try:
         db.commit()
-        print(colored(f"[*] Final commit of remaining {count % 1000} entries.", "green"), flush=True)
     except (IntegrityError, FlushError):
         db.rollback()
 
     for subdomain, domain in unresolved:
         db.add(Unresolved(subdomain=subdomain, domain=domain, timestamp=timestamp))
 
-        try:
-            db.commit()
-
-        except (IntegrityError, FlushError):
-            db.rollback()
+    try:
+        db.commit()
+    except (IntegrityError, FlushError):
+        db.rollback()
 
     del resolved
     del unresolved
@@ -388,20 +353,17 @@ def massResolve(db, findings, domain, hideWildcards, threads):
     for row in db.query(Resolution).filter(Resolution.domain == domain, Resolution.timestamp == timestamp).order_by(Resolution.subdomain):
         if row.subdomain:
             hostname = ".".join([row.subdomain, domain])
-
         else:
             hostname = domain
 
         if row.isWildcard:
             address = colored(row.address, "red")
-
         else:
             address = colored(row.address, "yellow")
 
         if (not row.isWildcard) or (row.isWildcard and not hideWildcards):
             if hostname in new_resolutions:
                 new_resolutions[hostname].append(address)
-
             else:
                 new_resolutions[hostname] = []
                 new_resolutions[hostname].append(address)
@@ -415,7 +377,6 @@ def massResolve(db, findings, domain, hideWildcards, threads):
 def reverseLookup(IP):
     try:
         return (gethostbyaddr(IP)[0].lower(), IP)
-
     except Exception:
         return (None, IP)
 
@@ -431,7 +392,6 @@ def massReverseLookup(db, domain, IPs, threads):
 
     if len(IPs) <= 100000:
         print("{0} {1} {2}".format(colored("\n[*]-Performing reverse DNS lookups on", "yellow"), colored(len(IPs), "cyan"), colored("public IPs...", "yellow")))
-
     else:
         print("{0} {1} {2}".format(colored("\n[*]-Performing reverse DNS lookups on", "yellow"), colored(len(IPs), "cyan"), colored("public IPs, in chunks of 100,000...", "yellow")))
         numberOfChunks = len(IPs) // 100000 + 1
@@ -454,17 +414,14 @@ def massReverseLookup(db, domain, IPs, threads):
 
                 if numberOfChunks == 1:
                     completed = tqdm(completed, total=len(IPChunk), desc="  \__ {0}".format(colored("Progress", "cyan")), dynamic_ncols=True, leave=leaveFlag)
-
                 else:
                     completed = tqdm(completed, total=len(IPChunk), desc="  \__ {0}".format(colored("Progress {0}/{1}".format(iteration, numberOfChunks), "cyan")), dynamic_ncols=True, leave=leaveFlag)
 
                 for task in completed:
                     result = task.result()
-
                     if result[0] is not None:
                         results.add(result)
                         hostnames.add(result[0])
-
 
             except KeyboardInterrupt:
                 completed.close()
@@ -486,7 +443,6 @@ def massReverseLookup(db, domain, IPs, threads):
     for result in results:
         if result[0] in result_dict:
             result_dict[result[0]].append(result[1])
-
         else:
             result_dict[result[0]] = []
             result_dict[result[0]].append(result[1])
@@ -494,21 +450,26 @@ def massReverseLookup(db, domain, IPs, threads):
     del results
     collect()
 
+    batch_count = 0
     for subdomain in filtered_subdomains:
         if subdomain:
             hostname = ".".join([subdomain, domain])
-
         else:
             hostname = domain
 
         for address in result_dict[hostname]:
             db.add(Resolution(subdomain=subdomain, domain=domain, address=address, isWildcard=False, source="Reverse", timestamp=timestamp))
+            batch_count += 1
+            if batch_count % 500 == 0:
+                try:
+                    db.commit()
+                except (IntegrityError, FlushError):
+                    db.rollback()
 
-            try:
-                db.commit()
-
-            except (IntegrityError, FlushError):
-                db.rollback()
+    try:
+        db.commit()
+    except (IntegrityError, FlushError):
+        db.rollback()
 
     del result_dict
     del filtered_subdomains
@@ -517,7 +478,6 @@ def massReverseLookup(db, domain, IPs, threads):
     for row in db.query(Resolution).filter(Resolution.domain == domain, Resolution.timestamp == timestamp).order_by(Resolution.subdomain):
         if row.subdomain:
             hostname = ".".join([row.subdomain, domain])
-
         else:
             hostname = domain
 
@@ -525,7 +485,6 @@ def massReverseLookup(db, domain, IPs, threads):
 
         if hostname in reverse_resolutions:
             reverse_resolutions[hostname].append(address)
-
         else:
             reverse_resolutions[hostname] = []
             reverse_resolutions[hostname].append(address)
@@ -541,7 +500,6 @@ def connectScan(target):
 
     if "." in target[0]:
         s = socket(AF_INET, SOCK_STREAM)
-
     else:
         s = socket(AF_INET6, SOCK_STREAM)
 
@@ -556,7 +514,6 @@ def connectScan(target):
                 context.check_hostname = False
                 context.verify_mode = CERT_NONE
                 context.wrap_socket(s)
-
                 return (target[0], target[1], True)
 
             elif target[1] == 80:
@@ -569,15 +526,14 @@ def connectScan(target):
         if isOpen:
             if "unsupported protocol" in str(e):
                 return (target[0], target[1], True)
-
             else:
                 return (target[0], target[1], False)
-
         else:
             return None
 
     finally:
         s.close()
+    return None
 
 
 def massConnectScan(db, domain, numberOfUniqueIPs, targets, threads, timestamp):
@@ -587,7 +543,6 @@ def massConnectScan(db, domain, numberOfUniqueIPs, targets, threads, timestamp):
 
     if len(targets) <= 100000:
         print("{0} {1} {2} {3} {4}".format(colored("\n[*]-Scanning", "yellow"), colored(len(targets), "cyan"), colored("ports on", "yellow"), colored(numberOfUniqueIPs, "cyan"), colored("public IPs...", "yellow")))
-
     else:
         print("{0} {1} {2} {3} {4}".format(colored("\n[*]-Scanning", "yellow"), colored(len(targets), "cyan"), colored("ports on", "yellow"), colored(numberOfUniqueIPs, "cyan"), colored("public IPs, in chunks of 100,000...", "yellow")))
         numberOfChunks = len(targets) // 100000 + 1
@@ -607,13 +562,11 @@ def massConnectScan(db, domain, numberOfUniqueIPs, targets, threads, timestamp):
 
                 if numberOfChunks == 1:
                     completed = tqdm(completed, total=len(PortChunk), desc="  \__ {0}".format(colored("Progress", "cyan")), dynamic_ncols=True, leave=leaveFlag)
-
                 else:
                     completed = tqdm(completed, total=len(PortChunk), desc="  \__ {0}".format(colored("Progress {0}/{1}".format(iteration, numberOfChunks), "cyan")), dynamic_ncols=True, leave=leaveFlag)
 
                 for task in completed:
                     result = task.result()
-
                     if result is not None:
                         open_ports.append(result)
 
@@ -629,23 +582,27 @@ def massConnectScan(db, domain, numberOfUniqueIPs, targets, threads, timestamp):
 
         iteration += 1
 
+    batch_count = 0
     for open_port in open_ports:
         db.add(OpenPort(domain=domain, address=open_port[0], port=open_port[1], isSSL=open_port[2], timestamp=timestamp))
+        batch_count += 1
+        if batch_count % 500 == 0:
+            try:
+                db.commit()
+            except (IntegrityError, FlushError):
+                db.rollback()
 
-        try:
-            db.commit()
-
-        except (IntegrityError, FlushError):
-            db.rollback()
+    try:
+        db.commit()
+    except (IntegrityError, FlushError):
+        db.rollback()
 
 
 def rdap(ip):
     try:
         obj = IPWhois(ip)
         result = obj.lookup_rdap()
-
         return result
-
     except Exception:
         return {}
 
@@ -658,18 +615,17 @@ def massRDAP(db, domain, threads):
     timestamp = int(time())
 
     for row in db.query(Resolution).filter(Resolution.domain == domain):
-        if "." in row.address:
-            if ip_address(row.address).is_global:
+        try:
+            addr = ip_address(row.address)
+            if addr.is_global:
                 IPs.add(row.address)
-
-        else:
+        except ValueError:
             IPs.add(row.address)
 
     IPs = list(IPs)
 
     if len(IPs) <= 100000:
         print("{0} {1} {2}".format(colored("\n[*]-Performing RDAP lookups for", "yellow"), colored(len(IPs), "cyan"), colored("public IPs...", "yellow")))
-
     else:
         print("{0} {1} {2}".format(colored("\n[*]-Performing RDAP lookups for", "yellow"), colored(len(IPs), "cyan"), colored("public IPs, in chunks of 100,000...", "yellow")))
         numberOfChunks = len(IPs) // 100000 + 1
@@ -692,13 +648,11 @@ def massRDAP(db, domain, threads):
 
                 if numberOfChunks == 1:
                     completed = tqdm(completed, total=len(IPChunk), desc="  \__ {0}".format(colored("Progress", "cyan")), dynamic_ncols=True, leave=leaveFlag)
-
                 else:
                     completed = tqdm(completed, total=len(IPChunk), desc="  \__ {0}".format(colored("Progress {0}/{1}".format(iteration, numberOfChunks), "cyan")), dynamic_ncols=True, leave=leaveFlag)
 
                 for task in completed:
                     result = task.result()
-
                     if result:
                         rdap_records.append(result)
 
@@ -715,37 +669,36 @@ def massRDAP(db, domain, threads):
         iteration += 1
 
     for record in rdap_records:
-        if record["asn"] != "NA" and record["asn_cidr"] != "NA" and record["asn_description"] != "NA":
+        if record.get("asn", "NA") != "NA" and record.get("asn_cidr", "NA") != "NA" and record.get("asn_description", "NA") != "NA":
             for asn in record["asn"].split(" "):
-                db.add(ASN(domain=domain, id=asn, prefix=record["asn_cidr"], description=record["asn_description"], timestamp=timestamp))
-
                 try:
+                    db.add(ASN(domain=domain, id=int(asn), prefix=record["asn_cidr"], description=record["asn_description"], timestamp=timestamp))
                     db.commit()
-
                 except (IntegrityError, FlushError):
                     db.rollback()
+                except ValueError:
+                    pass
 
-        for cidr in record["network"]["cidr"].split(", "):
-            db.add(Network(domain=domain, cidr=cidr, identifier=record["network"]["name"], country=record["asn_country_code"], timestamp=timestamp))
-
-            try:
-                db.commit()
-
-            except (IntegrityError, FlushError):
-                db.rollback()
+        for cidr in record.get("network", {}).get("cidr", "").split(", "):
+            if cidr:
+                try:
+                    db.add(Network(domain=domain, cidr=cidr, identifier=record.get("network", {}).get("name", ""), country=record.get("asn_country_code", ""), timestamp=timestamp))
+                    db.commit()
+                except (IntegrityError, FlushError):
+                    db.rollback()
 
     del rdap_records
     collect()
 
     print("    \__ {0}:".format(colored("New autonomous Systems that were identified", "yellow")))
 
-    for row in db.query(ASN).filter(ASN.domain == domain).order_by(ASN.id, ASN.prefix):
-        if row == db.query(ASN).filter(ASN.domain == domain).order_by(ASN.id.desc(), ASN.prefix.desc()).first():
-            print("    __\__ {0}: {1}, {2}: {3}, {4}: {5}".format(colored("ASN", "cyan"), colored(row.id, "yellow"), colored("Prefix", "cyan"), colored(row.prefix, "yellow"), colored("Description", "cyan"), colored(row.description, "yellow")))
+    asn_rows = db.query(ASN).filter(ASN.domain == domain).order_by(ASN.id, ASN.prefix).all()
+    for i, row in enumerate(asn_rows):
+        if i == len(asn_rows) - 1:
+            print("    __\__ {0}: {1}, {2}: {3}, {4}: {5}".format(colored("ASN", "cyan"), colored(str(row.id), "yellow"), colored("Prefix", "cyan"), colored(row.prefix, "yellow"), colored("Description", "cyan"), colored(row.description, "yellow")))
             print("   \\")
-
         else:
-            print("      \__ {0}: {1}, {2}: {3}, {4}: {5}".format(colored("ASN", "cyan"), colored(row.id, "yellow"), colored("Prefix", "cyan"), colored(row.prefix, "yellow"), colored("Description", "cyan"), colored(row.description, "yellow")))
+            print("      \__ {0}: {1}, {2}: {3}, {4}: {5}".format(colored("ASN", "cyan"), colored(str(row.id), "yellow"), colored("Prefix", "cyan"), colored(row.prefix, "yellow"), colored("Description", "cyan"), colored(row.description, "yellow")))
 
     print("    \__ {0}:".format(colored("New networks that were identified", "yellow")))
 

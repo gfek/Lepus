@@ -3,7 +3,7 @@ from json import loads
 from termcolor import colored
 
 
-def init(domain, ranges):
+def init(domain, ranges=None):
 	Crobat = []
 
 	print(colored("[*]-Searching Project Crobat...", "yellow"))
@@ -12,7 +12,7 @@ def init(domain, ranges):
 	headers = {"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:88.0) Gecko/20100101 Firefox/88.0"}
 
 	try:
-		response = requests.get(url, headers=headers)
+		response = requests.get(url, headers=headers, timeout=15)
 
 		if response.status_code == 200 and response.text.strip() != "null":
 			data = loads(response.text)
@@ -23,7 +23,7 @@ def init(domain, ranges):
 		if ranges:
 			for r in ranges.split(","):
 				rev_url = "https://sonar.omnisint.io/reverse/{0}".format(r)
-				response = requests.get(rev_url, headers=headers)
+				response = requests.get(rev_url, headers=headers, timeout=15)
 
 				if response.status_code == 200:
 					data = loads(response.text)

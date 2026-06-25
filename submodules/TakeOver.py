@@ -14,7 +14,7 @@ from sqlalchemy.orm.exc import FlushError
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dns.resolver import Resolver, NXDOMAIN, NoAnswer, NoNameservers, Timeout
 from utilities.DatabaseHelpers import Resolution, Unresolved, Takeover
-from utilities.MiscHelpers import chunkify, slackNotification
+from utilities.MiscHelpers import chunkify, slack_notification
 
 simplefilter("ignore")
 
@@ -80,24 +80,24 @@ def findSignatures(domainToTry, signatures, neededMatches):
 	numberOfMatches = 0
 
 	try:
+		r = get("http://" + domainToTry, headers=headers, verify=False, timeout=15)
+		text = r.text
 		for signature in signatures:
-			if signature in str(get("http://" + domainToTry, headers=headers, verify=False).content, "utf-8"):
+			if signature in text:
 				numberOfMatches += 1
-
 				if neededMatches <= numberOfMatches:
 					return True
-
 	except Exception:
 		pass
 
 	try:
+		r = get("https://" + domainToTry, headers=headers, verify=False, timeout=15)
+		text = r.text
 		for signature in signatures:
-			if signature in str(get("https://" + domainToTry, headers=headers, verify=False).content, "utf-8"):
+			if signature in text:
 				numberOfMatches += 1
-
 				if neededMatches <= numberOfMatches:
 					return True
-
 	except Exception:
 		pass
 
@@ -124,7 +124,7 @@ def findNX(domainToTry):
 def amazonS3(domain, ARecords, CNAME):
 	outcome = []
 
-	if findSignatures(domain, signatures["Amazon AWS/S3"], 2):
+	if findSignatures(domain, signatures["Amazon AWS/S3"], 1):
 		outcome = ["Amazon AWS/S3", domain, CNAME]
 
 	return outcome
@@ -446,7 +446,7 @@ def smugmug(domain, ARecords, CNAME):
 	outcome = []
 
 	try:
-		if get("http://" + domain, headers=headers).status_code == 404:
+		if get("http://" + domain, headers=headers, timeout=15).status_code == 404:
 			outcome = ["Smugmug", domain, CNAME]
 			return outcome
 
@@ -454,7 +454,7 @@ def smugmug(domain, ARecords, CNAME):
 		pass
 
 	try:
-		if get("https://" + domain, headers=headers, verify=False).status_code == 404:
+		if get("https://" + domain, headers=headers, verify=False, timeout=15).status_code == 404:
 			outcome = ["Smugmug", domain, CNAME]
 			return outcome
 
@@ -559,11 +559,17 @@ def tictail(domain, ARecords, CNAME):
 	outcome = []
 
 	try:
-		if signatures["Tictail"] in str(get("http://" + domain, headers=headers).history[0].content, "utf-8"):
+		r = get("http://" + domain, headers=headers, timeout=15)
+		if r.history and signatures["Tictail"] in r.history[0].text:
 			outcome = ["Tictail", domain, CNAME]
 			return outcome
 
-		if signatures["Tictail"] in str(get("https://" + domain, headers=headers, verify=False).history[0].content, "utf-8"):
+	except Exception:
+		pass
+
+	try:
+		r = get("https://" + domain, headers=headers, verify=False, timeout=15)
+		if r.history and signatures["Tictail"] in r.history[0].text:
 			outcome = ["Tictail", domain, CNAME]
 			return outcome
 
@@ -1032,8 +1038,8 @@ def init(db, domain, old_takeovers, threads):
 			counter += 1
 
 			if counter % 20 == 0:
-				slackNotification(SLACK_LEGACY_TOKEN, SLACK_CHANNEL, "```\n{0}```".format(text[:-1]))
+				slack_notification(SLACK_LEGACY_TOKEN, SLACK_CHANNEL, "```\n{0}```".format(text[:-1]))
 				text = ""
 
 		if text != "":
-			slackNotification(SLACK_LEGACY_TOKEN, SLACK_CHANNEL, "```\n{0}```".format(text[:-1]))
+			slack_notification(SLACK_LEGACY_TOKEN, SLACK_CHANNEL, "```\n{0}```".format(text[:-1]))

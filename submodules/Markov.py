@@ -120,17 +120,16 @@ def init(db, domain, markovState, markovLength, markovQuantity, hideWildcards, t
 			markov.update(line)
 	
 	baseList = list(base)
+	extra = []
 	for line in baseList:
 		if "." in line:
-			a = line.split(".")
-			for item in a:
-				baseList.append(item)
+			for item in line.split("."):
+				extra.append(item)
 		if "-" in line:
-			a = line.split("-")
-			for item in a:
-				baseList.append(item)
+			for item in line.split("-"):
+				extra.append(item)
 
-	baseList = list(set(baseList))
+	baseList = list(set(baseList + extra))
 	leaveFlag = True
 
 	if len(baseList) <= 1000:
@@ -145,7 +144,7 @@ def init(db, domain, markovState, markovLength, markovQuantity, hideWildcards, t
 
 	for baseChunk in baseChunks:
 		generators = []
-		with ThreadPoolExecutor(max_workers=1) as executor:
+		with ThreadPoolExecutor(max_workers=threads) as executor:
 			tempMarkov = copy.deepcopy(markov)
 			tasks = {executor.submit(markovify, tempMarkov, subdomain, markovLength, markovQuantity): subdomain for subdomain in baseChunk}
 

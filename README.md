@@ -1,6 +1,6 @@
 [![GitHub License](https://img.shields.io/badge/License-BSD%203--Clause-informational.svg)](https://github.com/GKNSB/Lepus/blob/master/LICENSE)
-[![GitHub Python](https://img.shields.io/badge/Python-%3E=%203.6-informational.svg)](https://www.python.org/)
-[![GitHub Version](https://img.shields.io/badge/Version-3.5.0-green.svg)](https://github.com/GKNSB/Lepus)
+[![GitHub Python](https://img.shields.io/badge/Python-%3E=%203.8-informational.svg)](https://www.python.org/)
+[![GitHub Version](https://img.shields.io/badge/Version-3.6.0-green.svg)](https://github.com/GKNSB/Lepus)
 
 # Lepus - The Ultimate Reconnaissance Tool
 
@@ -18,6 +18,8 @@ lepus.py example.com
 * [Port Scan](#Port-Scan)
 * [Intelligence and Analysis Engine](#Intelligence-and-Analysis-Engine)
 * [Custom Scripting for Bug Discovery](#Custom-Scripting-for-Bug-Discovery)
+* [Change Detection](#Change-Detection)
+* [Notifications](#Notifications)
 * [Reporting](#Reporting)
 * [Installation](#Installation)
 * [Arguments](#Arguments)
@@ -36,6 +38,7 @@ The enumeration modes are different ways lepus uses to identify subdomains for a
 Moreover:
 * For all methods, lepus checks if the given domain or any generated potential subdomain is a *wildcard* domain or not.
 * After identification, lepus collects ASN and network information for the identified domains that resolve to public IP Addresses.
+* Collectors run **concurrently** using asyncio for maximum performance.
 
 
 ### Collectors
@@ -123,7 +126,7 @@ lepus.py --markovify -ms 5 -ml 10 -mq 10
 ```
 
 ## Subdomain Takeover
-Lepus has a list of signatures in order to identify if a domain can be taken over. You can use it by providing the `--takeover` argument. This module also supports Slack notifications, once a potential takeover has been identified, by adding a Slack token in the `config.ini` file. The checks are made against the following services:
+Lepus has a list of signatures in order to identify if a domain can be taken over. You can use it by providing the `--takeover` argument. This module also supports Slack and Telegram notifications, once a potential takeover has been identified, by passing `--slack-token`/`--slack-channel` or `--telegram-token`/`--telegram-chat` arguments. The checks are made against the following services:
 
 * Acquia
 * Activecampaign
@@ -274,9 +277,40 @@ To use this module, ensure `ffuf` is installed and in your PATH, and you have a 
 lepus.py --dir-brute example.com
 ```
 
+## Change Detection
+
+Lepus can detect changes between consecutive scans of the same domain. It takes a snapshot of resolved and unresolved subdomains on each scan, then on subsequent runs computes the difference (newly resolved, newly unresolved, and newly discovered subdomains).
+
+To use this module, use the `--diff` argument:
+
+```
+lepus.py --diff example.com
+```
+
+Differences are also included in Telegram/Slack notifications when configured.
+
+## Notifications
+
+Lepus supports sending results via Slack and Telegram after a scan completes.
+
+### Slack Notifications
+To send findings to a Slack channel, pass the `--slack-token` and `--slack-channel` arguments:
+
+```
+lepus.py --slack-token xoxb-xxx --slack-channel #alerts example.com
+```
+
+### Telegram Notifications
+To send findings via Telegram, pass the `--telegram-token` and `--telegram-chat` arguments:
+
+```
+lepus.py --telegram-token 123:abc --telegram-chat -123456789 example.com
+```
+When used with `--diff`, only changes are included in the notification message.
+
 ## Reporting
 
-Lepus can now generate comprehensive reports of its findings in various formats.
+Lepus can generate comprehensive reports of its findings in various formats.
 
 ### JSON Report
 Generates a JSON report containing all the findings from the enumeration and analysis process.
@@ -329,12 +363,16 @@ lepus.py --html-report example.com
 
 ```
 usage: lepus.py [-h] [-w WORDLIST] [-hw] [-t THREADS] [-nc] [-zt]
-                [--permutate] [-pw PERMUTATION_WORDLIST] [--reverse]
-                [-r RANGES] [--portscan] [-p PORTS] [--takeover]
+                [--permutate] [-pw PERMUTATION_WORDLIST] [--reverse] [-ripe]
+                [-r RANGES] [-or] [--portscan] [-p PORTS] [--takeover]
                 [--tech-profile] [--vuln-scan] [--interesting]
-                [--sensitive-scan] [--dir-brute] [--intelligence] [--markovify]
-                [-ms MARKOV_STATE] [-ml MARKOV_LENGTH] [-mq MARKOV_QUANTITY]
-                [-f] [--json-report] [--html-report] [-v]
+                [--sensitive-scan] [--dir-brute] [--intelligence]
+                [--markovify] [-ms MARKOV_STATE] [-ml MARKOV_LENGTH]
+                [-mq MARKOV_QUANTITY] [-f] [--json-report] [--html-report]
+                [--diff] [--telegram-token TELEGRAM_TOKEN]
+                [--telegram-chat TELEGRAM_CHAT_ID]
+                [--slack-token SLACK_TOKEN]
+                [--slack-channel SLACK_CHANNEL] [-v]
                 domain
 
 Infrastructure OSINT
@@ -342,32 +380,30 @@ Infrastructure OSINT
 positional arguments:
   domain                domain to search
 
-optional arguments:
+options:
   -h, --help            show this help message and exit
-  -w WORDLIST, --wordlist WORDLIST
+  -w, --wordlist WORDLIST
                         wordlist with subdomains
   -hw, --hide-wildcards
                         hide wildcard resolutions
-  -t THREADS, --threads THREADS
-                        number of threads [default is 100]
+  -t, --threads THREADS
+                        number of threads [default is 200]
   -nc, --no-collectors  skip passive subdomain enumeration
   -zt, --zone-transfer  attempt to zone transfer from identified name servers
   --permutate           perform permutations on resolved domains
-  -pw PERMUTATION_WORDLIST, --permutation-wordlist PERMUTATION_WORDLIST
+  -pw, --permutation-wordlist PERMUTATION_WORDLIST
                         wordlist to perform permutations with [default is
                         lists/words.txt]
   --reverse             perform reverse dns lookups on resolved public IP
                         addresses
-  -ripe, --ripe         query ripe database with the 2nd level domain 
-                        for networks to be used for reverse lookups
-  -r RANGES, --ranges RANGES
-                        comma seperated ip ranges to perform reverse dns
+  -ripe, --ripe         query ripe database with the 2nd level domain for
+                        networks to be used for reverse lookups
+  -r, --ranges RANGES   comma separated ip ranges to perform reverse dns
                         lookups on
   -or, --only-ranges    use only ranges provided with -r or -ripe and not all
                         previously identified IPs
   --portscan            scan resolved public IP addresses for open ports
-  -p PORTS, --ports PORTS
-                        set of ports to be used by the portscan module
+  -p, --ports PORTS     set of ports to be used by the portscan module
                         [default is medium]
   --takeover            check identified hosts for potential subdomain take-
                         overs
@@ -378,24 +414,33 @@ optional arguments:
   --dir-brute           perform directory and file brute-forcing
   --intelligence        run intelligence module to correlate findings
   --markovify           use markov chains to identify more subdomains
-  -ms MARKOV_STATE, --markov-state MARKOV_STATE
+  -ms, --markov-state MARKOV_STATE
                         markov state size [default is 3]
-  -ml MARKOV_LENGTH, --markov-length MARKOV_LENGTH
+  -ml, --markov-length MARKOV_LENGTH
                         max length of markov substitutions [default is 5]
-  -mq MARKOV_QUANTITY, --markov-quantity MARKOV_QUANTITY
+  -mq, --markov-quantity MARKOV_QUANTITY
                         max quantity of markov results per candidate length
                         [default is 5]
   -f, --flush           purge all records of the specified domain from the
                         database
   --json-report         generate JSON report
   --html-report         generate HTML report
+  --diff                show changes compared to previous scan
+  --telegram-token TELEGRAM_TOKEN
+                        Telegram bot token for notifications
+  --telegram-chat TELEGRAM_CHAT_ID
+                        Telegram chat ID for notifications
+  --slack-token SLACK_TOKEN
+                        Slack API token for notifications
+  --slack-channel SLACK_CHANNEL
+                        Slack channel for notifications
   -v, --version         show program's version number and exit
 ```
 
 ## Full command example
 The following, is an example run with all available active arguments:
 ```
-./lepus.py python.org --wordlist lists/subdomains.txt --permutate -pw ~/mypermsword.lst --reverse -ripe -r 10.11.12.0/24 --portscan -p huge --takeover --tech-profile --vuln-scan --interesting --sensitive-scan --dir-brute --markovify -ms 3 -ml 10 -mq 10 --json-report --html-report
+./lepus.py python.org --wordlist lists/subdomains.txt --permutate -pw ~/mypermsword.lst --reverse -ripe -r 10.11.12.0/24 --portscan -p huge --takeover --tech-profile --vuln-scan --interesting --sensitive-scan --dir-brute --markovify -ms 3 -ml 10 -mq 10 --diff --json-report --html-report --telegram-token 123:abc --telegram-chat -123456789
 ```
 
 The following command flushes all database entries for a specific domain:

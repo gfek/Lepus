@@ -2,3 +2,9 @@
 findings.sqlite
 lepusdb.sqlite
 findings/
+telegram.me.html
+telegram.me.json
+kev_cache.json
+subdomains_to_scan.txt
+nuclei_results.json
+config.ini

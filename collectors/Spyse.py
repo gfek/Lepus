@@ -5,87 +5,79 @@ from configparser import RawConfigParser
 
 
 def init(domain):
-	SP = []
+    SP = set()
 
-	print(colored("[*]-Searching Spyse...", "yellow"))
+    print(colored("[*]-Searching Spyse...", "yellow"))
 
-	parser = RawConfigParser()
-	parser.read("config.ini")
-	SPYSE_API_TOKEN = parser.get("Spyse", "SPYSE_API_TOKEN")
+    parser = RawConfigParser()
+    parser.read("config.ini")
+    SPYSE_API_TOKEN = parser.get("Spyse", "SPYSE_API_TOKEN")
 
-	if SPYSE_API_TOKEN == "":
-		print("  \__", colored("No Spyse API token configured", "red"))
-		return []
+    if not SPYSE_API_TOKEN:
+        print("  \__", colored("No Spyse API token configured", "red"))
+        return []
 
-	headers = {
-		"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:88.0) Gecko/20100101 Firefox/88.0",
-		"Authorization": "Bearer {0}".format(SPYSE_API_TOKEN),
-		"accept": "application/json"
-	}
+    headers = {
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:88.0) Gecko/20100101 Firefox/88.0",
+        "Authorization": "Bearer {0}".format(SPYSE_API_TOKEN),
+        "accept": "application/json",
+    }
 
-	limit = 100
-	offset = 0
-	url = "https://api.spyse.com/v3/data/domain/subdomain?limit={0}&offset={1}&domain={2}".format(limit, offset, domain)
+    limit = 100
+    offset = 0
+    url = "https://api.spyse.com/v3/data/domain/subdomain?limit={0}&offset={1}&domain={2}".format(limit, offset, domain)
 
-	try:
-		response = requests.get(url, headers=headers)
+    try:
+        response = requests.get(url, headers=headers, timeout=10)
 
-		if response.status_code == 200:
-			response_json = loads(response.text)
+        if response.status_code == 401:
+            print("  \__", colored("Authentication error.", "red"))
+            return []
 
-			for item in response_json["data"]["items"]:
-				SP.append(item["name"])
+        if response.status_code == 402:
+            print("  \__", colored("Request quota exceeded.", "red"))
+            return []
 
-			total_count = response_json["data"]["total_count"]
+        if response.status_code != 200:
+            print("  \__", colored(f"HTTP {response.status_code}", "red"))
+            return []
 
-			if total_count > limit:
-				offset += limit
+        response_json = loads(response.text)
 
-				while offset < total_count:
-					url = "https://api.spyse.com/v3/data/domain/subdomain?limit={0}&offset={1}&domain={2}".format(limit, offset, domain)
+        for item in response_json.get("data", {}).get("items", []):
+            name = item.get("name", "")
+            if name:
+                SP.add(name.strip().lower())
 
-					response = requests.get(url, headers=headers)
+        total_count = response_json.get("data", {}).get("total_count", 0)
 
-					if response.status_code == 200:
-						response_json = loads(response.text)
+        if total_count > limit:
+            offset += limit
 
-						for item in response_json["data"]["items"]:
-							SP.append(item["name"])
+            while offset < total_count:
+                url = "https://api.spyse.com/v3/data/domain/subdomain?limit={0}&offset={1}&domain={2}".format(limit, offset, domain)
 
-						offset += limit
+                response = requests.get(url, headers=headers, timeout=10)
 
-					elif response.status_code == 402:
-						break;
+                if response.status_code == 200:
+                    response_json = loads(response.text)
+                    for item in response_json.get("data", {}).get("items", []):
+                        name = item.get("name", "")
+                        if name:
+                            SP.add(name.strip().lower())
+                    offset += limit
+                elif response.status_code == 402:
+                    break
+                else:
+                    break
 
-			SP = set(SP)
+        print("  \__ {0}: {1}".format(colored("Subdomains found", "cyan"), colored(len(SP), "yellow")))
+        return list(SP)
 
-			print("  \__ {0}: {1}".format(colored("Subdomains found", "cyan"), colored(len(SP), "yellow")))
-			return SP
+    except requests.exceptions.RequestException as err:
+        print("  \__", colored(err, "red"))
+        return []
 
-		elif response.status_code == 401:
-			print("  \__", colored("Authentication error.", "red"))
-			return []
-
-		elif response.status_code == 402:
-			print("  \__", colored("Request quota exceeded.", "red"))
-			return []
-
-	except requests.exceptions.RequestException as err:
-		print("  \__", colored(err, "red"))
-		return []
-
-	except requests.exceptions.HTTPError as errh:
-		print("  \__", colored(errh, "red"))
-		return []
-
-	except requests.exceptions.ConnectionError as errc:
-		print("  \__", colored(errc, "red"))
-		return []
-
-	except requests.exceptions.Timeout as errt:
-		print("  \__", colored(errt, "red"))
-		return []
-
-	except Exception:
-		print("  \__", colored("Something went wrong!", "red"))
-		return []
+    except Exception:
+        print("  \__", colored("Something went wrong!", "red"))
+        return []

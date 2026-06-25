@@ -22,11 +22,11 @@ def init(domain):
     data = {"q": domain, "per_page": 100}
 
     try:
-        response = requests.post(url, headers=headers, json=data)
+        response = requests.post(url, headers=headers, json=data, timeout=10)
         if response.status_code == 200:
             data = response.json()
             for result in data.get("result", {}).get("hits", []):
-                C.extend(findall(rf'([\w\d][\w\d\-\.]{domain.replace(".", "\\.")})', str(result)))
+                C.extend(findall(rf'([\w\d][\w\d\-\.]*\.{domain.replace(".", "\\.")})', str(result)))
             print(f"  \__ {colored('Subdomains found', 'green')}: {len(set(C))}")
         else:
             print(f"  \__ {colored('Error', 'red')}: {response.status_code}")

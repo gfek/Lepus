@@ -4,51 +4,44 @@ from configparser import RawConfigParser
 
 
 def init(domain):
-	VT = []
+    VT = set()
 
-	print(colored("[*]-Searching VirusTotal...", "yellow"))
+    print(colored("[*]-Searching VirusTotal...", "yellow"))
 
-	parser = RawConfigParser()
-	parser.read("config.ini")
-	VT_API_KEY = parser.get("VirusTotal", "VT_API_KEY")
+    parser = RawConfigParser()
+    parser.read("config.ini")
+    VT_API_KEY = parser.get("VirusTotal", "VT_API_KEY")
 
-	if VT_API_KEY == "":
-		print("  \__", colored("No VirusTotal API key configured", "red"))
-		return []
+    if not VT_API_KEY:
+        print("  \__", colored("No VirusTotal API key configured", "red"))
+        return []
 
-	else:
-		parameters = {"domain": domain, "apikey": VT_API_KEY}
-		headers = {"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:88.0) Gecko/20100101 Firefox/88.0"}
+    params = {"domain": domain, "apikey": VT_API_KEY}
+    headers = {"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:88.0) Gecko/20100101 Firefox/88.0"}
 
-		try:
-			response = requests.get("https://www.virustotal.com/vtapi/v2/domain/report", params=parameters, headers=headers)
-			response_dict = response.json()
+    try:
+        response = requests.get("https://www.virustotal.com/vtapi/v2/domain/report", params=params, headers=headers, timeout=10)
+    except requests.exceptions.RequestException as err:
+        print("  \__", colored(err, "red"))
+        return []
 
-			if "subdomains" in response_dict:
-				for sd in response_dict["subdomains"]:
-					VT.append(sd)
+    try:
+        response_dict = response.json()
+    except (ValueError, TypeError):
+        print("  \__ {0}: {1}".format(colored("Error", "red"), response.status_code))
+        return []
 
-			VT = set(VT)
+    if response.status_code != 200:
+        print("  \__ {0}: {1}".format(colored("Error", "red"), response.status_code))
+        return []
 
-			print("  \__ {0}: {1}".format(colored("Subdomains found", "cyan"), colored(len(VT), "yellow")))
-			return VT
+    try:
+        for sd in response_dict.get("subdomains", []):
+            if sd:
+                VT.add(sd.strip().lower())
 
-		except requests.exceptions.RequestException as err:
-			print("  \__", colored(err, "red"))
-			return []
-
-		except requests.exceptions.HTTPError as errh:
-			print("  \__", colored(errh, "red"))
-			return []
-
-		except requests.exceptions.ConnectionError as errc:
-			print("  \__", colored(errc, "red"))
-			return []
-
-		except requests.exceptions.Timeout as errt:
-			print("  \__", colored(errt, "red"))
-			return []
-
-		except Exception:
-			print("  \__", colored("Something went wrong!", "red"))
-			return []
+        print("  \__ {0}: {1}".format(colored("Subdomains found", "cyan"), colored(len(VT), "yellow")))
+        return list(VT)
+    except Exception:
+        print("  \__", colored("Something went wrong!", "red"))
+        return []

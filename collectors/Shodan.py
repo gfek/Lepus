@@ -19,6 +19,7 @@ def init(domain):
         return []
 
     api = shodan.Shodan(SHODAN_API_KEY)
+    api._session.timeout = 15
 
     try:
         results = api.search(f'hostname:"{domain}"')

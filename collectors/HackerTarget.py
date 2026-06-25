@@ -12,8 +12,17 @@ def init(domain):
 	headers = {"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:88.0) Gecko/20100101 Firefox/88.0"}
 
 	try:
-		response = requests.get(url, headers=headers).text
-		hostnames = [result.split(",")[0] for result in response.split("\n")]
+		response = requests.get(url, headers=headers, timeout=10)
+	except requests.exceptions.RequestException as err:
+		print("  \__", colored(err, "red"))
+		return []
+
+	if response.status_code != 200:
+		print("  \__ {0}: {1}".format(colored("Error", "red"), response.status_code))
+		return []
+
+	try:
+		hostnames = [result.split(",")[0] for result in response.text.split("\n")]
 
 		for hostname in hostnames:
 			if hostname:
@@ -23,22 +32,6 @@ def init(domain):
 
 		print("  \__ {0}: {1}".format(colored("Subdomains found", "cyan"), colored(len(HT), "yellow")))
 		return HT
-
-	except requests.exceptions.RequestException as err:
-		print("  \__", colored(err, "red"))
-		return []
-
-	except requests.exceptions.HTTPError as errh:
-		print("  \__", colored(errh, "red"))
-		return []
-
-	except requests.exceptions.ConnectionError as errc:
-		print("  \__", colored(errc, "red"))
-		return []
-
-	except requests.exceptions.Timeout as errt:
-		print("  \__", colored(errt, "red"))
-		return []
 
 	except Exception:
 		print("  \__", colored("Something went wrong!", "red"))

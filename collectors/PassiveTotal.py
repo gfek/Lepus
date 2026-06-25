@@ -21,7 +21,7 @@ def init(domain):
     url = f"https://api.passivetotal.org/v2/enrichment/subdomains?query={domain}"
 
     try:
-        response = requests.get(url, auth=auth)
+        response = requests.get(url, auth=auth, timeout=10)
         if response.status_code == 200:
             PT = response.json().get('subdomains', [])
             print(f"  \__ {colored('Subdomains found', 'green')}: {len(PT)}")

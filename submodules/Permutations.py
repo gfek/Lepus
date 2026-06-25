@@ -62,7 +62,7 @@ def permuteNumbers(subdomain):
 
 
 def permuteIterations(subdomain):
-	instancesOfNumbers = findall("\d+", subdomain)	
+	instancesOfNumbers = findall(r"\d+", subdomain)	
 	for instance in instancesOfNumbers:
 		instancelength = len(instance)
 		

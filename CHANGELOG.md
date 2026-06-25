@@ -1,4 +1,47 @@
-# Version 3.4.0
+# Version 3.6.0
+
+### --- New Features
+1. Async concurrent collector execution (all collectors run in parallel)
+2. Change detection / diff monitoring (`--diff`) - compares with previous scans
+3. Telegram notification support (`--telegram-token`, `--telegram-chat`)
+4. New CLI notification arguments: `--slack-token`, `--slack-channel`, `--telegram-token`, `--telegram-chat`
+5. Thread-safe scoped SQLAlchemy sessions
+6. CIDR size limit protection in ReverseLookups (avoids OOM on large networks)
+7. Multi-TLD support in RIPE module (handles .co.uk, .com.au, etc.)
+8. Proper HTML report template with styling
+9. Scan snapshot tracking for historical comparison
+
+### --- Bug Fixes
+1. **Censys regex fix**: Missing `*` quantifier caused only single-char subdomains to match
+2. **Amazon S3 takeover**: Fixed `neededMatches` (was 2, only 1 signature existed → never reported)
+3. **Markov max_workers**: Was hardcoded to 1, now uses `--threads` argument
+4. **RIPE multi-TLD**: `split(".")[-2]` was wrong for .co.uk, .com.au etc.
+5. **ProjectSonar CSV parsing**: Added all CSV fields instead of just domain
+6. **WaybackMachine HTTPS**: Changed from HTTP to HTTPS
+7. **ProjectSonar HTTPS**: Changed from HTTP to HTTPS
+8. **GoogleTransparency mislabel**: Actually queried crt.sh, not Google Transparency
+9. **Duplicate Intelligence00.py**: Removed (was identical to Intelligence.py)
+10. **TechnologyProfiler hardcoded path**: `~/go/bin/httpx` → uses PATH lookup first
+11. **VulnerabilityScanner hardcoded path**: `/home/k/nuclei-templates/cves` removed; uses default nuclei templates
+12. **VulnerabilityScanner shell=True**: Changed to safe list-based subprocess call
+13. **Dead exception handlers**: Removed unreachable `HTTPError`/`ConnectionError`/`Timeout` handlers after `RequestException`
+14. **Missing timeouts**: Added timeouts to all collectors
+15. **Slack import**: Updated from deprecated `slackclient` to `slack_sdk`
+16. **Thread-unsafe DB session**: Switched to `scoped_session` for thread safety
+17. **CertSpotter regex**: Fixed raw string escape sequences
+18. **Permutations regex**: Fixed `\d` escape sequence
+
+### --- Misc
+1. Bumped version to 3.6.0
+2. Updated requirements.txt
+3. Rewrote lepus.py main pipeline with async/await
+4. Improved HTML report with styled tables and summary
+5. Added `ScanSnapshot` model for diff tracking
+6. Cleaned up collector exception handling patterns
+7. Removed unused `ThreatCrowd` import from ProjectCrobat
+8. Better error messages throughout
+
+# Version 3.5.0
 
 ### --- New Features
 1. Added Markov submodule

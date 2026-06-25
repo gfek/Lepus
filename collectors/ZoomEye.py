@@ -22,7 +22,7 @@ def init(domain):
     headers = {"API-KEY": ZOOMEYE_API_KEY, "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:88.0) Gecko/20100101 Firefox/88.0"}
 
     try:
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=headers, timeout=15)
         if response.status_code == 200:
             data = loads(response.text)
             for result in data.get("list", []):

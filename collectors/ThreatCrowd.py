@@ -1,49 +1,43 @@
 import requests
-from json import loads
+from json import loads, JSONDecodeError
 from termcolor import colored
 
 
 def init(domain):
-	TC = []
+    TC = set()
 
-	print(colored("[*]-Searching ThreatCrowd...", "yellow"))
+    print(colored("[*]-Searching ThreatCrowd...", "yellow"))
 
-	try:
-		result = requests.get("https://www.threatcrowd.org/searchApi/v2/domain/report/", params={"domain": domain})
+    headers = {"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:88.0) Gecko/20100101 Firefox/88.0"}
 
-		try:
-			RES = loads(result.text)
-			resp_code = int(RES["response_code"])
+    try:
+        result = requests.get(
+            "https://www.threatcrowd.org/searchApi/v2/domain/report/",
+            params={"domain": domain},
+            headers=headers,
+            timeout=15,
+        )
+    except requests.exceptions.RequestException as err:
+        print("  \__", colored(err, "red"))
+        return []
 
-			if resp_code == 1:
-				for sd in RES["subdomains"]:
-					TC.append(sd)
+    try:
+        RES = loads(result.text)
+    except (ValueError, TypeError, JSONDecodeError):
+        print("  \__ {0}: {1}".format(colored("Error", "red"), "Invalid API response"))
+        return []
 
-			TC = set(TC)
+    try:
+        resp_code = int(RES.get("response_code", -1))
 
-			print("  \__ {0}: {1}".format(colored("Subdomains found", "cyan"), colored(len(TC), "yellow")))
-			return TC
+        if resp_code == 1:
+            for sd in RES.get("subdomains", []):
+                if sd:
+                    TC.add(sd.strip().lower())
 
-		except ValueError as errv:
-			print("  \__", colored(errv, "red"))
-			return []
+        print("  \__ {0}: {1}".format(colored("Subdomains found", "cyan"), colored(len(TC), "yellow")))
+        return list(TC)
 
-	except requests.exceptions.RequestException as err:
-		print("  \__", colored(err, "red"))
-		return []
-
-	except requests.exceptions.HTTPError as errh:
-		print("  \__", colored(errh, "red"))
-		return []
-
-	except requests.exceptions.ConnectionError as errc:
-		print("  \__", colored(errc, "red"))
-		return []
-
-	except requests.exceptions.Timeout as errt:
-		print("  \__", colored(errt, "red"))
-		return []
-
-	except Exception:
-		print("  \__", colored("Something went wrong!", "red"))
-		return []
+    except Exception:
+        print("  \__", colored("Something went wrong!", "red"))
+        return []

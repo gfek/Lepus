@@ -4,56 +4,45 @@ from termcolor import colored
 
 
 def init(domain):
-	CRT = []
+    CRT = set()
 
-	print(colored("[*]-Searching CRT...", "yellow"))
+    print(colored("[*]-Searching CRT...", "yellow"))
 
-	parameters = {"q": "%.{0}".format(domain), "output": "json"}
-	headers = {"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:88.0) Gecko/20100101 Firefox/88.0", "content-type": "application/json"}
+    params = {"q": "%.{0}".format(domain), "output": "json"}
+    headers = {"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:88.0) Gecko/20100101 Firefox/88.0"}
 
-	try:
-		response = requests.get("https://crt.sh/?", params=parameters, headers=headers)
+    try:
+        response = requests.get("https://crt.sh/", params=params, headers=headers, timeout=20)
 
-		if response.status_code == 200:
-			data = loads(response.text)
+        if response.status_code == 200:
+            data = loads(response.text)
 
-			for d in data:
-				if "\n" in d["name_value"]:
-					values = d["name_value"].split("\n")
+            for d in data:
+                val = d.get("name_value", "")
+                if "\n" in val:
+                    for v in val.split("\n"):
+                        v = v.strip().lower()
+                        if v and not v.startswith("*"):
+                            CRT.add(v)
+                else:
+                    val = val.strip().lower()
+                    if val and not val.startswith("*"):
+                        CRT.add(val)
 
-					for value in values:
-						if not value.startswith("*"):
-							CRT.append(value)
+            print("  \__ {0}: {1}".format(colored("Subdomains found", "cyan"), colored(len(CRT), "yellow")))
+            return list(CRT)
 
-				else:
-					if not d["name_value"].startswith("*"):
-						CRT.append(d["name_value"])
+        else:
+            print("  \__ {0}: {1}".format(colored("Error", "red"), response.status_code))
+            return []
 
-			CRT = set(CRT)
+    except requests.exceptions.RequestException as err:
+        print("  \__", colored(err, "red"))
+        return []
 
-			print("  \__ {0}: {1}".format(colored("Subdomains found", "cyan"), colored(len(CRT), "yellow")))
-			return CRT
-
-		else:
-			print("  \__", colored("Something went wrong!", "red"))
-			return []
-
-	except requests.exceptions.RequestException as err:
-		print("  \__", colored(err, "red"))
-		return []
-
-	except requests.exceptions.HTTPError as errh:
-		print("  \__", colored(errh, "red"))
-		return []
-
-	except requests.exceptions.ConnectionError as errc:
-		print("  \__", colored(errc, "red"))
-		return []
-
-	except requests.exceptions.Timeout as errt:
-		print("  \__", colored(errt, "red"))
-		return []
-
-	except Exception:
-		print("  \__", colored("Something went wrong!", "red"))
-		return []
+    except ValueError:
+        print("  \__ {0}: {1}".format(colored("Error", "red"), "Invalid API response"))
+        return []
+    except Exception:
+        print("  \__", colored("Something went wrong!", "red"))
+        return []

@@ -23,7 +23,7 @@ def init(domain):
     url = f"https://fofa.so/api/v1/search/all?key={FOFA_KEY}&qbase64={query}"
 
     try:
-        response = requests.get(url)
+        response = requests.get(url, timeout=15)
         if response.status_code == 200:
             data = response.json()
             if data.get("error"):

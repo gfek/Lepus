@@ -26,6 +26,9 @@ def get_technologies_deep(hostname):
     # Use httpx for initial tech detection
     try:
         httpx_path = os.path.expanduser("~/go/bin/httpx")
+        if not os.path.exists(httpx_path):
+            import shutil
+            httpx_path = shutil.which("httpx") or httpx_path
         command = [
             httpx_path,
             "-silent",
@@ -162,7 +165,7 @@ def process_subdomain(subdomain, domain):
     analysis = analyze_technologies_deep(hostname, technologies)
     return hostname, technologies, analysis, None
 
-def init(db, domain):
+def init(db, domain, threads=10):
     print(colored("\n[*]-Performing deep technology profiling and analysis...", "yellow"))
 
     try:
@@ -178,7 +181,7 @@ def init(db, domain):
     all_findings = []
     processed_count = 0
 
-    with ThreadPoolExecutor(max_workers=5) as executor:
+    with ThreadPoolExecutor(max_workers=threads) as executor:
         futures = {executor.submit(process_subdomain, sub, domain): sub for sub in resolved_subdomains}
 
         for future in as_completed(futures):
